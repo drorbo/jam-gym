@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readdirSync, rmSync, utimesSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -9,7 +9,7 @@ import { asChordWord, chordToken, prepareText, prepareTrackData } from '../serve
 import { buildMatch, parseBrowseParams } from '../server/search.js';
 import { createLimiter } from '../server/limits.js';
 import { SCHEMA_VERSION, openDatabase, transaction } from '../server/db.js';
-import { buildCsp } from '../server/static.js';
+import { buildCsp, fingerprints, versionedHtml } from '../server/static.js';
 import { listBackups, snapshot } from '../server/backup.js';
 import { loadConfig } from '../server/config.js';
 import { parseChord } from '../src/theory/chord.js';
@@ -266,4 +266,44 @@ test('backups: a snapshot opens as a real database, and old ones are pruned', as
     db.close();
     utimesSync(dir, new Date(), new Date());
   } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+// ---- versioned addresses -------------------------------------------------------------------
+
+
+test('fingerprints: every script and stylesheet gets a short hash of its content, and a change changes it', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'jg-fp-'));
+  try {
+    mkdirSync(join(dir, 'src', 'app'), { recursive: true });
+    mkdirSync(join(dir, 'css'));
+    writeFileSync(join(dir, 'src', 'app', 'main.js'), 'export const a = 1;');
+    writeFileSync(join(dir, 'src', 'util.js'), 'export const b = 2;');
+    writeFileSync(join(dir, 'css', 'app.css'), 'body{}');
+    writeFileSync(join(dir, 'src', 'notes.txt'), 'not code');
+    const v1 = fingerprints(dir);
+    assert.deepEqual([...v1.keys()].sort(), ['/css/app.css', '/src/app/main.js', '/src/util.js']);
+    for (const v of v1.values()) assert.match(v, /^[0-9a-f]{10}$/);
+    writeFileSync(join(dir, 'src', 'util.js'), 'export const b = 3;');
+    const v2 = fingerprints(dir);
+    assert.notEqual(v2.get('/src/util.js'), v1.get('/src/util.js'));
+    assert.equal(v2.get('/src/app/main.js'), v1.get('/src/app/main.js'), 'untouched files keep their address');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('versionedHtml: stylesheet and entry script are versioned and an import map versions every module, before the first module script', () => {
+  const versions = new Map([['/css/app.css', 'aaaaaaaaaa'], ['/src/app/main.js', 'bbbbbbbbbb'], ['/src/app/ui.js', 'cccccccccc']]);
+  const html = '<head><link rel="stylesheet" href="css/app.css"><link rel="preload" href="fonts/x.woff2"></head><body><script type="module" src="src/app/main.js"></script></body>';
+  const out = versionedHtml(html, versions);
+  assert.match(out, /href="css\/app\.css\?v=aaaaaaaaaa"/);
+  assert.match(out, /src="src\/app\/main\.js\?v=bbbbbbbbbb"/);
+  assert.match(out, /href="fonts\/x\.woff2"/, 'fonts are left alone');
+  const map = JSON.parse(/<script type="importmap">(.*?)<\/script>/.exec(out)[1]);
+  assert.deepEqual(map.imports, { '/src/app/main.js': '/src/app/main.js?v=bbbbbbbbbb', '/src/app/ui.js': '/src/app/ui.js?v=cccccccccc' });
+  assert.ok(out.indexOf('importmap') < out.indexOf('type="module"'), 'the import map must come first');
+  assert.equal(versionedHtml('<p>no scripts</p>', versions), '<p>no scripts</p>');
+});
+
+test('CSP: the import map is allowed by its hash too', () => {
+  const html = versionedHtml('<script>var t = 1;</script><script type="module" src="src/app/main.js"></script>', new Map([['/src/app/main.js', 'bbbbbbbbbb']]));
+  assert.equal((buildCsp(html).match(/sha256-/g) ?? []).length, 2, 'the theme script and the import map');
 });

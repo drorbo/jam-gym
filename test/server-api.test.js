@@ -35,6 +35,35 @@ test('the bass line is stored with the track; junk is repaired, and older tracks
   assert.equal((await b.get(`/api/tracks/${o.json.track.id}`)).json.track.data.config.bass.pattern, 'mixed', 'the blues default');
 }));
 
+test('the page asks for versioned scripts and styles, and only a current version is cached for good', withServer(async ({ browser }) => {
+  const b = browser();
+  const page = await b.get('/');
+  assert.equal(page.status, 200);
+  assert.equal(page.headers.get('cache-control'), 'no-cache');
+  const css = /href="(css\/app\.css\?v=[0-9a-f]{10})"/.exec(page.text)?.[1];
+  const entry = /src="(src\/app\/main\.js\?v=[0-9a-f]{10})"/.exec(page.text)?.[1];
+  assert.ok(css && entry, 'stylesheet and entry script carry a version');
+  const map = JSON.parse(/<script type="importmap">(.*?)<\/script>/.exec(page.text)[1]);
+  assert.ok(Object.keys(map.imports).length >= 20 && Object.keys(map.imports).every((k) => k.startsWith('/src/')));
+  // the header's CSP must allow the import map that is in this very page
+  const { buildCsp } = await import('../server/static.js');
+  assert.equal(page.headers.get('content-security-policy'), buildCsp(page.text));
+
+  for (const path of [css, entry, ...Object.values(map.imports).slice(0, 5)]) {
+    const r = await b.get(`/${path.replace(/^\//, '')}`);
+    assert.equal(r.status, 200, path);
+    assert.equal(r.headers.get('cache-control'), 'public, max-age=31536000, immutable', path);
+  }
+  // an address with a made-up or outdated version is not kept: it would pin the wrong content
+  const stale = await b.get('/src/app/main.js?v=0000000000');
+  assert.equal(stale.status, 200);
+  assert.equal(stale.headers.get('cache-control'), 'no-cache');
+  assert.equal((await b.get('/src/app/main.js')).headers.get('cache-control'), 'no-cache');
+  // a conditional request for the page is answered with a 304
+  const again = await b.get('/', { 'If-None-Match': page.headers.get('etag') });
+  assert.equal(again.status, 304);
+}));
+
 // ---- identity ------------------------------------------------------------------------------
 
 test('browsing and reading set no cookie and need no identity', withServer(async ({ browser }) => {

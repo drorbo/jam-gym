@@ -29,7 +29,7 @@ function parseCookies(header) {
 export function createApp({ db, config, root, limiter = createLimiter() }) {
   const users = createUsers(db);
   const tracks = createTracks(db);
-  const serveStatic = createStatic(root);
+  const serveStatic = createStatic(root, { watch: !config.production });
 
   // ---- request helpers -------------------------------------------------------------------
 
