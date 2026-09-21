@@ -11,7 +11,7 @@ synthesised in the browser. The band plays offline; saving and sharing tracks ne
 
 ```
 npm start        # serves http://localhost:5173 (the site and the tracks API), data in ./data
-npm test         # 266 tests, Node's built-in runner, no install needed
+npm test         # 296 tests, Node's built-in runner, no install needed
 npm run admin -- stats     # moderation and upkeep, see "Tracks" below
 ```
 
@@ -37,7 +37,8 @@ Live at **[jam-gym.eardle.com](https://jam-gym.eardle.com)**. How it is deployed
   Choosing a style sets it to that style's default (jazz 65% at its default tempo, blues 67%, rock 50%; jazz eases toward
   straighter as the default tempo rises); a small button restores the default after you've moved it. It applies from
   the next bar, is saved with saved progressions, and is disabled in 6/8, 7/8 and 10/8, whose feel comes from their groupings.
-- **Tracks**: see below. A track is the whole setup, not just the chords.
+- **Bass line** (jazz and blues): a panel under the controls that shapes how the walking bass is played. See below.
+- **Tracks**: the button in the header opens the tracks sidebar, described below. A track is the whole setup, not just the chords.
 - **Key change**: *Step* moves by an interval (−11…+11 semitones, named) every N loops.
   *Random* picks a key every N loops: never the same twice, completely random, all 12 in random order,
   circle of fifths, circle of fourths, or chromatic.
@@ -48,9 +49,36 @@ Live at **[jam-gym.eardle.com](https://jam-gym.eardle.com)**. How it is deployed
   valid version keeps playing.
 - Space plays and pauses.
 
+## Bass line
+
+Jazz and blues walk. Open **Bass line** to choose how, from the next bar on:
+
+- **Rhythm**: steady quarters; quarters with skips (swung ghost notes and passing tones on the "and"); running eighths;
+  two-feel (half notes on roots and fifths); or mixed, which mostly plays quarters and now and then a skip, a run of
+  eighths or a two-feel bar (no eighths above 170 BPM, no two-feel in the blues).
+- **Line**: from scales (stepwise, chromatic passing notes) to arpeggios (chord-tone leaps).
+- **Tensions**: from chord tones only to colourful: the 9th, 13th and #11 (and any extension you wrote, such as the
+  #9 in `G7#9`) are allowed on strong beats.
+- **Approach**: how the last note leads into the next chord: a half step, a scale step, the fifth above, an enclosure
+  (above, then below), or a mix.
+- **Pattern** (blues): the eighth-note boogie with a half-step lead into each chord change and a walking bar to turn
+  the chorus around (the default), walking throughout, or boogie throughout.
+
+Choosing a style resets the panel to that style's defaults (a button restores them after you have changed things).
+In 6/8, 7/8 and 10/8 the line follows the groupings. Rock keeps its driving root line, so the panel hides for it.
+The settings are saved with a track.
+
+How a line is chosen (`src/styles/walking.js`): the rhythm is planned first; beat one is the root, and the last note
+is picked as an approach into the next chord; the notes between are found by a beam search that scores every
+candidate on chord tones for strong beats, scale and passing tones for weak ones, step against leap (the Line
+setting), colour tones (Tensions), direction, leap recovery and not repeating last bar's shape, with seeded noise
+so each chorus differs.
+
 ## Tracks: save, publish, search, like
 
-Under the progression is the **Tracks** panel.
+The **Tracks** button in the header opens a sidebar. On a wide window it docks beside the practice controls and
+pushes them over, so the play button stays in reach; on a phone it slides over the page as a sheet. It remembers
+whether you had it open.
 
 - **My tracks**: name the current setup and press Save. A track keeps everything: progression, key, time signature,
   tempo, style, swing, sounds, key-change and tempo-ramp settings, loop, count-in and the mixer. Saving under an
@@ -77,11 +105,12 @@ src/engine/    planner   key + tempo of each chorus        pure: (state, setting
                conductor lookahead scheduler               clock and sink injected, no DOM, no Web Audio
                voicing, feel, rng
 src/styles/    jazz, blues, rock + registry                data + generators that emit note events
+               walking                                     the walking-bass engine and its settings
                oddMeters                                   how every style plays in 6/8, 7/8 and 10/8
 src/audio/     voices        synthesised instruments
                samples       loader + player for recorded instruments (samplemap: pure selection logic)
                engine, ticker  mixer bus, worker-driven timer
-src/app/       state, player, ui                           store, playback wiring, DOM
+src/app/       state, player, ui, bass-ui, sidebar         store, playback wiring, DOM
                api, tracks-model, tracks, tracks-ui        tracks: HTTP client, setup <-> track data, controller, panel
                saved                                       older browser-only saves (offline fallback, migration)
 server/        index, app, static, db, tracks, users,      the site + /api on Node's built-in http and node:sqlite;

@@ -51,11 +51,20 @@ button { cursor: pointer; }
 
 :focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; border-radius: 6px; }
 
-.app { max-width: 1120px; margin: 0 auto; padding: 0 var(--gutter) 3rem; }
+.shell { display: flex; align-items: flex-start; min-height: 100vh; }
+/* .app is the size container for the layout rules below, so the layout responds to the room beside the sidebar, not to the window */
+.app { flex: 1 1 0; min-width: 0; max-width: 1120px; margin: 0 auto; padding: 0 var(--gutter) 3rem; container-type: inline-size; }
 
 /* ---- header ------------------------------------------------------------------------- */
 .top { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0 0; }
 .brand { font-weight: 800; font-size: 1.125rem; letter-spacing: -0.01em; }
+.top-actions { display: flex; align-items: center; gap: 0.5rem; }
+.tracks-btn {
+  display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; padding: 0 1rem 0 0.85rem;
+  background: none; border: 1px solid var(--fret-strong); border-radius: 999px; color: var(--text); font-size: 0.9375rem;
+}
+.tracks-btn:hover { border-color: var(--text); }
+.tracks-btn.is-open { color: var(--brass); border-color: var(--brass); }
 .icon-btn {
   display: grid; place-items: center; width: 44px; height: 44px;
   background: none; border: 1px solid transparent; border-radius: 50%; color: var(--muted);
@@ -207,11 +216,10 @@ select { min-height: 40px; max-width: 100%; min-width: 0; padding: 0 0.6rem; }
 input[type='number'] { width: 4.5rem; min-height: 40px; padding: 0 0.5rem; text-align: center; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 /* ---- tracks: my library and the community ------------------------------------------- */
-.tracks { margin-top: 2.25rem; }
-.tracks-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; }
-.tracks-head h2 { margin: 0; }
-.tabs { display: inline-flex; border: 1px solid var(--fret-strong); border-radius: 999px; padding: 2px; }
-.tabs button { min-height: 36px; padding: 0 1rem; background: none; border: 0; border-radius: 999px; color: var(--muted); font-size: 0.9375rem; }
+.tracks-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; }
+.tracks-head h2 { margin: 0; font-size: 1.125rem; color: var(--text); }
+.tabs { order: 3; display: grid; grid-template-columns: 1fr 1fr; width: 100%; border: 1px solid var(--fret-strong); border-radius: 999px; padding: 2px; }
+.tabs button { min-height: 38px; padding: 0 1rem; background: none; border: 0; border-radius: 999px; color: var(--muted); font-size: 0.9375rem; }
 .tabs button:hover { color: var(--text); }
 .tabs button[aria-selected='true'] { background: var(--brass); color: var(--brass-ink); font-weight: 600; }
 .loaded-line { margin: 0.8rem 0 0; font-size: 0.9375rem; color: var(--brass); overflow-wrap: anywhere; }
@@ -401,11 +409,11 @@ input[type='number'] { width: 4.5rem; min-height: 40px; padding: 0 0.5rem; text-
 .foot { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--fret); font-size: 0.875rem; color: var(--muted); }
 
 /* ---- tablet / phone ----------------------------------------------------------------- */
-@media (max-width: 900px) {
+@container (max-width: 828px) {
   .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .controls .ctl:nth-child(3) { grid-column: 1 / -1; border-left: 0; padding-left: 0; border-top: 1px solid var(--fret); }
 }
-@media (max-width: 720px) {
+@container (max-width: 660px) {
   .stage { grid-template-columns: 1fr; }
   .transport { grid-auto-flow: column; justify-content: start; justify-items: start; align-items: center; gap: 1.25rem; grid-template-columns: auto 1fr; }
   .transport .secondary, .transport .toggles { grid-column: 2; }
@@ -415,7 +423,7 @@ input[type='number'] { width: 4.5rem; min-height: 40px; padding: 0 0.5rem; text-
   .mod { grid-template-columns: minmax(0, 1fr); }
   .mod-col + .mod-col { padding-left: 0; border-left: 0; border-top: 1px solid var(--fret); }
 }
-@media (max-width: 640px) {
+@container (max-width: 590px) {
   .bars { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bar:nth-child(n + 3) { border-top: 1px solid var(--fret); }
   .bar { min-height: 6rem; }
@@ -426,12 +434,64 @@ input[type='number'] { width: 4.5rem; min-height: 40px; padding: 0 0.5rem; text-
   .bar .bss { font-size: 1.75rem; }
 }
 
-@media (max-width: 400px) {
+@container (max-width: 368px) {
   .transport { grid-auto-flow: row; grid-template-columns: 1fr; justify-items: start; gap: 0.9rem; }
   .transport .play { grid-row: auto; }
   .transport .secondary, .transport .toggles { grid-column: 1; }
   .transport .play { width: 88px; }
 }
+
+/* ---- tracks sidebar ------------------------------------------------------------------ */
+.sidebar {
+  --sidebar-w: 400px;
+  flex: 0 0 auto; width: 0; overflow: hidden; position: sticky; top: 0; height: 100vh; height: 100dvh;
+  background: var(--raised); border-left: 1px solid var(--fret);
+  visibility: hidden; transition: width 0.25s ease, visibility 0s 0.25s;
+}
+body[data-sidebar='open'] .sidebar { width: var(--sidebar-w); visibility: visible; transition: width 0.25s ease; }
+.sidebar-inner { width: var(--sidebar-w); height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 1rem 1.25rem 3rem; }
+.sidebar-close { width: 40px; height: 40px; margin-right: -0.5rem; }
+.scrim { position: fixed; inset: 0; z-index: 20; background: rgb(0 0 0 / 0.5); }
+body.sidebar-lock { overflow: hidden; }
+
+/* narrow windows: the sidebar slides over the page as a sheet instead of pushing it */
+@media (max-width: 1099px) {
+  .sidebar {
+    position: fixed; top: 0; right: 0; bottom: 0; z-index: 30; width: min(440px, 100vw); height: auto;
+    transform: translateX(100%); box-shadow: -12px 0 32px rgb(0 0 0 / 0.35);
+    transition: transform 0.25s ease, visibility 0s 0.25s;
+  }
+  body[data-sidebar='open'] .sidebar { width: min(440px, 100vw); transform: none; transition: transform 0.25s ease; }
+  .sidebar-inner { width: 100%; padding-bottom: 5rem; }
+}
+.loaded-now.flash { color: var(--brass); }
+.loaded-now.flash.bad { color: var(--danger); }
+
+/* ---- bass line panel ------------------------------------------------------------------ */
+.bassline { border-top: 1px solid var(--fret); }
+.bassline summary {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 1.25rem; padding: 1rem 0; cursor: pointer; list-style: none;
+}
+.bassline summary::-webkit-details-marker { display: none; }
+.bassline summary::before {
+  content: ''; flex: none; align-self: center; width: 0.5rem; height: 0.5rem; margin-right: -0.5rem;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-45deg); transition: transform 0.15s;
+}
+.bassline details[open] summary::before { transform: rotate(45deg); }
+.bassline summary:hover .bl-title { color: var(--brass); }
+.bl-title { padding-left: 1.1rem; font-size: 0.875rem; font-weight: 600; color: var(--muted); }
+.bl-sum { font-size: 0.9375rem; color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+.bl-body { padding: 0.4rem 0 1.6rem 1.1rem; }
+.bl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 1.4rem 2.25rem; align-items: start; }
+.bl-field { display: grid; grid-template-columns: 5.2rem minmax(0, 1fr); align-items: center; gap: 0.6rem; }
+.bl-field select { width: 100%; min-width: 0; }
+.bl-range .swing-ends { margin: 0 0.4rem; }
+.bl-range .swing-ends span:nth-child(2) { right: 0; left: auto; transform: none; }
+.bl-range .slider { margin-top: 0.35rem; }
+.bl-range .swing-head output { font-size: 1.0625rem; font-weight: 600; letter-spacing: 0; min-width: 0; }
+.bassline details.off .bl-range, .bassline details.off .bl-field:not(#bass-pattern-field) { opacity: 0.45; }
+.bl-body .hint { max-width: 70ch; }
+.bl-body .chip { margin-top: 0.8rem; min-height: 34px; font-size: 0.875rem; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

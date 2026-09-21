@@ -35,13 +35,16 @@ function drums(ctx) {
   }
   const kicks = rng.chance(0.55) ? KICKS[0] : rng.pick(KICKS);
   kicks.forEach((b) => ev.push(drum('kick', b, 0.88, 0.25)));
-  ev.push(drum('snare', 1, 0.92, 0.3), drum('snare', 3, 0.94, 0.3));
+  ev.push(drum('snare', 1, 0.94, 0.3), drum('snare', 3, 0.96, 0.3));
+  // ghost notes a sixteenth before a backbeat, and now and then a second hit after beat 4
+  for (const b of [0.75, 2.75]) if (rng.chance(0.3)) ev.push(drum('snare', b, 0.3 + rng.next() * 0.12, 0.15));
+  if (rng.chance(0.22)) ev.push(drum('snare', 3.5, 0.62 + rng.next() * 0.1, 0.2));
   if (isFirstBar) ev.push(drum('crash', 0, 0.7, 1.5));
 
-  if ((isLastBar && rng.chance(0.7)) || (barIndex % 4 === 3 && rng.chance(0.12))) {
+  if ((isLastBar && rng.chance(0.75)) || (barIndex % 4 === 3 && rng.chance(0.22))) {
     ev.push(
-      drum('snare', 3, 0.7, 0.2), drum('snare', 3.25, 0.66, 0.2),
-      drum('tomMid', 3.5, 0.74, 0.2), drum('tomLow', 3.75, 0.8, 0.2),
+      drum('snare', 3, 0.78, 0.2), drum('snare', 3.25, 0.74, 0.2),
+      drum('tomMid', 3.5, 0.76, 0.2), drum('tomLow', 3.75, 0.82, 0.2),
     );
   }
   return ev;

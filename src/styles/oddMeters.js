@@ -8,7 +8,8 @@
 import { guitarChord, placeVoicing, voicingPcs } from '../engine/voicing.js';
 import { slotsWithin } from '../theory/meter.js';
 import { mod12 } from '../theory/notes.js';
-import { bassPc, boogieSteps, capDur, drum, note, walkSegment } from './helpers.js';
+import { bassPc, boogieSteps, capDur, drum, note } from './helpers.js';
+import { DEFAULT_BASS, walkOddBar } from './walking.js';
 
 /** Group spans that start inside a chord's span, clipped to it. */
 function groupsIn(meter, seg) {
@@ -44,9 +45,11 @@ export function oddDrums(ctx, flavor) {
     }
   });
 
-  if (flavor === 'jazz' && rng.chance(0.25)) {
-    const s = rng.pick(meter.slots.filter((x) => x.posInGroup > 0));
-    ev.push(drum('snare', s.start, 0.3 + rng.next() * 0.15, 0.2));
+  if (flavor === 'jazz') {
+    // the snare answers the soloist: one or two comping hits per bar, some ghosted and some accented
+    const spots = rng.shuffle(meter.slots.filter((x) => x.posInGroup > 0));
+    const hits = rng.weighted([[0, 2], [1, 4], [2, 2]]);
+    for (const s of spots.slice(0, hits)) ev.push(drum('snare', s.start, 0.38 + rng.next() * 0.32, 0.2));
   }
   if (isFirstBar && (flavor === 'rock' || (chorus > 1 && rng.chance(0.6)))) ev.push(drum('crash', 0, flavor === 'rock' ? 0.7 : 0.5, 1));
 
@@ -63,23 +66,18 @@ export function oddDrums(ctx, flavor) {
 // ---- bass ------------------------------------------------------------------------------
 
 export function oddBass(ctx, flavor) {
-  const { meter, segments, nextChord, state, rng, isLastBar } = ctx;
+  const { meter, segments, state, rng, isLastBar } = ctx;
+  const pattern = (ctx.bassOpts ?? DEFAULT_BASS).pattern;
+  // jazz always walks; the blues walks when asked, and to turn the chorus around
+  if (flavor === 'jazz' || (flavor === 'blues' && (pattern === 'walk' || (pattern === 'mixed' && isLastBar)))) {
+    return walkOddBar(ctx, flavor);
+  }
   const ev = [];
   const rockVariant = flavor === 'rock' ? rng.weighted([['eighths', 5], ['pushes', 3]]) : null;
 
-  segments.forEach((seg, k) => {
+  segments.forEach((seg) => {
     if (!seg.chord) return;
     const slots = slotsWithin(meter, seg.startBeat, seg.beats);
-    const upcoming = segments[k + 1] ? segments[k + 1].chord : nextChord;
-    const nextRoot = upcoming ? bassPc(upcoming) : null;
-
-    if (flavor === 'jazz' || (flavor === 'blues' && isLastBar)) {
-      // walking: one step per group, approaching the next chord's root
-      const groups = groupsIn(meter, seg);
-      const walked = walkSegment(seg, nextRoot, state, rng, {}, groups.map((g) => g.start));
-      walked.forEach((n, i) => ev.push(note('bass', n.midi, n.beat, groups[i].len * 0.92, i === 0 ? 0.78 : 0.72)));
-      return;
-    }
 
     const base = 28 + mod12(bassPc(seg.chord) - 28);
     if (flavor === 'blues') {

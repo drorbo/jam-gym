@@ -99,13 +99,13 @@ function snare(ctx, out, t, vel) {
   const hp = filter(ctx, 'highpass', 1400);
   const bp = filter(ctx, 'peaking', 3200, 0.8);
   bp.gain.value = 5;
-  const ng = envelope(ctx, t, { peak: vel * 0.85, attack: 0.001, tc: ghost ? 0.03 : 0.055 });
+  const ng = envelope(ctx, t, { peak: vel * 1.4, attack: 0.001, tc: ghost ? 0.03 : 0.06 });
   n.connect(hp).connect(bp).connect(ng).connect(out);
 
   const body = osc(ctx, 'triangle', 190, t, t + 0.3);
   body.frequency.setValueAtTime(230, t);
   body.frequency.exponentialRampToValueAtTime(170, t + 0.05);
-  const bg = envelope(ctx, t, { peak: vel * 0.5, attack: 0.001, tc: 0.03 });
+  const bg = envelope(ctx, t, { peak: vel * 0.8, attack: 0.001, tc: 0.035 });
   body.connect(bg).connect(out);
 }
 

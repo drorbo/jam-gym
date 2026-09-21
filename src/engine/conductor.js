@@ -31,6 +31,7 @@ import { createRng, hashSeed } from './rng.js';
  * @property {boolean} loop
  * @property {boolean} countIn
  * @property {number} [swing]  swing percentage, 50 (straight) to 75 (hard); 4/4 only. Omitted = the style's own feel.
+ * @property {{rhythm?:string, line?:number, tension?:number, approach?:string, pattern?:string}} [bass]  walking-bass settings; omitted = the style's own
  * @property {{type:'off'|'interval'|'random', interval?:number, everyLoops?:number, randomMode?:string}} modulation
  * @property {{enabled:boolean, increment:number, everyLoops:number, maxBpm?:number}} tempoRamp
  * @property {{drums?:string, keys?:string}} [sounds]  'auto' or a sound id; see DRUM_SOUNDS / KEY_SOUNDS
@@ -231,6 +232,7 @@ export class Conductor {
       state: this.styleState,
       timbres: resolveTimbres(style, cfg.sounds),
       swing: Number.isFinite(cfg.swing) ? cfg.swing / 100 : undefined, // percent -> ratio; applies from the next bar
+      bass: cfg.bass, // walking-bass settings; also apply from the next bar
       rng: createRng(hashSeed(this.seed, this.state.chorus, this.barIdx)),
     });
     this.evPtr = 0;

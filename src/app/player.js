@@ -9,7 +9,7 @@ import { clampBpm } from '../engine/planner.js';
 import { keyPrefersFlats, parseKey, formatKey } from '../theory/keys.js';
 import { mod12 } from '../theory/notes.js';
 import { parseProgression, transposeProgressionText } from '../theory/progression.js';
-import { DRUM_SOUNDS, KEY_SOUNDS, getStyle, resolveTimbres } from '../styles/index.js';
+import { DRUM_SOUNDS, KEY_SOUNDS, defaultBass, getStyle, resolveTimbres } from '../styles/index.js';
 import { removeSaved, restoreSaved, saveSnapshot, signatureOf } from './saved.js';
 import { buildTrackData, dataFromLocalSave } from './tracks-model.js';
 
@@ -242,7 +242,8 @@ export class Player {
       timeSignature: song.timeSignature, key: song.key, progressionText: song.progressionText,
       ...(live ? {} : { tempo: song.tempo }),
     });
-    this.store.set({ config: { ...this.store.get().config, ...config }, mixer });
+    // tracks saved before the bass panel existed have no bass settings: they get the style's own
+    this.store.set({ config: { ...this.store.get().config, ...config, bass: config.bass ?? defaultBass(getStyle(config.style)) }, mixer });
     for (const [inst, level] of Object.entries(mixer)) this.bus?.setLevel(inst, level);
     if (live) {
       this.conductor.requestKey(parseKey(song.key).pc);

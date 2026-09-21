@@ -28,6 +28,13 @@ export const pitchRate = (midi, root) => 2 ** ((midi - root) / 12);
 /** Level trim within a layer: harder than the layer's nominal velocity plays louder, softer plays quieter. */
 export const layerGain = (vel, ref) => Math.min(1.3, Math.max(0.6, vel / ref));
 
+/**
+ * Per-voice loudness trim for recorded kits. The snare recordings sit several dB under the kick and cymbals
+ * (measured on the RMS of the first 250 ms), and in a full mix with piano and bass they get lost.
+ */
+export const DRUM_TRIM = { snare: 1.8 };
+export const drumTrim = (voice) => DRUM_TRIM[voice] ?? 1;
+
 /** If a kit lacks a voice, borrow a close relative instead of going silent. */
 export const VOICE_FALLBACK = {
   hatPedal: ['hat'],

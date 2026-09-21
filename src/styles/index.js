@@ -7,6 +7,7 @@
 //     feel:     { name, swing: number | (bpm) => number },   // 0.5 = straight, 0.667 = triplet swing
 //     humanize: { drums: {t, v, lay}, bass: {...}, chords: {...} },
 //     timbres:  { drums, bass, chords },                     // sound choices for the audio layer
+//     bass:     { rhythm, line, tension, approach, pattern }, // optional: starting point for the bass-line panel (see walking.js)
 //     parts:    { drums(ctx), bass(ctx), chords(ctx) },      // each returns note events
 //   }
 // Add a style by writing one of these and calling registerStyle(). The UI lists the registry.
@@ -16,6 +17,7 @@ import { getMeter } from '../theory/meter.js';
 import { blues } from './blues.js';
 import { jazz } from './jazz.js';
 import { rock } from './rock.js';
+import { DEFAULT_BASS, sanitizeBass } from './walking.js';
 
 const registry = new Map();
 
@@ -63,6 +65,12 @@ export function defaultSwing(style, bpm) {
   return clampSwing(ratio * 100);
 }
 
+/** The bass-line settings a style starts with (what choosing the style sets the panel to). */
+export const defaultBass = (style) => sanitizeBass(style.bass, DEFAULT_BASS);
+
+/** Whether the style has a bass line worth adjusting (rock's root-and-octave line has nothing to tune). */
+export const hasBassOptions = (style) => Boolean(style.bass);
+
 export const getStyle = (id) => registry.get(id) ?? registry.get('jazz');
 export const listStyles = () => [...registry.values()];
 
@@ -83,6 +91,8 @@ export const listStyles = () => [...registry.values()];
  * @property {object} state  per-run memory owned by the style (voice-leading etc.)
  * @property {Record<string,string>} [timbres] sound choices (defaults to the style's own)
  * @property {number} [swing] user swing, 0.5 (straight) to 0.75 (hard); omitted = the style's own feel. 4/4 only.
+ * @property {object} [bass] user bass-line settings (rhythm, line, tension, approach, pattern); omitted = the style's own
+ * @property {ReturnType<typeof defaultBass>} [bassOpts] the settings above, checked and merged over the style's defaults
  * @property {ReturnType<import('../engine/rng.js').createRng>} rng
  */
 
@@ -98,6 +108,7 @@ export function renderBar(style, ctx) {
   const isFour = !ctx.meter || ctx.meter.id === '4/4';
   const styleSwing = typeof style.feel.swing === 'function' ? style.feel.swing(ctx.bpm) : style.feel.swing;
   const swing = !isFour ? 0.5 : Number.isFinite(ctx.swing) ? clampSwing(ctx.swing * 100) / 100 : styleSwing;
+  ctx = { ...ctx, bassOpts: sanitizeBass(ctx.bass, defaultBass(style)) };
   let events = [];
   for (const part of Object.values(style.parts)) events.push(...part(ctx));
   events = applyFeel(events, swing);

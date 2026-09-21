@@ -278,3 +278,17 @@ test('unusual progressions: 1 bar, NC bars, many chords per bar, huge chorus', (
     assert.ok(h.played.every((n) => Number.isFinite(n.when) && Number.isFinite(n.dur) && n.vel >= 0), progression);
   }
 });
+
+test('bass-line settings reach the playing bass, and a change applies from the next bar', () => {
+  const bassNotes = (played, from, to) => played.filter((n) => n.inst === 'bass' && n.when >= from && n.when < to && !n.ghost);
+  const h = harness({ config: { style: 'jazz', bass: { rhythm: 'quarters' } } });
+  h.c.start();
+  h.run(4.2); // two bars at 120 BPM
+  const quarters = bassNotes(h.played, 1000, 1004);
+  h.config.bass = { rhythm: 'eighths' };
+  h.run(8);
+  const t0 = Math.max(...h.played.filter((n) => n.inst === 'bass').map((n) => n.when)) - 2; // the last bar
+  const eighths = bassNotes(h.played, t0, t0 + 2);
+  assert.equal(quarters.length, 8, 'two bars of quarters');
+  assert.ok(eighths.length >= 6, `a bar of eighths has at least six notes (${eighths.length})`);
+});

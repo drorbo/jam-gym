@@ -281,4 +281,7 @@ the import succeeds).
 - **Client layering:** `api.js` (HTTP) → `tracks-model.js` (setup <-> stored data) → `tracks.js` (state and actions, no
   DOM, fully unit-tested with a fake API) → `tracks-ui.js` (DOM only). The UI redraws a region only when its own inputs
   change, so a beat event never disturbs typing in the search or rename boxes.
-- **Test count:** 266 (unit, API over real HTTP, client controller, and the original engine and UI-model suites).
+- **Test count:** 296 (unit, API over real HTTP, client controller, walking bass, and the original engine and UI-model suites).
+- **Sidebar, not inline.** The panel started in the middle of the page; it now lives in a collapsible sidebar (`src/app/sidebar.js`).
+  The controller and panel code are unchanged. Docked on wide windows, a sheet on narrow ones, state remembered in localStorage.
+- **Bass settings are part of a track** (`config.bass`), so a saved walking line comes back exactly. Tracks saved before the panel existed get the style's default.

@@ -47,9 +47,9 @@ const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /**
  * @param {{store: ReturnType<typeof import('./state.js').createStore>, tracks: ReturnType<typeof import('./tracks.js').createTracksController>,
- *          player: any}} deps
+ *          player: any, sidebar?: ReturnType<typeof import('./sidebar.js').mountSidebar>}} deps
  */
-export function mountTracksUI({ store, tracks, player }) {
+export function mountTracksUI({ store, tracks, player, sidebar = null }) {
   // Local UI state: which inline panel or confirmation is open. Not part of the app state on purpose.
   const ui = { accountPanel: null, confirm: null /* {id, kind} */, recoverError: '' };
   const last = {};
@@ -137,7 +137,18 @@ export function mountTracksUI({ store, tracks, player }) {
   function renderMessages(state) {
     const t = state.tracks;
     const box = $('tracks-msg');
-    if (t.flash) { box.textContent = t.flash.text; box.className = `msg tracks-msg${t.flash.kind === 'error' ? ' bad' : ''}`; return; }
+    const hero = $('hero-flash');
+    if (t.flash) {
+      box.textContent = t.flash.text;
+      box.className = `msg tracks-msg${t.flash.kind === 'error' ? ' bad' : ''}`;
+      // with the sidebar closed nobody would see it, so say it under the player as well
+      hero.hidden = Boolean(sidebar?.isOpen);
+      hero.textContent = t.flash.text;
+      hero.classList.toggle('bad', t.flash.kind === 'error');
+      return;
+    }
+    hero.hidden = true;
+    hero.textContent = '';
     if (t.status === 'offline') { box.textContent = "You're offline, so tracks can only be saved on this device for now."; box.className = 'msg tracks-msg'; return; }
     box.textContent = '';
     box.className = 'msg tracks-msg';
@@ -357,7 +368,7 @@ export function mountTracksUI({ store, tracks, player }) {
     // only rebuild a region when something it shows has changed
     const edited = t.active ? setupSignature(buildTrackData(state)) !== t.active.signature : false;
     const sigs = {
-      messages: [t.flash?.id, t.status],
+      messages: [t.flash?.id, t.status, sidebar?.isOpen],
       loaded: [t.active, edited, t.active && state.song.tempo],
       account: [t.me, t.status, t.recovery, ui.accountPanel],
       note: [t.cookieNote],
@@ -398,8 +409,8 @@ export function mountTracksUI({ store, tracks, player }) {
     if (!target) return;
     const { act, id, panel } = target.dataset;
     switch (act) {
-      case 'load': { const t = byId(id); if (t) tracks.open(t.data ? t : id, 'mine'); break; }
-      case 'open-browse': tracks.open(id, 'browse'); break;
+      case 'load': { const t = byId(id); if (t && await tracks.open(t.data ? t : id, 'mine')) sidebar?.closeIfSheet(); break; }
+      case 'open-browse': if (await tracks.open(id, 'browse')) sidebar?.closeIfSheet(); break;
       case 'like': tracks.toggleLike(id); break;
       case 'copy': tracks.copy(id); break;
       case 'unpublish': tracks.setPublished(id, false); break;
@@ -438,9 +449,13 @@ export function mountTracksUI({ store, tracks, player }) {
   $('tracks').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.id === 'rename-input') { e.preventDefault(); $('tracks').querySelector('[data-act="do-rename"]')?.click(); }
     if (e.key === 'Enter' && e.target.id === 'recover-input') { e.preventDefault(); $('tracks').querySelector('[data-act="do-recover"]')?.click(); }
-    if (e.key === 'Escape' && (ui.confirm || ui.accountPanel)) { ui.confirm = null; ui.accountPanel = null; tracks.hideRecovery(); poke(); }
+    if (e.key === 'Escape' && (ui.confirm || ui.accountPanel)) {
+      e.preventDefault(); // this Escape closes the open question, not the whole sidebar
+      ui.confirm = null; ui.accountPanel = null; tracks.hideRecovery(); poke();
+    }
   });
 
   store.subscribe(render);
+  sidebar?.onChange(() => render(store.get()));
   render(store.get());
 }

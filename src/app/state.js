@@ -1,6 +1,7 @@
 // App state: defaults, a tiny observable store, and localStorage persistence.
 
-import { DRUM_SOUNDS, KEY_SOUNDS, defaultSwing, getStyle } from '../styles/index.js';
+import { DRUM_SOUNDS, KEY_SOUNDS, defaultBass, defaultSwing, getStyle } from '../styles/index.js';
+import { sanitizeBass } from '../styles/walking.js';
 import { clampSwing } from '../engine/feel.js';
 import { MAX_BPM, MIN_BPM } from '../engine/planner.js';
 import { parseKey } from '../theory/keys.js';
@@ -23,6 +24,7 @@ export const defaultState = () => ({
   config: {
     style: 'jazz',
     swing: defaultSwing(getStyle('jazz'), 132), // percent; picking a style resets this to that style's default
+    bass: defaultBass(getStyle('jazz')), // walking-bass settings; picking a style resets these too
     loop: true,
     countIn: true,
     sounds: { drums: 'auto', keys: 'auto' },
@@ -79,6 +81,7 @@ export function sanitize(saved) {
     config: {
       style: style.id,
       swing: clampSwing(c.swing, defaultSwing(style, tempo)), // missing or invalid -> the style's default
+      bass: sanitizeBass(c.bass, defaultBass(style)),
       loop: c.loop !== false,
       countIn: c.countIn !== false,
       sounds: {

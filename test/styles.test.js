@@ -11,7 +11,7 @@ import { mod12 } from '../src/theory/notes.js';
 const DRUM_VOICES = new Set(['kick', 'snare', 'hat', 'hatOpen', 'hatPedal', 'ride', 'crash', 'tomHigh', 'tomMid', 'tomLow']);
 
 /** Render every bar of a progression as the conductor would, with shared style state. */
-function renderChorus(styleId, text, { chorus = 1, bpm = 120, seed = 1 } = {}) {
+function renderChorus(styleId, text, { chorus = 1, bpm = 120, seed = 1, bass } = {}) {
   const style = getStyle(styleId);
   const { bars } = parseProgression(text);
   const state = {};
@@ -20,7 +20,7 @@ function renderChorus(styleId, text, { chorus = 1, bpm = 120, seed = 1 } = {}) {
     return renderBar(style, {
       segments: bar.chords, nextChord: nextBar.chords.find((s) => s.chord)?.chord ?? null,
       barIndex: i, barCount: bars.length, isFirstBar: i === 0, isLastBar: i === bars.length - 1,
-      chorus, bpm, beatsPerBar: 4, state, rng: createRng(seed * 1000 + i),
+      chorus, bpm, beatsPerBar: 4, state, bass, rng: createRng(seed * 1000 + i),
     });
   });
 }
@@ -108,11 +108,11 @@ for (const id of ['jazz', 'blues', 'rock']) {
   });
 }
 
-test('jazz bass walks: one note per beat, last note approaches the next root', () => {
+test('jazz bass walks: steady quarters give one note per beat, and the last note approaches the next root', () => {
   const prog = 'Dm7 | G7 | Cmaj7 | Cmaj7';
   const { bars } = parseProgression(prog);
   for (let seed = 1; seed <= 30; seed++) {
-    const out = renderChorus('jazz', prog, { seed });
+    const out = renderChorus('jazz', prog, { seed, bass: { rhythm: 'quarters' } });
     out.forEach((events, i) => {
       const bass = events.filter((e) => e.inst === 'bass');
       assert.equal(bass.length, 4);

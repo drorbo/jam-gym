@@ -4,7 +4,7 @@ import { MAX_BPM, MIN_BPM, RANDOM_MODES, describeInterval, INTERVAL_NAMES } from
 import { chordParts } from '../theory/chord.js';
 import { MAJOR_KEYS, MINOR_KEYS, keyPrefersFlats, parseKey } from '../theory/keys.js';
 import { describeSwing } from '../engine/feel.js';
-import { DRUM_SOUNDS, KEY_SOUNDS, defaultSwing, getStyle, listStyles, resolveTimbres } from '../styles/index.js';
+import { DRUM_SOUNDS, KEY_SOUNDS, defaultBass, defaultSwing, getStyle, listStyles, resolveTimbres } from '../styles/index.js';
 import { transposeProgressionText } from '../theory/progression.js';
 import { METER_IDS, getMeter } from '../theory/meter.js';
 import { EXAMPLES } from './state.js';
@@ -156,12 +156,12 @@ export function mountUI({ store, player }) {
   const patchMod = (patch) => patchConfig({ modulation: { ...store.get().config.modulation, ...patch } });
   const patchRamp = (patch) => patchConfig({ tempoRamp: { ...store.get().config.tempoRamp, ...patch } });
 
-  /** Choosing a style also sets the swing to that style's default, at the tempo it will be played at. */
+  /** Choosing a style also sets the swing and the bass line to that style's defaults (swing at the tempo it will be played at). */
   function setStyle(id) {
     const style = getStyle(id);
     const stopped = store.get().transport === 'stopped';
     const bpm = stopped ? style.defaultTempo : bpmNow();
-    patchConfig({ style: id, swing: defaultSwing(style, bpm) });
+    patchConfig({ style: id, swing: defaultSwing(style, bpm), bass: defaultBass(style) });
     if (stopped) player.setTempo(style.defaultTempo);
   }
 

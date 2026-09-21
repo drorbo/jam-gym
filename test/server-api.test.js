@@ -17,6 +17,24 @@ const withServer = (fn, env) => async () => {
 const cookieOf = (b) => b.jar.get('jg_session');
 const searchIds = async (b, qs) => (await b.get(`/api/browse?${qs}`)).json.items.map((t) => t.title);
 
+test('the bass line is stored with the track; junk is repaired, and older tracks without one get the style default', withServer(async ({ browser }) => {
+  const b = browser();
+  const bass = { rhythm: 'eighths', line: 90, tension: 10, approach: 'enclosure', pattern: 'walk' };
+  const r = await b.post('/api/tracks', { title: 'Busy bass', data: trackData({ config: { bass } }) });
+  assert.equal(r.status, 201);
+  assert.deepEqual((await b.get(`/api/tracks/${r.json.track.id}`)).json.track.data.config.bass, bass);
+
+  const junk = await b.post('/api/tracks', { title: 'Junk bass', data: trackData({ config: { bass: { rhythm: 'polka', line: 'loud', approach: 7 } } }) });
+  const fixed = (await b.get(`/api/tracks/${junk.json.track.id}`)).json.track.data.config.bass;
+  assert.equal(fixed.rhythm, 'mixed');
+  assert.ok(fixed.line >= 0 && fixed.line <= 100 && fixed.approach === 'mixed');
+
+  const old = trackData({ config: { style: 'blues' } });
+  delete old.config.bass;
+  const o = await b.post('/api/tracks', { title: 'Old blues', data: old });
+  assert.equal((await b.get(`/api/tracks/${o.json.track.id}`)).json.track.data.config.bass.pattern, 'mixed', 'the blues default');
+}));
+
 // ---- identity ------------------------------------------------------------------------------
 
 test('browsing and reading set no cookie and need no identity', withServer(async ({ browser }) => {

@@ -1,7 +1,7 @@
 // A track is the whole practice setup. These pure functions turn the app's state into a track's data and back,
 // and give a setup a fingerprint so the UI can tell when it has been edited since it was loaded.
 
-import { defaultSwing, getStyle } from '../styles/index.js';
+import { defaultBass, defaultSwing, getStyle } from '../styles/index.js';
 import { defaultState } from './state.js';
 
 export const DATA_VERSION = 1;
@@ -17,6 +17,7 @@ export function buildTrackData(state) {
     config: {
       style: config.style,
       swing: config.swing,
+      bass: { ...config.bass },
       loop: config.loop,
       countIn: config.countIn,
       sounds: { ...config.sounds },
@@ -35,7 +36,7 @@ export function setupSignature(data) {
   const { song, config, mixer } = data;
   return JSON.stringify([
     song.key, song.tempo, song.timeSignature, song.progressionText.trim(),
-    config.style, config.swing, config.loop, config.countIn, config.sounds, config.modulation, config.tempoRamp,
+    config.style, config.swing, config.bass, config.loop, config.countIn, config.sounds, config.modulation, config.tempoRamp,
     Object.keys(mixer).sort().map((k) => [k, mixer[k].volume, mixer[k].muted]),
   ]);
 }
@@ -50,7 +51,7 @@ export function dataFromLocalSave(item) {
   return {
     v: DATA_VERSION,
     song: { key: item.key, tempo: item.tempo, timeSignature: item.timeSignature, progressionText: item.text },
-    config: { ...d.config, style: style.id, swing: item.swing ?? defaultSwing(style, item.tempo) },
+    config: { ...d.config, style: style.id, swing: item.swing ?? defaultSwing(style, item.tempo), bass: defaultBass(style) },
     mixer: d.mixer,
   };
 }

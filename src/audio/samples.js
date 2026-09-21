@@ -4,7 +4,7 @@
 // samples/manifest.json. Banks are loaded on demand, so the app starts instantly and only
 // downloads the kit / keyboard you actually use.
 
-import { findVoice, layerGain, pickLayer, pickNote, pitchRate } from './samplemap.js';
+import { drumTrim, findVoice, layerGain, pickLayer, pickNote, pitchRate } from './samplemap.js';
 
 const DEFAULT_BASE = new URL('../../samples/', import.meta.url);
 
@@ -102,7 +102,7 @@ export function playSampledDrum(ctx, out, bank, voice, t, vel, level = 1) {
   src.buffer = buffer;
   src.playbackRate.value = layer.rate;
   const gain = ctx.createGain();
-  gain.gain.value = layerGain(vel, layer.ref) * level;
+  gain.gain.value = layerGain(vel, layer.ref) * level * drumTrim(voice);
   src.connect(gain).connect(out);
   src.start(t);
   return { src, gain };
