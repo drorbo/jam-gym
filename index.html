@@ -43,6 +43,7 @@
             <div><dt>Next</dt><dd id="stat-next">–</dd></div>
           </dl>
           <p class="headsup" id="headsup" aria-live="polite"></p>
+          <p class="loaded-now" id="loaded-now" hidden></p>
         </div>
 
         <div class="transport">
@@ -79,15 +80,51 @@
           <p class="msg" id="progmsg" role="status"></p>
           <div class="examples" id="examples" role="group" aria-label="Example progressions"></div>
 
-          <div class="saved">
-            <h2>Saved progressions</h2>
-            <form class="save-form" id="save-form" autocomplete="off">
-              <label class="sr-only" for="save-name">Name for this progression</label>
-              <input id="save-name" type="text" maxlength="60" placeholder="Name this progression" spellcheck="false">
-              <button class="chip" id="save-btn" type="submit">Save</button>
-            </form>
-            <p class="msg" id="save-msg" role="status"></p>
-            <ul class="saved-list" id="saved-list"></ul>
+          <!-- Tracks: my library and the community -->
+          <div class="tracks" id="tracks">
+            <div class="tracks-head">
+              <h2>Tracks</h2>
+              <div class="tabs" role="tablist" aria-label="Tracks">
+                <button type="button" role="tab" id="tab-mine" aria-selected="true" aria-controls="panel-mine">My tracks</button>
+                <button type="button" role="tab" id="tab-browse" aria-selected="false" aria-controls="panel-browse" tabindex="-1">Browse</button>
+              </div>
+            </div>
+
+            <p class="loaded-line" id="loaded-line" hidden></p>
+            <p class="msg tracks-msg" id="tracks-msg" role="status"></p>
+
+            <section id="panel-mine" role="tabpanel" aria-labelledby="tab-mine">
+              <div class="account" id="account"></div>
+              <div class="note" id="cookie-note" hidden></div>
+              <form class="save-form" id="save-form" autocomplete="off">
+                <label class="sr-only" for="save-name">Name for this track</label>
+                <input id="save-name" type="text" maxlength="80" placeholder="Name this track" spellcheck="false">
+                <button class="chip" id="save-btn" type="submit">Save</button>
+              </form>
+              <ul class="track-list" id="my-list"></ul>
+              <div class="local-box" id="local-box" hidden></div>
+            </section>
+
+            <section id="panel-browse" role="tabpanel" aria-labelledby="tab-browse" hidden>
+              <form class="browse-form" id="browse-form" role="search" autocomplete="off">
+                <label class="sr-only" for="browse-q">Search published tracks</label>
+                <input id="browse-q" type="search" maxlength="200" placeholder="Search titles, names or chords, e.g. Dm7 G7" spellcheck="false">
+                <div class="filters">
+                  <label class="field">Style <select id="f-style"></select></label>
+                  <label class="field">Time <select id="f-meter"></select></label>
+                  <label class="field">Key <select id="f-key"></select></label>
+                  <label class="field">Tempo
+                    <input id="f-bpm-min" type="number" min="40" max="220" inputmode="numeric" placeholder="from" aria-label="Lowest tempo">
+                    <span>to</span>
+                    <input id="f-bpm-max" type="number" min="40" max="220" inputmode="numeric" placeholder="to" aria-label="Highest tempo">
+                  </label>
+                  <label class="field">Sort <select id="f-sort"></select></label>
+                </div>
+              </form>
+              <p class="msg" id="browse-count" role="status"></p>
+              <ul class="track-list" id="browse-list"></ul>
+              <button class="chip" id="browse-more" type="button" hidden>Show more</button>
+            </section>
           </div>
         </div>
       </section>
@@ -115,6 +152,17 @@
           <h2>Style</h2>
           <div class="seg seg-col" id="styles" role="radiogroup" aria-label="Style"></div>
           <p class="hint" id="style-desc"></p>
+          <div class="swing" id="swing-box">
+            <div class="swing-head">
+              <label for="swing">Swing</label>
+              <output id="swing-val" for="swing"></output>
+            </div>
+            <input class="slider" id="swing" type="range" min="50" max="75" step="1" list="swing-marks" aria-describedby="swing-hint">
+            <datalist id="swing-marks"><option value="50"></option><option value="67"></option><option value="75"></option></datalist>
+            <div class="swing-ends" aria-hidden="true"><span>Straight</span><span>Triplet</span><span>Hard</span></div>
+            <p class="hint" id="swing-hint"></p>
+            <button class="chip" id="swing-reset" type="button" hidden></button>
+          </div>
           <div class="sounds">
             <label class="field">Drums
               <select id="snd-drums"></select>

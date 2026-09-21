@@ -15,6 +15,25 @@ export function swingMap(pos, swing) {
   return f < 0.5 ? b + f * 2 * swing : b + swing + (f - 0.5) * 2 * (1 - swing);
 }
 
+// Swing is shown to users as a percentage: how much of an eighth-note pair the first eighth takes.
+// 50% = straight, about 67% = triplet swing (2:1), 75% = hard, dotted swing (3:1).
+export const MIN_SWING = 50;
+export const MAX_SWING = 75;
+
+/** A percentage clamped to the supported range and rounded; `fallback` if it isn't a number. */
+export const clampSwing = (percent, fallback = MIN_SWING) =>
+  (Number.isFinite(percent) ? Math.min(MAX_SWING, Math.max(MIN_SWING, Math.round(percent))) : fallback);
+
+/** Plain-English name for a swing percentage. */
+export function describeSwing(percent) {
+  const p = clampSwing(percent);
+  if (p === MIN_SWING) return 'Straight eighths';
+  if (p < 58) return 'Barely swung';
+  if (p < 64) return 'Light swing';
+  if (p < 70) return 'Triplet swing (2:1)';
+  return 'Hard swing';
+}
+
 /** Apply swing to every event that isn't flagged `fixed`. Durations follow their end points. */
 export function applyFeel(events, swing) {
   if (Math.abs(swing - 0.5) < 1e-6) return events;

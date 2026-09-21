@@ -1,13 +1,28 @@
-# Jam Gym is a static site (no build step), so the image is just nginx plus the files.
-FROM nginx:stable-alpine
+# Jam Gym: one small Node process serves the static site and the tracks API. No npm packages, no build step.
+# The database uses Node's built-in SQLite, so the Node version matters (22.13 or newer).
+FROM node:24-alpine
 
-COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+ENV NODE_ENV=production \
+    HOST=0.0.0.0 \
+    PORT=8080 \
+    DATA_DIR=/data
 
-# Only what the browser needs. Tests, tools and docs stay out of the image.
-COPY index.html /usr/share/nginx/html/index.html
-COPY css /usr/share/nginx/html/css
-COPY fonts /usr/share/nginx/html/fonts
-COPY src /usr/share/nginx/html/src
-COPY samples /usr/share/nginx/html/samples
+WORKDIR /app
 
-EXPOSE 80
+# Only what runs. Tests, tools and docs stay out of the image.
+COPY package.json ./
+COPY server ./server
+COPY index.html ./index.html
+COPY css ./css
+COPY fonts ./fonts
+COPY src ./src
+COPY samples ./samples
+
+# /data holds the database and its backups. The compose file mounts a named volume there, so it survives rebuilds.
+# The `node` user (uid 1000) owns it, so the process never runs as root.
+RUN mkdir -p /data && chown node:node /data
+USER node
+VOLUME /data
+
+EXPOSE 8080
+CMD ["node", "server/index.js"]

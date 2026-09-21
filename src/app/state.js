@@ -1,6 +1,7 @@
 // App state: defaults, a tiny observable store, and localStorage persistence.
 
-import { DRUM_SOUNDS, KEY_SOUNDS, getStyle } from '../styles/index.js';
+import { DRUM_SOUNDS, KEY_SOUNDS, defaultSwing, getStyle } from '../styles/index.js';
+import { clampSwing } from '../engine/feel.js';
 import { MAX_BPM, MIN_BPM } from '../engine/planner.js';
 import { parseKey } from '../theory/keys.js';
 import { METER_IDS } from '../theory/meter.js';
@@ -21,6 +22,7 @@ export const defaultState = () => ({
   song: { key: 'C', tempo: 132, timeSignature: '4/4', progressionText: 'Cmaj7 | Am7 | Dm7 | G7' },
   config: {
     style: 'jazz',
+    swing: defaultSwing(getStyle('jazz'), 132), // percent; picking a style resets this to that style's default
     loop: true,
     countIn: true,
     sounds: { drums: 'auto', keys: 'auto' },
@@ -65,15 +67,18 @@ export function sanitize(saved) {
   const c = saved.config ?? {};
   const m = c.modulation ?? {};
   const r = c.tempoRamp ?? {};
+  const tempo = num(s.tempo, MIN_BPM, MAX_BPM, d.song.tempo);
+  const style = getStyle(c.style);
   return {
     song: {
       key: parseKey(s.key) ? s.key : d.song.key,
-      tempo: num(s.tempo, MIN_BPM, MAX_BPM, d.song.tempo),
+      tempo,
       timeSignature: oneOf(s.timeSignature, METER_IDS, '4/4'),
       progressionText: typeof s.progressionText === 'string' && s.progressionText.trim() ? s.progressionText : d.song.progressionText,
     },
     config: {
-      style: getStyle(c.style).id,
+      style: style.id,
+      swing: clampSwing(c.swing, defaultSwing(style, tempo)), // missing or invalid -> the style's default
       loop: c.loop !== false,
       countIn: c.countIn !== false,
       sounds: {

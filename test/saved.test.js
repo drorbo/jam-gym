@@ -6,7 +6,7 @@ import {
 } from '../src/app/saved.js';
 
 const snap = (over = {}) => ({
-  name: 'Giant steps A', text: 'Bmaj7 D7 | Gmaj7 Bb7 | Ebmaj7', key: 'B', timeSignature: '4/4', style: 'jazz', tempo: 140, ...over,
+  name: 'Giant steps A', text: 'Bmaj7 D7 | Gmaj7 Bb7 | Ebmaj7', key: 'B', timeSignature: '4/4', style: 'jazz', tempo: 140, swing: 62, ...over,
 });
 
 test('names are trimmed and whitespace-collapsed', () => {
@@ -22,7 +22,7 @@ test('saving adds an entry with everything needed to bring the setup back', () =
   assert.equal(r.list.length, 1);
   assert.deepEqual(
     { ...r.item, id: 'x' },
-    { id: 'x', name: 'Giant steps A', text: 'Bmaj7 D7 | Gmaj7 Bb7 | Ebmaj7', key: 'B', timeSignature: '4/4', style: 'jazz', tempo: 140, savedAt: 1000 },
+    { id: 'x', name: 'Giant steps A', text: 'Bmaj7 D7 | Gmaj7 Bb7 | Ebmaj7', key: 'B', timeSignature: '4/4', style: 'jazz', tempo: 140, swing: 62, savedAt: 1000 },
   );
   assert.ok(r.item.id.length > 3);
 });
@@ -117,4 +117,20 @@ test('stored data is validated: bad entries dropped, odd values repaired, order 
   assert.equal(new Set(list.map((x) => x.id)).size, list.length, 'ids are unique');
   assert.deepEqual(sanitizeSaved('garbage'), []);
   assert.deepEqual(sanitizeSaved(null), []);
+});
+
+test('swing is saved with the setup; missing or silly values become "the style default" (null) or are clamped', () => {
+  assert.equal(saveSnapshot([], snap({ swing: 58 })).item.swing, 58);
+  assert.equal(saveSnapshot([], snap({ swing: 10 })).item.swing, 50);
+  assert.equal(saveSnapshot([], snap({ swing: 99 })).item.swing, 75);
+  assert.equal(saveSnapshot([], snap({ swing: undefined })).item.swing, null);
+  assert.equal(saveSnapshot([], snap({ swing: NaN })).item.swing, null);
+  // older stored entries have no swing at all
+  const list = sanitizeSaved([
+    { id: 'a', name: 'Old', text: 'C | F', key: 'C', timeSignature: '4/4', style: 'blues', tempo: 100 },
+    { id: 'b', name: 'New', text: 'C | F', key: 'C', timeSignature: '4/4', style: 'rock', tempo: 120, swing: 60.4 },
+    { id: 'c', name: 'Bad', text: 'C | F', key: 'C', timeSignature: '4/4', style: 'rock', tempo: 120, swing: 'lots' },
+  ]);
+  const by = Object.fromEntries(list.map((x) => [x.name, x.swing]));
+  assert.deepEqual(by, { Old: null, New: 60, Bad: null });
 });

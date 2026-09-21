@@ -11,7 +11,7 @@
 //   }
 // Add a style by writing one of these and calling registerStyle(). The UI lists the registry.
 
-import { applyFeel, humanize } from '../engine/feel.js';
+import { applyFeel, clampSwing, humanize } from '../engine/feel.js';
 import { getMeter } from '../theory/meter.js';
 import { blues } from './blues.js';
 import { jazz } from './jazz.js';
@@ -54,6 +54,15 @@ export function resolveTimbres(style, sounds = {}) {
   };
 }
 
+/**
+ * The swing percentage a style starts with (what choosing the style sets the slider to).
+ * Jazz eases off as the tempo rises, so this depends on the tempo it will be played at.
+ */
+export function defaultSwing(style, bpm) {
+  const ratio = typeof style.feel.swing === 'function' ? style.feel.swing(bpm) : style.feel.swing;
+  return clampSwing(ratio * 100);
+}
+
 export const getStyle = (id) => registry.get(id) ?? registry.get('jazz');
 export const listStyles = () => [...registry.values()];
 
@@ -73,6 +82,7 @@ export const listStyles = () => [...registry.values()];
  * @property {number} beatsPerBar  bar length in quarter notes
  * @property {object} state  per-run memory owned by the style (voice-leading etc.)
  * @property {Record<string,string>} [timbres] sound choices (defaults to the style's own)
+ * @property {number} [swing] user swing, 0.5 (straight) to 0.75 (hard); omitted = the style's own feel. 4/4 only.
  * @property {ReturnType<import('../engine/rng.js').createRng>} rng
  */
 
@@ -84,8 +94,10 @@ export const listStyles = () => [...registry.values()];
 export function renderBar(style, ctx) {
   if (!ctx.meter) ctx = { ...ctx, meter: getMeter('4/4') }; // callers may omit the meter: 4/4 is the default
   // Swing re-times eighths inside a beat. The /8 meters get their lilt from their 3+2 groupings instead.
+  // The user's swing percentage (ctx.swing, 0.5-0.75) wins; without one the style's own feel applies.
   const isFour = !ctx.meter || ctx.meter.id === '4/4';
-  const swing = !isFour ? 0.5 : typeof style.feel.swing === 'function' ? style.feel.swing(ctx.bpm) : style.feel.swing;
+  const styleSwing = typeof style.feel.swing === 'function' ? style.feel.swing(ctx.bpm) : style.feel.swing;
+  const swing = !isFour ? 0.5 : Number.isFinite(ctx.swing) ? clampSwing(ctx.swing * 100) / 100 : styleSwing;
   let events = [];
   for (const part of Object.values(style.parts)) events.push(...part(ctx));
   events = applyFeel(events, swing);

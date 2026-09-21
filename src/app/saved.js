@@ -4,6 +4,7 @@
 // tempo. It is stored on its own, apart from the app's settings, so it never gets lost when settings change.
 // Everything here is pure except loadSaved/persistSaved, so it can be tested without a browser.
 
+import { clampSwing } from '../engine/feel.js';
 import { MAX_BPM, MIN_BPM } from '../engine/planner.js';
 import { getStyle } from '../styles/index.js';
 import { parseKey } from '../theory/keys.js';
@@ -23,6 +24,7 @@ export const MAX_SAVED = 200;
  * @property {string} timeSignature
  * @property {string} style
  * @property {number} tempo
+ * @property {number|null} swing    swing percentage, or null = whatever the style's default is (older saves)
  * @property {number} savedAt       epoch ms
  */
 
@@ -42,7 +44,7 @@ const newId = (now) => `${now.toString(36)}${(counter++).toString(36)}${Math.ran
 /**
  * Save (or update) a snapshot. A name that already exists, ignoring case, is updated in place.
  * @param {SavedProgression[]} list
- * @param {{name:string, text:string, key:string, timeSignature:string, style:string, tempo:number}} snapshot
+ * @param {{name:string, text:string, key:string, timeSignature:string, style:string, tempo:number, swing?:number}} snapshot
  * @returns {{ok:true, list:SavedProgression[], item:SavedProgression, updated:boolean} | {ok:false, error:string}}
  */
 export function saveSnapshot(list, snapshot, now = Date.now()) {
@@ -62,6 +64,7 @@ export function saveSnapshot(list, snapshot, now = Date.now()) {
     timeSignature: snapshot.timeSignature,
     style: snapshot.style,
     tempo: snapshot.tempo,
+    swing: Number.isFinite(snapshot.swing) ? clampSwing(snapshot.swing) : null,
     savedAt: now,
   };
   const next = existing ? list.map((x) => (x.id === existing.id ? item : x)) : [...list, item];
@@ -102,6 +105,7 @@ export function sanitizeSaved(raw) {
       id, name, text, key: r.key, timeSignature,
       style: getStyle(r.style).id,
       tempo: Number.isFinite(r.tempo) ? Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(r.tempo))) : 120,
+      swing: Number.isFinite(r.swing) ? clampSwing(r.swing) : null,
       savedAt: Number.isFinite(r.savedAt) ? r.savedAt : 0,
     });
     if (out.length >= MAX_SAVED) break;

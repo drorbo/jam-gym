@@ -4,17 +4,19 @@ A backing band for improvisers. Type a chord progression, pick a style, press pl
 The band (drums, bass, keys or guitar) loops the progression indefinitely and can move the key and
 speed up the tempo on its own, so you can practise the same idea in all twelve keys.
 
-No dependencies and no build step. Recorded drums and keyboards load on demand; everything else is
-synthesised in the browser. It works offline.
+No npm dependencies and no build step. Recorded drums and keyboards load on demand; everything else is
+synthesised in the browser. The band plays offline; saving and sharing tracks needs the server.
 
 ## Run it
 
 ```
-npm start        # serves http://localhost:5173
-npm test         # 170 tests, Node's built-in runner, no install needed
+npm start        # serves http://localhost:5173 (the site and the tracks API), data in ./data
+npm test         # 266 tests, Node's built-in runner, no install needed
+npm run admin -- stats     # moderation and upkeep, see "Tracks" below
 ```
 
-Any static file server works. The app must be served over `http://` (ES modules don't load from `file://`).
+Needs Node 22.13 or newer (the database is Node's built-in `node:sqlite`). The app must be served over `http://`
+(ES modules don't load from `file://`), and the tracks features need the Node server rather than a plain file server.
 
 Live at **[jam-gym.eardle.com](https://jam-gym.eardle.com)**. How it is deployed: [docs/deployment.md](docs/deployment.md).
 
@@ -31,8 +33,11 @@ Live at **[jam-gym.eardle.com](https://jam-gym.eardle.com)**. How it is deployed
   meter keeps the eighth-note pace the same; the tempo hint says what that means in each meter.
 - **Sounds**: drums are a Jazz kit, a Rock kit or Electronic drums. Keys are a Grand piano, a Wurlitzer, or
   the synth electric piano, organ or guitar. Each style has its own default; you can override either.
-- **Saved progressions**: name the current setup and press Save. It keeps the progression, key, time signature, style
-  and tempo. Saving under an existing name updates it, clicking a saved item brings it all back, and Delete has Undo.
+- **Swing**: a percentage slider from 50% (straight eighths) through about 67% (triplet swing) to 75% (hard swing).
+  Choosing a style sets it to that style's default (jazz 65% at its default tempo, blues 67%, rock 50%; jazz eases toward
+  straighter as the default tempo rises); a small button restores the default after you've moved it. It applies from
+  the next bar, is saved with saved progressions, and is disabled in 6/8, 7/8 and 10/8, whose feel comes from their groupings.
+- **Tracks**: see below. A track is the whole setup, not just the chords.
 - **Key change**: *Step* moves by an interval (−11…+11 semitones, named) every N loops.
   *Random* picks a key every N loops: never the same twice, completely random, all 12 in random order,
   circle of fifths, circle of fourths, or chromatic.
@@ -42,6 +47,27 @@ Live at **[jam-gym.eardle.com](https://jam-gym.eardle.com)**. How it is deployed
   time-signature changes and loaded songs apply from the next chorus. Invalid text is flagged and the last
   valid version keeps playing.
 - Space plays and pauses.
+
+## Tracks: save, publish, search, like
+
+Under the progression is the **Tracks** panel.
+
+- **My tracks**: name the current setup and press Save. A track keeps everything: progression, key, time signature,
+  tempo, style, swing, sounds, key-change and tempo-ramp settings, loop, count-in and the mixer. Saving under an
+  existing name updates it. Load brings it all back; Replace with current setup overwrites it.
+- **Identity** is one random ID in an HttpOnly cookie (`jg_session`), set the first time you save, publish or like, never
+  for just listening. Your name defaults to something like `Player-4F2K` and can be changed. A **recovery code** opens
+  your library in another browser; keep it private. **Delete my data** removes your name, tracks and likes.
+- **Publish** makes a track public under your name (with a confirmation that says so); **Make private** takes it back.
+  Published tracks have a link (`/?track=ID`) that opens them straight into the player.
+- **Browse**: search titles, authors and chords together (`Dm7 G7` finds tracks that contain those chords, however they
+  are spelled), filter by style, time signature, key and tempo, sort by best match, most liked or newest. Like a track
+  with the heart, or save a copy to your own library. Report sends it to moderation; three different reporters hide it.
+- Offline or with the server down, Save keeps the track on this device. Older browser-only saves are listed under
+  "On this device" and can be moved into the library.
+
+Design and decisions: [docs/tracks-design.md](docs/tracks-design.md). Moderation is a command on the server:
+`docker exec jam-gym-web-1 node server/admin.js reports` (also `stats show hide restore delete ban unban backup`).
 
 ## How it is put together
 
@@ -55,7 +81,11 @@ src/styles/    jazz, blues, rock + registry                data + generators tha
 src/audio/     voices        synthesised instruments
                samples       loader + player for recorded instruments (samplemap: pure selection logic)
                engine, ticker  mixer bus, worker-driven timer
-src/app/       state, saved, player, ui                    store, saved progressions, wiring, DOM
+src/app/       state, player, ui                           store, playback wiring, DOM
+               api, tracks-model, tracks, tracks-ui        tracks: HTTP client, setup <-> track data, controller, panel
+               saved                                       older browser-only saves (offline fallback, migration)
+server/        index, app, static, db, tracks, users,      the site + /api on Node's built-in http and node:sqlite;
+               search, trackdata, limits, backup, admin    reuses src/app/state.js and src/theory to validate tracks
 samples/       recorded kits and keyboards + manifest.json + CREDITS.md
 tools/         build_samples.py                            rebuilds ./samples from the original libraries
 ```
@@ -116,5 +146,4 @@ quarter notes. Swing and humanising are applied afterwards. A new instrument is 
 
 Challenge mode (a random `{ song, config }` pair), natural-language modulation ("up a minor third every 2 loops",
 which would produce the same `modulation` object the UI does), more time signatures (add a line to `theory/meter.js`),
-exporting and importing saved progressions as a file (they live in this browser's storage, so clearing site data
-clears them), recorded guitar and bass, sections and fills, metronome, recording/microphone, scale suggestions.
+sign-in with Google or email (the users table has room for it), tags and comments on tracks, exporting tracks as a file, recorded guitar and bass, sections and fills, metronome, recording/microphone, scale suggestions.

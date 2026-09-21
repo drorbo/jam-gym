@@ -10,7 +10,8 @@
 #     eardle server, so it uses the same alias and key.
 #   - First-time setup on the server (clone, nginx site) done once, per docs/deployment.md.
 #
-# This script only touches ~/drorbo/jam-gym and the `jam-gym` Compose project. It never runs a
+# This script only touches ~/drorbo/jam-gym and the `jam-gym` Compose project (its container, its image and the
+# `jam-gym_data` volume, which holds users' tracks and is kept by `up -d`). It never runs a
 # command that could affect eardle's containers, and it contains no credentials.
 
 set -euo pipefail
@@ -41,6 +42,7 @@ echo "==> Verifying the public site (000 means not reachable yet, e.g. DNS or ng
 # The manifest only exists on Jam Gym, so a 200 here proves the request reached Jam Gym and not eardle.
 curl -s -o /dev/null -w 'jam-gym home:      %{http_code}\n' https://jam-gym.eardle.com/ || true
 curl -s -o /dev/null -w 'jam-gym manifest:  %{http_code}\n' https://jam-gym.eardle.com/samples/manifest.json || true
+curl -s -o /dev/null -w 'jam-gym api health: %{http_code}\n' https://jam-gym.eardle.com/api/health || true
 curl -s -o /dev/null -w 'eardle (unchanged): %{http_code}\n' https://eardle.com/ || true
 
 echo "==> Deploy complete"

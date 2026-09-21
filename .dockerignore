@@ -4,8 +4,7 @@ test
 tools
 scripts
 docs
-deploy/host-nginx
-serve.mjs
-package.json
+deploy
+data
 README.md
 .env*

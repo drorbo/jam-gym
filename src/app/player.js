@@ -11,6 +11,7 @@ import { mod12 } from '../theory/notes.js';
 import { parseProgression, transposeProgressionText } from '../theory/progression.js';
 import { DRUM_SOUNDS, KEY_SOUNDS, getStyle, resolveTimbres } from '../styles/index.js';
 import { removeSaved, restoreSaved, saveSnapshot, signatureOf } from './saved.js';
+import { buildTrackData, dataFromLocalSave } from './tracks-model.js';
 
 /** Transport-facing state shown by the UI while playing. */
 const IDLE_VIEW = {
@@ -221,31 +222,47 @@ export class Player {
     const { song, config, saved } = this.store.get();
     const r = saveSnapshot(saved, {
       name, text: song.progressionText, key: song.key, timeSignature: song.timeSignature, style: config.style, tempo: song.tempo,
+      swing: config.swing,
     });
     if (r.ok) this.store.set({ saved: r.list, activeSaved: { id: r.item.id, signature: signatureOf(r.item) } });
     return r;
   }
 
   /**
-   * Bring a saved setup back. While playing, the progression and key take effect at the next chorus
-   * and tempo and style straight away.
+   * Bring back a whole setup (a track, or a locally saved progression): progression, key, meter, tempo, style, swing,
+   * sounds, key-change and tempo-ramp settings, loop and count-in, and the mixer.
+   * While playing, tempo, style, sounds and the mixer apply straight away; the progression, key and meter take effect
+   * at the next chorus (a loaded key is jumped to then, and modulation carries on from it).
+   * @param {ReturnType<typeof import('./tracks-model.js').buildTrackData>} data
+   */
+  applySetup(data) {
+    const live = this.isRunning && this.conductor?.running;
+    const { song, config, mixer } = data;
+    this.updateSong({
+      timeSignature: song.timeSignature, key: song.key, progressionText: song.progressionText,
+      ...(live ? {} : { tempo: song.tempo }),
+    });
+    this.store.set({ config: { ...this.store.get().config, ...config }, mixer });
+    for (const [inst, level] of Object.entries(mixer)) this.bus?.setLevel(inst, level);
+    if (live) {
+      this.conductor.requestKey(parseKey(song.key).pc);
+      this.setTempo(song.tempo);
+    }
+  }
+
+  /** The current setup, ready to store as a track. */
+  currentSetup() {
+    return buildTrackData(this.store.get());
+  }
+
+  /**
+   * Bring back a progression saved on this device (the older, browser-only list).
    */
   loadSaved(id) {
     const item = this.store.get().saved.find((x) => x.id === id);
     if (!item) return null;
-    const live = this.isRunning && this.conductor?.running;
-    this.updateSong({
-      timeSignature: item.timeSignature, key: item.key, progressionText: item.text,
-      ...(live ? {} : { tempo: item.tempo }),
-    });
-    this.store.set({
-      config: { ...this.store.get().config, style: item.style },
-      activeSaved: { id: item.id, signature: signatureOf(item) },
-    });
-    if (live) {
-      this.conductor.requestKey(parseKey(item.key).pc);
-      this.setTempo(item.tempo);
-    }
+    this.applySetup(dataFromLocalSave(item));
+    this.store.set({ activeSaved: { id: item.id, signature: signatureOf(item) } });
     return item;
   }
 

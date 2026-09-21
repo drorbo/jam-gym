@@ -1,14 +1,15 @@
 {
   "name": "jam-gym",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Backing-band practice tool: enter a progression, pick a style, jam.",
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node serve.mjs",
+    "start": "node server/index.js",
+    "admin": "node server/admin.js",
     "test": "node --test"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.13"
   }
 }

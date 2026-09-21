@@ -3,10 +3,10 @@
 import { MAX_BPM, MIN_BPM, RANDOM_MODES, describeInterval, INTERVAL_NAMES } from '../engine/planner.js';
 import { chordParts } from '../theory/chord.js';
 import { MAJOR_KEYS, MINOR_KEYS, keyPrefersFlats, parseKey } from '../theory/keys.js';
-import { DRUM_SOUNDS, KEY_SOUNDS, getStyle, listStyles, resolveTimbres } from '../styles/index.js';
+import { describeSwing } from '../engine/feel.js';
+import { DRUM_SOUNDS, KEY_SOUNDS, defaultSwing, getStyle, listStyles, resolveTimbres } from '../styles/index.js';
 import { transposeProgressionText } from '../theory/progression.js';
 import { METER_IDS, getMeter } from '../theory/meter.js';
-import { describeSaved, findByName, signatureOf } from './saved.js';
 import { EXAMPLES } from './state.js';
 
 const $ = (id) => document.getElementById(id);
@@ -73,8 +73,6 @@ export function mountUI({ store, player }) {
   let lastGoodBars = [];
   let chordSig = '';
   let pipMeter = '';
-  let savedSig = '';
-  let flashTimer = null;
 
   // ---- static content ------------------------------------------------------------------
 
@@ -152,93 +150,19 @@ export function mountUI({ store, player }) {
     examplesEl.append(b);
   }
 
-  // ---- saved progressions ----------------------------------------------------------------
-
-  const saveName = $('save-name');
-
-  /** A short status line under the save box, with an optional Undo. */
-  function say(text, undoItem = null) {
-    const box = $('save-msg');
-    box.replaceChildren(text);
-    if (undoItem) {
-      const b = el('button', '', 'Undo');
-      b.type = 'button';
-      b.addEventListener('click', () => { player.restoreDeleted(undoItem); say(`Restored "${undoItem.name}".`); });
-      box.append(b);
-    }
-    clearTimeout(flashTimer);
-    flashTimer = setTimeout(() => { $('save-msg').replaceChildren(); }, 9000);
-  }
-
-  $('save-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const r = player.saveCurrent(saveName.value);
-    if (r.ok) say(r.updated ? `Updated "${r.item.name}".` : `Saved "${r.item.name}".`);
-    else say(r.error);
-  });
-  saveName.addEventListener('input', () => renderSaveButton(store.get()));
-
-  $('saved-list').addEventListener('click', (e) => {
-    const load = e.target.closest('.saved-load');
-    const del = e.target.closest('.saved-del');
-    if (load) {
-      const item = player.loadSaved(load.dataset.id);
-      if (item) { saveName.value = item.name; say(`Loaded "${item.name}".`); }
-    } else if (del) {
-      const item = player.deleteSaved(del.dataset.id);
-      if (item) say(`Deleted "${item.name}".`, item);
-    }
-  });
-
-  function renderSaveButton(state) {
-    const exists = Boolean(findByName(state.saved, saveName.value));
-    $('save-btn').textContent = exists ? 'Update' : 'Save';
-    $('save-btn').classList.toggle('is-update', exists);
-  }
-
-  function renderSaved(state) {
-    const { saved, activeSaved, song } = state;
-    const current = signatureOf({ text: song.progressionText, key: song.key, timeSignature: song.timeSignature });
-    const activeState = activeSaved && activeSaved.signature === current ? 'loaded' : activeSaved ? 'loaded, edited' : '';
-    const sig = JSON.stringify([saved.map((x) => [x.id, x.savedAt, x.name]), activeSaved?.id, activeState]);
-    if (sig !== savedSig) {
-      savedSig = sig;
-      const list = $('saved-list');
-      list.replaceChildren();
-      if (!saved.length) {
-        list.append(el('li', 'saved-empty', 'Nothing saved yet. Name the progression above and press Save to keep it, along with its key, time signature, style and tempo.'));
-      }
-      for (const item of saved) {
-        const li = el('li', 'saved-item');
-        const active = activeSaved?.id === item.id;
-        li.classList.toggle('is-active', active);
-        const load = el('button', 'saved-load');
-        load.type = 'button';
-        load.dataset.id = item.id;
-        load.title = 'Load this progression';
-        const name = el('span', 'saved-name', item.name);
-        if (active) name.dataset.state = activeState;
-        load.append(name, el('span', 'saved-meta', describeSaved(item)));
-        const del = el('button', 'saved-del', 'Delete');
-        del.type = 'button';
-        del.dataset.id = item.id;
-        del.setAttribute('aria-label', `Delete ${item.name}`);
-        li.append(load, del);
-        list.append(li);
-      }
-    }
-    renderSaveButton(state);
-  }
-
   // ---- actions -------------------------------------------------------------------------
 
   const patchConfig = (patch) => store.set({ config: { ...store.get().config, ...patch } });
   const patchMod = (patch) => patchConfig({ modulation: { ...store.get().config.modulation, ...patch } });
   const patchRamp = (patch) => patchConfig({ tempoRamp: { ...store.get().config.tempoRamp, ...patch } });
 
+  /** Choosing a style also sets the swing to that style's default, at the tempo it will be played at. */
   function setStyle(id) {
-    patchConfig({ style: id });
-    if (store.get().transport === 'stopped') player.setTempo(getStyle(id).defaultTempo);
+    const style = getStyle(id);
+    const stopped = store.get().transport === 'stopped';
+    const bpm = stopped ? style.defaultTempo : bpmNow();
+    patchConfig({ style: id, swing: defaultSwing(style, bpm) });
+    if (stopped) player.setTempo(style.defaultTempo);
   }
 
   const readInt = (input, lo, hi, fallback) => {
@@ -265,6 +189,13 @@ export function mountUI({ store, player }) {
   $('bpm').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
   $('bpm-slider').addEventListener('input', (e) => player.setTempo(Number(e.target.value)));
   $('meter').addEventListener('change', (e) => player.setTimeSignature(e.target.value));
+
+  // swing applies from the next bar
+  $('swing').addEventListener('input', (e) => patchConfig({ swing: Number(e.target.value) }));
+  $('swing-reset').addEventListener('click', () => {
+    const { config } = store.get();
+    patchConfig({ swing: defaultSwing(getStyle(config.style), bpmNow()) });
+  });
 
   const taps = [];
   $('tap').addEventListener('click', () => {
@@ -473,6 +404,20 @@ export function mountUI({ store, player }) {
     const style = getStyle(config.style);
     $('style-desc').textContent = style.description;
 
+    // swing: a percentage (50 straight, ~67 triplet, 75 hard); only meaningful in 4/4
+    const swingDefault = defaultSwing(style, bpm);
+    const isFour = song.timeSignature === '4/4';
+    $('swing-box').classList.toggle('off', !isFour);
+    $('swing').disabled = !isFour;
+    if (document.activeElement !== $('swing')) $('swing').value = String(config.swing);
+    $('swing-val').textContent = isFour ? `${config.swing}%` : '–';
+    $('swing-hint').textContent = isFour
+      ? `${describeSwing(config.swing)}${config.swing === swingDefault ? ' · style default' : ''}`
+      : 'Swing applies in 4/4. The 6/8, 7/8 and 10/8 grooves get their lilt from their groupings.';
+    const resetBtn = $('swing-reset');
+    resetBtn.hidden = !isFour || config.swing === swingDefault;
+    resetBtn.textContent = `Style default: ${swingDefault}%`;
+
     // sound pickers: say which sound "Style default" means right now
     const t = resolveTimbres(style, {});
     const nameOf = (list, id) => list.find((x) => x.id === id)?.name ?? id;
@@ -550,7 +495,6 @@ export function mountUI({ store, player }) {
     renderBars(state, bars);
     renderStage(state, bars);
     renderControls(state);
-    renderSaved(state);
     if (state.theme !== lastTheme) { lastTheme = state.theme; renderTheme(state.theme); }
   }
 
