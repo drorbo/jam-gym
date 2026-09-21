@@ -27,43 +27,56 @@ browser ─► Cloudflare ─► host nginx (TLS, hostname) ─► 127.0.0.1:310
 
 ## Shipping a change
 
+One command does the whole path, from your working tree to a verified live site:
+
+```bash
+bash scripts/ship.sh -m "What changed and why"      # or: npm run ship -- -m "..."
+```
+
+In order, it: checks you are on `main` and up to date; **runs the tests and stops if any fail**; commits everything with
+your message; pushes to GitHub; checks the server and the data volume; records eardle's state; deploys; waits for the
+container to be healthy; then verifies the live site and that eardle is untouched. It ends with `Shipped <sha> in Ns`
+or a list of what failed and the rollback command. A typical run takes about a minute.
+
+| Command | What it does |
+| --- | --- |
+| `bash scripts/ship.sh -m "msg"` | test, commit all changes, push, deploy, verify. Repeat `-m` for more paragraphs (as with `git commit`). |
+| `bash scripts/ship.sh` | the same for commits you already made (no `-m`; it refuses if the tree is dirty). |
+| `bash scripts/ship.sh --dry-run -m "msg"` | print the plan and check the server, change nothing. |
+| `bash scripts/ship.sh --skip-tests ...` | skip the tests. Only for changes that cannot affect code (docs, scripts). |
+| `bash scripts/ship.sh --force` | rebuild even if the server already runs this commit. |
+| `bash scripts/ship.sh --rollback <sha>` | put an earlier commit live (no tests, commit or push). The next normal ship returns to `main`. |
+| `bash scripts/deploy-prod.sh [sha]` | only the deploy step (pull, build, recreate, wait for healthy), no tests, no push. |
+
+**What the verification checks:** the home page and `/api/health` answer; the entry script is versioned and cached
+immutably; the page carries its import map and a CSP header; server code is not reachable (`/server/config.js` is 404);
+the sample manifest loads; eardle's home page and `/learn` still answer; the number of stored tracks did not drop; and
+eardle's containers (ids and start times) and nginx config are identical to before the deploy. If any check fails the
+script exits non-zero and prints `bash scripts/ship.sh --rollback <previous sha>`.
+
+**A failing test blocks everything**, so nothing half-shipped ever reaches GitHub or the server. Nothing is deployed
+when the server already runs the commit you are shipping.
+
+Manual equivalent, if ever needed:
+
 ```bash
 git push origin main
-bash scripts/deploy-prod.sh
-```
-
-The script pulls on the server, rebuilds the image, recreates the container, and checks the public URLs (including
-that eardle still answers). Always use `docker compose -f docker-compose.yml` on the server.
-
-Manual equivalent:
-
-```bash
 ssh eardle-prod "cd ~/drorbo/jam-gym && git pull --ff-only origin main"
-ssh eardle-prod "cd ~/drorbo/jam-gym && docker compose -f docker-compose.yml build web"
-ssh eardle-prod "cd ~/drorbo/jam-gym && docker compose -f docker-compose.yml up -d web"
+ssh eardle-prod "cd ~/drorbo/jam-gym && docker compose -f docker-compose.yml up -d --build web"
 ssh eardle-prod "docker logs jam-gym-web-1 --tail 15"
-curl -s -o /dev/null -w '%{http_code}\n' https://jam-gym.eardle.com/
+curl -s https://jam-gym.eardle.com/api/health
 ```
 
-## Operating it
+### Why script addresses carry a version
 
-```bash
-# health, and what is in the library
-ssh eardle-prod "curl -s http://127.0.0.1:3100/api/health"
-ssh eardle-prod "docker exec jam-gym-web-1 node server/admin.js stats"
-
-# moderation: reports queue, look at a track, hide / restore / delete it, ban or unban its author
-ssh eardle-prod "docker exec jam-gym-web-1 node server/admin.js reports"
-ssh eardle-prod "docker exec jam-gym-web-1 node server/admin.js hide TRACK_ID"
-
-# take a backup now, then copy it off the server
-ssh eardle-prod "docker exec jam-gym-web-1 node server/admin.js backup"
-ssh eardle-prod "docker cp jam-gym-web-1:/data/backups ~/jam-gym-backups"
-```
-
-Environment (set in `docker-compose.yml`): `TRUST_PROXY=1` (believe the host nginx's `X-Forwarded-Proto` and Cloudflare's
-client IP, which is safe only because the port is published on loopback), `BACKUPS=1`, `DATA_DIR=/data`.
-The server sends a Content-Security-Policy and refuses cross-site writes, so nginx needs no extra headers.
+Cloudflare sits in front of the site and keeps `.js` and `.css` files in browsers for up to four hours, overriding the
+`Cache-Control: no-cache` the server sends (it is a zone-wide setting shared with eardle, so it is not changed). After a
+deploy, a returning visitor would get the new page with old scripts. So the server rewrites `index.html` when it starts:
+the stylesheet and entry script get `?v=<content hash>`, and an import map gives every module the same, so a changed file
+has a new address and can never be stale. An address with the file's current hash is cached for a year (`immutable`);
+anything else revalidates. The CSP allows the import map by its hash. Nothing to do on your part: it follows from the
+file contents (`server/static.js`, tested in `test/server-unit.test.js`). If you add a script that is not under `src/`
+or a stylesheet not under `css/`, it will not be versioned.
 
 ## First-time setup (already done once)
 

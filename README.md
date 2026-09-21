@@ -11,7 +11,7 @@ synthesised in the browser. The band plays offline; saving and sharing tracks ne
 
 ```
 npm start        # serves http://localhost:5173 (the site and the tracks API), data in ./data
-npm test         # 296 tests, Node's built-in runner, no install needed
+npm test         # 300 tests, Node's built-in runner, no install needed
 npm run admin -- stats     # moderation and upkeep, see "Tracks" below
 ```
 
@@ -19,6 +19,7 @@ Needs Node 22.13 or newer (the database is Node's built-in `node:sqlite`). The a
 (ES modules don't load from `file://`), and the tracks features need the Node server rather than a plain file server.
 
 Live at **[jam-gym.eardle.com](https://jam-gym.eardle.com)**. How it is deployed: [docs/deployment.md](docs/deployment.md).
+To ship a change (tests, commit, push, deploy, verify, in one go): `bash scripts/ship.sh -m "what changed"`.
 
 ## Using it
 

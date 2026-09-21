@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node server/index.js",
     "admin": "node server/admin.js",
-    "test": "node --test"
+    "test": "node --test",
+    "ship": "bash scripts/ship.sh",
+    "deploy": "bash scripts/deploy-prod.sh"
   },
   "engines": {
     "node": ">=22.13"
