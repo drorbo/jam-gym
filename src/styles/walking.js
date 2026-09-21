@@ -25,56 +25,12 @@ const CENTER = 39;
 const BEAM = 36;
 
 // ---- settings ----------------------------------------------------------------------------
+// The lists and the checking live in settings.js (one schema for the whole band); they are re-exported here because
+// this is where the bass code has always found them.
 
-export const RHYTHMS = [
-  { id: 'quarters', name: 'Steady quarters', hint: 'one note on every beat' },
-  { id: 'skips', name: 'Quarters with skips', hint: 'quarter notes with swung ghost notes and passing tones' },
-  { id: 'eighths', name: 'Running eighths', hint: 'a line of eighth notes' },
-  { id: 'two', name: 'Two-feel', hint: 'half notes on roots and fifths' },
-  { id: 'mixed', name: 'Mixed', hint: 'mostly quarters, with skips, runs of eighths and two-feel bars now and then' },
-];
+import { APPROACHES, DEFAULT_BASS, PATTERNS, RHYTHMS, sanitizeBass } from './settings.js';
 
-export const APPROACHES = [
-  { id: 'mixed', name: 'Mixed', short: 'varied approaches', hint: 'a bit of everything' },
-  { id: 'chromatic', name: 'Half step', short: 'half-step approaches', hint: 'a half step from below or above the next root' },
-  { id: 'step', name: 'Scale step', short: 'scale-step approaches', hint: 'a whole step from below or above the next root' },
-  { id: 'fifth', name: 'From the fifth', short: 'approaches from the fifth', hint: 'the fifth above the next root, as if it were a V chord' },
-  { id: 'enclosure', name: 'Enclosure', short: 'enclosures', hint: 'a note above, then a note below, landing on the next root' },
-];
-
-export const PATTERNS = [
-  { id: 'mixed', name: 'Boogie, walking at turnarounds', hint: 'the eighth-note boogie, walking into each chord change and at the end of the chorus' },
-  { id: 'walk', name: 'Walking throughout', hint: 'a walking line for the whole chorus' },
-  { id: 'boogie', name: 'Boogie throughout', hint: 'the eighth-note boogie the whole way' },
-];
-
-export const DEFAULT_BASS = Object.freeze({ rhythm: 'quarters', line: 40, tension: 25, approach: 'mixed', pattern: 'mixed' });
-
-const clamp = (v, lo, hi, fallback) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : fallback);
-const oneOf = (v, list, fallback) => (list.some((x) => x.id === v) ? v : fallback);
-
-/** Merge untrusted bass settings over a base (a style's defaults), keeping only valid values. */
-export function sanitizeBass(raw, base = DEFAULT_BASS) {
-  const r = raw && typeof raw === 'object' ? raw : {};
-  return {
-    rhythm: oneOf(r.rhythm, RHYTHMS, base.rhythm),
-    line: clamp(r.line, 0, 100, base.line),
-    tension: clamp(r.tension, 0, 100, base.tension),
-    approach: oneOf(r.approach, APPROACHES, base.approach),
-    pattern: oneOf(r.pattern, PATTERNS, base.pattern),
-  };
-}
-
-/** Plain-English summary of the settings, for the panel's one-line readout. */
-export function describeBass(o, { blues = false } = {}) {
-  if (blues && o.pattern === 'boogie') return 'Boogie throughout';
-  const rhythm = RHYTHMS.find((r) => r.id === o.rhythm)?.name ?? '';
-  const line = o.line < 20 ? 'scales' : o.line < 45 ? 'mostly scales' : o.line < 65 ? 'scales and arpeggios' : o.line < 85 ? 'mostly arpeggios' : 'arpeggios';
-  const colour = o.tension < 15 ? 'chord tones' : o.tension < 40 ? 'a few colour tones' : o.tension < 70 ? 'colour tones' : 'lots of colour';
-  const approach = APPROACHES.find((a) => a.id === o.approach)?.short ?? '';
-  const lead = blues && o.pattern === 'mixed' ? 'Boogie, walking at turnarounds' : rhythm;
-  return `${lead} · ${line} · ${colour} · ${approach}`;
-}
+export { APPROACHES, DEFAULT_BASS, PATTERNS, RHYTHMS, sanitizeBass };
 
 // ---- what the chord offers ---------------------------------------------------------------
 
@@ -204,7 +160,7 @@ export function planOddSlots(meter, groups, mode, rng) {
  * @returns {number[]} empty when the chord is too short to approach anything
  */
 export function planApproach({ mode, targetPc, chord, count, prevMidi, rng }) {
-  if (count < 2) return [];
+  if (count < 2 || mode === 'none') return [];
   if (targetPc === null) return [mod12(chord.root + (chord.fifth ?? 7))]; // nowhere to go: settle on the fifth
   const above = (k) => mod12(targetPc + k);
   const below = (k) => mod12(targetPc - k);

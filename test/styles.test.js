@@ -141,12 +141,23 @@ test('rock stays straight, blues shuffles', () => {
   bluesHat.forEach((e) => assert.ok(Math.abs((e.beat % 1) - 2 / 3) < 0.03, `${e.beat}`));
 });
 
-test('blues bass is the boogie pattern 1 3 5 6 b7 6 5 3', () => {
-  const [ev] = renderChorus('blues', 'C7 | C7', { seed: 9 });
-  const bass = ev.filter((e) => e.inst === 'bass').sort((a, b) => a.beat - b.beat);
-  assert.deepEqual(bass.map((e) => mod12(e.midi)), [0, 4, 7, 9, 10, 9, 7, 4]);
-  const [minor] = renderChorus('blues', 'Cm7 | C7', { seed: 9 });
-  assert.deepEqual(minor.filter((e) => e.inst === 'bass').sort((a, b) => a.beat - b.beat).map((e) => mod12(e.midi)), [0, 3, 7, 9, 10, 9, 7, 3]);
+test('blues bass is a boogie figure built on the chord (the classic is 1 3 5 6 b7 6 5 3)', () => {
+  const figures = (sym, third) => ({
+    classic: [0, third, 7, 9, 10, 9, 7, third],
+    chicago: [0, 7, 9, 7, 0, 7, 9, 7],
+    rise: [0, third, 7, third, 9, 7, 10, 7],
+  });
+  for (const [prog, third] of [['C7 | C7', 4], ['Cm7 | C7', 3]]) {
+    const seen = new Set();
+    for (let seed = 1; seed <= 30; seed++) {
+      const [ev] = renderChorus('blues', prog, { seed, bass: { pattern: 'boogie' } });
+      const notes = ev.filter((e) => e.inst === 'bass').sort((a, b) => a.beat - b.beat).map((e) => mod12(e.midi));
+      const match = Object.entries(figures('', third)).find(([, f]) => f.slice(0, 7).every((x, i) => x === notes[i]));
+      assert.ok(match, `seed ${seed}: ${notes} is not a known figure`);
+      seen.add(match[0]);
+    }
+    assert.ok(seen.has('classic'), 'the classic boogie appears');
+  }
 });
 
 test('every style fills at the end of the chorus at least some of the time', () => {

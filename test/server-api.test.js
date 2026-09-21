@@ -7,6 +7,7 @@ import { createTracks } from '../server/tracks.js';
 import { createUsers } from '../server/users.js';
 import { run as runAdmin } from '../server/admin.js';
 import { LIMITS } from '../server/config.js';
+import { defaultBass, defaultComp, defaultKit, getStyle } from '../src/styles/index.js';
 
 /** Run a test body against a fresh server, always closing it. */
 const withServer = (fn, env) => async () => {
@@ -22,7 +23,7 @@ test('the bass line is stored with the track; junk is repaired, and older tracks
   const bass = { rhythm: 'eighths', line: 90, tension: 10, approach: 'enclosure', pattern: 'walk' };
   const r = await b.post('/api/tracks', { title: 'Busy bass', data: trackData({ config: { bass } }) });
   assert.equal(r.status, 201);
-  assert.deepEqual((await b.get(`/api/tracks/${r.json.track.id}`)).json.track.data.config.bass, bass);
+  assert.deepEqual((await b.get(`/api/tracks/${r.json.track.id}`)).json.track.data.config.bass, { ...defaultBass(getStyle('jazz')), ...bass }, 'what was sent is kept; the rest takes the style default');
 
   const junk = await b.post('/api/tracks', { title: 'Junk bass', data: trackData({ config: { bass: { rhythm: 'polka', line: 'loud', approach: 7 } } }) });
   const fixed = (await b.get(`/api/tracks/${junk.json.track.id}`)).json.track.data.config.bass;
@@ -62,6 +63,32 @@ test('the page asks for versioned scripts and styles, and only a current version
   // a conditional request for the page is answered with a 304
   const again = await b.get('/', { 'If-None-Match': page.headers.get('etag') });
   assert.equal(again.status, 304);
+}));
+
+test('the Keys and Drums panels are stored with the track; junk is repaired and older tracks get the style default', withServer(async ({ browser }) => {
+  const b = browser();
+  const comp = { rhythm: 'charleston', density: 20, sync: 90, variety: 10, tension: 80, range: 70, spread: 60, length: 30, power: 40, pocket: 60, loose: 20 };
+  const kit = { cymbal: 10, kick: 90, snare: 70, ghosts: 0, fills: 100, wild: 100, crash: 0, power: 80, pocket: 40, loose: 90 };
+  const r = await b.post('/api/tracks', { title: 'Custom band', data: trackData({ config: { comp, kit } }) });
+  assert.equal(r.status, 201);
+  const back = (await b.get(`/api/tracks/${r.json.track.id}`)).json.track.data.config;
+  assert.deepEqual(back.comp, { ...comp, mix: [] });
+  assert.deepEqual(back.kit, { ...kit, mix: [] });
+
+  const junk = await b.post('/api/tracks', { title: 'Junk band', data: trackData({ config: { comp: { density: 'lots', rhythm: 'polka', range: 500 }, kit: { fills: -9, extra: 1 } } }) });
+  const fixed = (await b.get(`/api/tracks/${junk.json.track.id}`)).json.track.data.config;
+  assert.equal(fixed.comp.rhythm, 'auto');
+  assert.equal(fixed.comp.range, 100);
+  assert.equal(fixed.kit.fills, 0);
+  assert.ok(!('extra' in fixed.kit));
+
+  const old = trackData({ config: { style: 'rock' } });
+  delete old.config.comp;
+  delete old.config.kit;
+  const o = await b.post('/api/tracks', { title: 'Old rock', data: old });
+  const oc = (await b.get(`/api/tracks/${o.json.track.id}`)).json.track.data.config;
+  assert.deepEqual(oc.comp, defaultComp(getStyle('rock')));
+  assert.deepEqual(oc.kit, defaultKit(getStyle('rock')));
 }));
 
 // ---- identity ------------------------------------------------------------------------------

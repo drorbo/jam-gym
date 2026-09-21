@@ -1,7 +1,7 @@
 // App state: defaults, a tiny observable store, and localStorage persistence.
 
-import { BASS_SOUNDS, DRUM_SOUNDS, KEY_SOUNDS, defaultBass, defaultSwing, getStyle } from '../styles/index.js';
-import { sanitizeBass } from '../styles/walking.js';
+import { BASS_SOUNDS, DRUM_SOUNDS, KEY_SOUNDS, defaultBass, defaultComp, defaultKit, defaultSwing, getStyle } from '../styles/index.js';
+import { sanitizeBass, sanitizeComp, sanitizeKit } from '../styles/settings.js';
 import { clampSwing } from '../engine/feel.js';
 import { MAX_BPM, MIN_BPM } from '../engine/planner.js';
 import { parseKey } from '../theory/keys.js';
@@ -24,7 +24,9 @@ export const defaultState = () => ({
   config: {
     style: 'jazz',
     swing: defaultSwing(getStyle('jazz'), 132), // percent; picking a style resets this to that style's default
-    bass: defaultBass(getStyle('jazz')), // walking-bass settings; picking a style resets these too
+    bass: defaultBass(getStyle('jazz')), // the Bass line, Keys and Drums panels; picking a style resets them too
+    comp: defaultComp(getStyle('jazz')),
+    kit: defaultKit(getStyle('jazz')),
     loop: true,
     countIn: true,
     sounds: { drums: 'auto', bass: 'auto', keys: 'auto' },
@@ -82,6 +84,8 @@ export function sanitize(saved) {
       style: style.id,
       swing: clampSwing(c.swing, defaultSwing(style, tempo)), // missing or invalid -> the style's default
       bass: sanitizeBass(c.bass, defaultBass(style)),
+      comp: sanitizeComp(c.comp, defaultComp(style)),
+      kit: sanitizeKit(c.kit, defaultKit(style)),
       loop: c.loop !== false,
       countIn: c.countIn !== false,
       sounds: {

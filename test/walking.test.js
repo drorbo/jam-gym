@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultBass, getStyle, hasBassOptions, renderBar } from '../src/styles/index.js';
+import { defaultBass, getStyle, renderBar } from '../src/styles/index.js';
+import { fieldsFor } from '../src/styles/settings.js';
 import { APPROACHES, DEFAULT_BASS, HI, LO, PATTERNS, RHYTHMS, analyseChord, planSlots, sanitizeBass } from '../src/styles/walking.js';
 import { parseChord } from '../src/theory/chord.js';
 import { getMeter } from '../src/theory/meter.js';
@@ -69,18 +70,20 @@ test('bass settings: junk is replaced by the base, good values are kept and clam
   assert.deepEqual(sanitizeBass(undefined), DEFAULT_BASS);
   assert.deepEqual(sanitizeBass('nope'), DEFAULT_BASS);
   const s = sanitizeBass({ rhythm: 'eighths', line: 250, tension: -4, approach: 'enclosure', pattern: 'walk' });
-  assert.deepEqual(s, { rhythm: 'eighths', line: 100, tension: 0, approach: 'enclosure', pattern: 'walk' });
-  const bad = sanitizeBass({ rhythm: 'polka', line: 'x', tension: NaN, approach: 5, pattern: {} }, { rhythm: 'two', line: 12, tension: 34, approach: 'step', pattern: 'walk' });
-  assert.deepEqual(bad, { rhythm: 'two', line: 12, tension: 34, approach: 'step', pattern: 'walk' });
-  assert.ok(RHYTHMS.length >= 5 && APPROACHES.length >= 5 && PATTERNS.length === 3);
+  assert.deepEqual(s, { ...DEFAULT_BASS, rhythm: 'eighths', line: 100, tension: 0, approach: 'enclosure', pattern: 'walk' });
+  const base = { ...DEFAULT_BASS, rhythm: 'two', line: 12, tension: 34, approach: 'step', pattern: 'walk' };
+  const bad = sanitizeBass({ rhythm: 'polka', line: 'x', tension: NaN, approach: 5, pattern: {} }, base);
+  assert.deepEqual(bad, base);
+  assert.ok(RHYTHMS.length >= 5 && APPROACHES.length >= 5 && PATTERNS.length >= 3);
 });
 
-test('bass settings: jazz and blues have a panel, rock does not; each style starts from its own defaults', () => {
-  assert.equal(hasBassOptions(getStyle('jazz')), true);
-  assert.equal(hasBassOptions(getStyle('blues')), true);
-  assert.equal(hasBassOptions(getStyle('rock')), false);
+test('bass settings: every style has a panel, showing the controls that make sense for it', () => {
+  const ids = (style) => fieldsFor('bass', style).map((f) => f.id);
+  assert.ok(ids('jazz').includes('rhythm') && !ids('jazz').includes('pattern') && !ids('jazz').includes('fills'));
+  assert.ok(ids('blues').includes('pattern'));
+  assert.ok(ids('rock').includes('pattern') && ids('rock').includes('fills') && !ids('rock').includes('rhythm'), 'rock has its own patterns and fills');
   assert.notDeepEqual(defaultBass(getStyle('jazz')), defaultBass(getStyle('blues')));
-  assert.deepEqual(defaultBass(getStyle('rock')), DEFAULT_BASS);
+  assert.notDeepEqual(defaultBass(getStyle('rock')), defaultBass(getStyle('jazz')));
 });
 
 // ---- rhythm --------------------------------------------------------------------------------
@@ -370,9 +373,9 @@ for (const ts of ['6/8', '7/8', '10/8']) {
   });
 }
 
-test('rock ignores the walking settings', () => {
+test('rock does not use the walking-only settings (rhythm), and has patterns of its own', () => {
   const a = JSON.stringify(render('rock', 'C | G | Am | F', { seed: 5 }).out);
-  const b = JSON.stringify(render('rock', 'C | G | Am | F', { seed: 5, bass: { rhythm: 'eighths', line: 100, tension: 100, approach: 'enclosure', pattern: 'walk' } }).out);
+  const b = JSON.stringify(render('rock', 'C | G | Am | F', { seed: 5, bass: { rhythm: 'eighths' } }).out);
   assert.equal(a, b);
 });
 

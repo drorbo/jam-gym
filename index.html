@@ -144,40 +144,8 @@
         </div>
       </section>
 
-      <!-- Bass line: how the walking bass is played (jazz and blues) -->
-      <section class="bassline" id="bassline" aria-label="Bass line">
-        <details id="bass-details">
-          <summary>
-            <span class="bl-title">Bass line</span>
-            <span class="bl-sum" id="bass-sum"></span>
-          </summary>
-          <div class="bl-body">
-            <div class="bl-grid">
-              <label class="field bl-field">Rhythm
-                <select id="bass-rhythm"></select>
-              </label>
-              <div class="bl-range">
-                <div class="swing-head"><label for="bass-line">Line</label><output id="bass-line-val" for="bass-line"></output></div>
-                <input class="slider" id="bass-line" type="range" min="0" max="100" step="5" aria-describedby="bass-line-ends">
-                <div class="swing-ends" id="bass-line-ends"><span>Scales</span><span>Arpeggios</span></div>
-              </div>
-              <div class="bl-range">
-                <div class="swing-head"><label for="bass-tension">Tensions</label><output id="bass-tension-val" for="bass-tension"></output></div>
-                <input class="slider" id="bass-tension" type="range" min="0" max="100" step="5" aria-describedby="bass-tension-ends">
-                <div class="swing-ends" id="bass-tension-ends"><span>Chord tones</span><span>Colourful</span></div>
-              </div>
-              <label class="field bl-field">Approach
-                <select id="bass-approach"></select>
-              </label>
-              <label class="field bl-field" id="bass-pattern-field">Pattern
-                <select id="bass-pattern"></select>
-              </label>
-            </div>
-            <p class="hint" id="bass-hint"></p>
-            <button class="chip" id="bass-reset" type="button" hidden></button>
-          </div>
-        </details>
-      </section>
+      <!-- Bass line, Keys and Drums: how each part of the band plays (drawn by src/app/band-ui.js) -->
+      <div class="band" id="band-panels"></div>
 
       <!-- Key change + tempo ramp -->
       <section class="mod" aria-label="Practice automation">

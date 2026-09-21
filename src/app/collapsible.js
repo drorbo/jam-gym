@@ -20,8 +20,11 @@ export function mountCollapsibles({ root = document, storage = null, toggleAll =
     const id = d.dataset.section;
     if (typeof saved[id] === 'boolean') d.open = saved[id];
     d.addEventListener('toggle', () => {
-      saved[id] = d.open;
-      try { storage?.setItem(KEY, JSON.stringify(saved)); } catch { /* storage blocked */ }
+      // read the stored map again: another group of sections (the sidebar, the band panels) may have written to it
+      let current = {};
+      try { current = JSON.parse(storage?.getItem(KEY) || '{}') ?? {}; } catch { current = {}; }
+      current[id] = d.open;
+      try { storage?.setItem(KEY, JSON.stringify(current)); } catch { /* storage blocked */ }
       refreshButton();
     });
   }

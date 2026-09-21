@@ -11,7 +11,7 @@ synthesised in the browser. The band plays offline; saving and sharing tracks ne
 
 ```
 npm start        # serves http://localhost:5173 (the site and the tracks API), data in ./data
-npm test         # 303 tests, Node's built-in runner, no install needed
+npm test         # 348 tests, Node's built-in runner, no install needed
 npm run admin -- stats     # moderation and upkeep, see "Tracks" below
 ```
 
@@ -40,7 +40,7 @@ To ship a change (tests, commit, push, deploy, verify, in one go): `bash scripts
   Choosing a style sets it to that style's default (jazz 65% at its default tempo, blues 67%, rock 50%; jazz eases toward
   straighter as the default tempo rises); a small button restores the default after you've moved it. It applies from
   the next bar, is saved with saved progressions, and is disabled in 6/8, 7/8 and 10/8, whose feel comes from their groupings.
-- **Bass line** (jazz and blues): a panel under the controls that shapes how the walking bass is played. See below.
+- **Bass line, Keys and Drums**: three panels under the controls that shape how each part of the band plays. See below.
 - **Tracks**: the button in the header opens the tracks sidebar, described below. Every section of it folds away, and
   remembers whether it was open. A track is the whole setup, not just the chords.
 - **Key change**: *Step* moves by an interval (−11…+11 semitones, named) every N loops.
@@ -53,30 +53,54 @@ To ship a change (tests, commit, push, deploy, verify, in one go): `bash scripts
   valid version keeps playing.
 - Space plays and pauses.
 
-## Bass line
+## Shaping the band: Bass line, Keys and Drums
 
-Jazz and blues walk. Open **Bass line** to choose how, from the next bar on:
+Under the controls are three collapsible panels, one for each part of the band. Every slider has a word for where it
+sits, "Style default" restores the panel, choosing a style resets all three, and the settings are saved with a track. They
+apply from the next bar, in every time signature. At the middle a slider plays what the style always played; less is
+sparser or simpler, more is busier or richer.
 
-- **Rhythm**: steady quarters; quarters with skips (swung ghost notes and passing tones on the "and"); running eighths;
-  two-feel (half notes on roots and fifths); or mixed, which mostly plays quarters and now and then a skip, a run of
-  eighths or a two-feel bar (no eighths above 170 BPM, no two-feel in the blues).
-- **Line**: from scales (stepwise, chromatic passing notes) to arpeggios (chord-tone leaps).
-- **Tensions**: from chord tones only to colourful: the 9th, 13th and #11 (and any extension you wrote, such as the
-  #9 in `G7#9`) are allowed on strong beats.
-- **Approach**: how the last note leads into the next chord: a half step, a scale step, the fifth above, an enclosure
-  (above, then below), or a mix.
-- **Pattern** (blues): the eighth-note boogie with a half-step lead into each chord change and a walking bar to turn
-  the chorus around (the default), walking throughout, or boogie throughout.
+**Mixed.** Every parameter can vary by itself. Each dropdown has a **Mixed** choice (the band picks for itself: a
+different Keys rhythm each bar, a mix of bass patterns, approaches or rhythms). Each slider has a **Mix** button: the
+slider then wanders up to 30 either side of where you left it, drifting smoothly from bar to bar (a new target every four
+bars) and differently in each run, instead of staying put. The stored setting never changes, and which sliders are mixed
+is saved with the track.
 
-Choosing a style resets the panel to that style's defaults (a button restores them after you have changed things).
-In 6/8, 7/8 and 10/8 the line follows the groupings. Rock keeps its driving root line, so the panel hides for it.
-The settings are saved with a track.
+**Drums**
+- **Ride and hi-hat**: just quarters (room to breathe) up to a full ride or sixteenth-note hats.
+- **Kick**: only on the beat, up to syncopated. **Snare**: the backbeat only (in jazz, no comping) up to chatty.
+- **Ghost notes**: none to lots. **Fills**: how often one leads into the next phrase. **Fill style**: one snare pickup,
+  a tidy fill, sixteenth-note (or triplet) tom runs, up to a half-bar roll; big fills are followed by a crash.
+- **Crashes**, **Dynamics** (soft to hard), **Timing** (ahead of the beat to laid back) and **Feel** (machine tight to sloppy).
 
-How a line is chosen (`src/styles/walking.js`): the rhythm is planned first; beat one is the root, and the last note
-is picked as an approach into the next chord; the notes between are found by a beam search that scores every
-candidate on chord tones for strong beats, scale and passing tones for weak ones, step against leap (the Line
-setting), colour tones (Tensions), direction, leap recovery and not repeating last bar's shape, with seeded noise
-so each chorus differs.
+**Keys** (piano in jazz, organ or electric piano in the blues, guitar in rock)
+- **How much**: one chord a bar up to constant comping. **On or off the beat**: chords on the beat, or on the "ands" and
+  pushed ahead; the chord that starts a change is always heard within its first beat. **Pattern**: repeat a rhythm bar to
+  bar, or change it every bar. **Rhythm**: build it from those sliders, or choose a named one (Charleston, four to the
+  bar, palm-muted chug, ...).
+- **Harmony**: jazz goes from shells (3rd and 7th) through rootless voicings and extended chords to upper-structure
+  triads and altered tones; the blues from triads through sevenths, ninths and thirteenths to the sharp-nine "Hendrix"
+  chord; rock from power chords through full chords and add 9 to open, ringing chords.
+- **Register** (low to high on the keyboard), **Voicing** (close to wide), **Note length** (staccato to sustained),
+  **Dynamics**, **Timing**, **Feel**.
+
+**Bass line** (all three styles)
+- **Jazz and blues walk.** **Rhythm**: steady quarters, quarters with swung skips, running eighths, two-feel, or mixed.
+  **Line** runs from scales to arpeggios, **Tensions** from chord tones to colourful (9ths, 13ths, #11), and **Approach** is
+  how the last note leads into the next chord: a half step, a scale step, the fifth above, an enclosure, or a mix. The blues
+  **Pattern** is the boogie with a lead into each change and a walking turnaround (the default), walking throughout, or
+  boogie throughout.
+- **Rock** has its own **Pattern**: mixed, driving eighths, octaves, pushes, quarter notes, syncopated, or a melodic
+  line. **Line** runs from root notes to a melodic part (fifths, octaves, and with Tensions sevenths, fourths and
+  sixths), **Approach** can be none, and **Bass fills** add a short run at the end of a phrase.
+- **Note length**, **Timing** and **Feel** for every style.
+
+How a walking line is chosen (`src/styles/walking.js`): the rhythm is planned first; beat one is the root, and the last
+note is picked as an approach into the next chord; the notes between are found by a beam search that scores every
+candidate on chord tones for strong beats, scale and passing tones for weak ones, step against leap, colour tones,
+direction, leap recovery and not repeating last bar's shape, with seeded noise so each chorus differs. The panels are
+described by one schema (`src/styles/settings.js`); the players are `drumming.js`, `comping.js`, `walking.js` and
+`rockbass.js`.
 
 ## Tracks: save, publish, search, like
 
@@ -109,12 +133,14 @@ src/engine/    planner   key + tempo of each chorus        pure: (state, setting
                conductor lookahead scheduler               clock and sink injected, no DOM, no Web Audio
                voicing, feel, rng
 src/styles/    jazz, blues, rock + registry                data + generators that emit note events
-               walking                                     the walking-bass engine and its settings
+               settings                                    the schema for the Bass line, Keys and Drums panels
+               walking, rockbass                           bass: walking engine; rock bass patterns and fills
+               comping, drumming                           keys and guitar; the drummer (rhythm, voicings, fills)
                oddMeters                                   how every style plays in 6/8, 7/8 and 10/8
 src/audio/     voices        synthesised instruments
                samples       loader + player for recorded instruments (samplemap: pure selection logic)
                engine, ticker  mixer bus, worker-driven timer
-src/app/       state, player, ui, bass-ui, sidebar         store, playback wiring, DOM
+src/app/       state, player, ui, band-ui, sidebar         store, playback wiring, DOM
                api, tracks-model, tracks, tracks-ui        tracks: HTTP client, setup <-> track data, controller, panel
                saved                                       older browser-only saves (offline fallback, migration)
 server/        index, app, static, db, tracks, users,      the site + /api on Node's built-in http and node:sqlite;

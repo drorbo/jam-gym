@@ -503,7 +503,16 @@ body.sidebar-lock { overflow: hidden; }
 .bl-range .swing-ends span:nth-child(2) { right: 0; left: auto; transform: none; }
 .bl-range .slider { margin-top: 0.35rem; }
 .bl-range .swing-head output { font-size: 1.0625rem; font-weight: 600; letter-spacing: 0; min-width: 0; }
-.bassline details.off .bl-range, .bassline details.off .bl-field:not(#bass-pattern-field) { opacity: 0.45; }
+.bl-range.inactive, .bl-field.inactive { opacity: 0.45; }
+.bl-range .swing-head { gap: 0.6rem; }
+.bl-range .swing-head output { flex: 1 1 auto; text-align: right; }
+.mixbtn {
+  flex: none; min-height: 26px; padding: 0 0.6rem; background: none; border: 1px solid var(--fret-strong); border-radius: 999px;
+  color: var(--muted); font-size: 0.75rem;
+}
+.mixbtn:hover { color: var(--text); border-color: var(--text); }
+.mixbtn[aria-pressed='true'] { color: var(--brass); border-color: var(--brass); }
+.bl-range.is-mixed .slider { accent-color: var(--muted); }
 .bl-body .hint { max-width: 70ch; }
 .bl-body .chip { margin-top: 0.8rem; min-height: 34px; font-size: 0.875rem; }
 

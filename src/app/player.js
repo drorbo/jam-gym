@@ -9,7 +9,7 @@ import { clampBpm } from '../engine/planner.js';
 import { keyPrefersFlats, parseKey, formatKey } from '../theory/keys.js';
 import { mod12 } from '../theory/notes.js';
 import { parseProgression, transposeProgressionText } from '../theory/progression.js';
-import { BASS_SOUNDS, DRUM_SOUNDS, KEY_SOUNDS, defaultBass, getStyle, resolveTimbres } from '../styles/index.js';
+import { BASS_SOUNDS, DRUM_SOUNDS, KEY_SOUNDS, defaultBass, defaultComp, defaultKit, getStyle, resolveTimbres } from '../styles/index.js';
 import { removeSaved, restoreSaved, saveSnapshot, signatureOf } from './saved.js';
 import { buildTrackData, dataFromLocalSave } from './tracks-model.js';
 
@@ -243,8 +243,15 @@ export class Player {
       timeSignature: song.timeSignature, key: song.key, progressionText: song.progressionText,
       ...(live ? {} : { tempo: song.tempo }),
     });
-    // tracks saved before the bass panel existed have no bass settings: they get the style's own
-    this.store.set({ config: { ...this.store.get().config, ...config, bass: config.bass ?? defaultBass(getStyle(config.style)) }, mixer });
+    // tracks saved before the panels existed have no such settings: they get the style's own
+    const style = getStyle(config.style);
+    this.store.set({
+      config: {
+        ...this.store.get().config, ...config,
+        bass: config.bass ?? defaultBass(style), comp: config.comp ?? defaultComp(style), kit: config.kit ?? defaultKit(style),
+      },
+      mixer,
+    });
     for (const [inst, level] of Object.entries(mixer)) this.bus?.setLevel(inst, level);
     if (live) {
       this.conductor.requestKey(parseKey(song.key).pc);

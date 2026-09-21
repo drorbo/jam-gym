@@ -1,50 +1,14 @@
 // Blues: triplet shuffle. Shuffled hi-hat, backbeat, boogie-woogie bass, organ comping.
 
-import { placeVoicing, voicingPcs } from '../engine/voicing.js';
 import { mod12, nearestMidi } from '../theory/notes.js';
-import { bassPc, boogieSteps, capDur, drum, note } from './helpers.js';
-import { oddBass, oddChords, oddDrums } from './oddMeters.js';
+import { bassPc, boogieSteps, note } from './helpers.js';
+import { keysBar, oddChords } from './comping.js';
+import { bluesDrums } from './drumming.js';
+import { oddBass } from './oddMeters.js';
 import { walkBar } from './walking.js';
 
-// Organ/piano comping per segment length: [startBeat, length, velocity]
-const COMP = {
-  4: [
-    [[0, 0.9, 0.62], [1, 0.9, 0.5], [2, 0.9, 0.56], [3, 0.9, 0.5]],                       // four to the bar
-    [[0, 1.9, 0.6], [2, 0.9, 0.55], [3.5, 0.45, 0.5]],                                    // long-short
-    [[0, 3.6, 0.55]],                                                                     // pad
-    [[0, 0.45, 0.64], [0.5, 0.45, 0.5], [1.5, 0.45, 0.5], [2, 0.45, 0.6], [2.5, 0.45, 0.5], [3.5, 0.45, 0.5]], // shuffle stabs
-  ],
-  2: [[[0, 1.9, 0.6]], [[0, 0.9, 0.6], [1, 0.9, 0.5]]],
-  1: [[[0, 0.9, 0.6]]],
-  3: [[[0, 2.9, 0.58]]],
-};
-
-function drums(ctx) {
-  if (ctx.meter.id !== '4/4') return oddDrums(ctx, 'blues');
-  const { rng, isLastBar, isFirstBar, chorus, barIndex } = ctx;
-  const ev = [];
-
-  // shuffled hi-hat: each beat plus the swung "and"
-  [0.72, 0.56, 0.66, 0.56].forEach((v, b) => {
-    ev.push(drum('hat', b, v, 0.3));
-    ev.push(drum('hat', b + 0.5, v * 0.66, 0.3));
-  });
-  ev.push(drum('kick', 0, 0.82, 0.3), drum('kick', 2, 0.76, 0.3));
-  if (rng.chance(0.35)) ev.push(drum('kick', 2.5, 0.55, 0.3));
-  ev.push(drum('snare', 1, 0.9, 0.3), drum('snare', 3, 0.92, 0.3));
-  // ghost notes on the shuffle's "a" just before each backbeat, and now and then a push into beat 1
-  for (const b of [0.5, 2.5]) if (rng.chance(0.4)) ev.push(drum('snare', b, 0.3 + rng.next() * 0.14, 0.2));
-  if (rng.chance(0.2)) ev.push(drum('snare', 3.5, 0.5 + rng.next() * 0.12, 0.2));
-
-  if (isFirstBar && chorus > 1 && rng.chance(0.6)) ev.push(drum('crash', 0, 0.55, 1));
-
-  if ((isLastBar && rng.chance(0.75)) || (barIndex % 4 === 3 && rng.chance(0.25))) {
-    ev.push(
-      drum('snare', 2, 0.7, 0.3), drum('snare', 2.5, 0.72, 0.3),
-      drum('snare', 3, 0.8, 0.3), drum('tomLow', 3.5, 0.8, 0.3),
-    );
-  }
-  return ev;
+function chords(ctx) {
+  return ctx.meter.id !== '4/4' ? oddChords(ctx, 'blues') : keysBar(ctx, 'blues');
 }
 
 // Eighth-note bass figures, as semitones above the root. The classic is 1 3 5 6 b7 6 5 3.
@@ -95,27 +59,6 @@ function bass(ctx) {
   return boogieBar(ctx);
 }
 
-function chords(ctx) {
-  if (ctx.meter.id !== '4/4') return oddChords(ctx, 'blues');
-  const { segments, state, rng } = ctx;
-  const ev = [];
-  for (const seg of segments) {
-    if (!seg.chord) continue;
-    const table = COMP[seg.beats] ?? COMP[seg.beats >= 4 ? 4 : 1];
-    const pattern = rng.weighted(table.map((p, i) => [p, table.length === 4 ? [3, 3, 2, 2][i] : 1]));
-    state.voicing = placeVoicing(voicingPcs(seg.chord, 'block'), state.voicing, { lo: 50, hi: 70, center: 60, maxSpan: 14 });
-    const end = seg.startBeat + seg.beats;
-    for (const [b, len, vel] of pattern) {
-      const beat = seg.startBeat + b;
-      if (beat >= end) continue;
-      state.voicing.forEach((midi, i) => {
-        ev.push(note('chords', midi, beat, capDur(len, beat, end), vel * (0.95 + rng.next() * 0.1), { dt: i * 0.003 }));
-      });
-    }
-  }
-  return ev;
-}
-
 export const blues = {
   id: 'blues',
   name: 'Blues',
@@ -129,6 +72,8 @@ export const blues = {
     chords: { t: 0.006, v: 0.08, lay: 0.003 },
   },
   timbres: { bass: 'guitar', chords: 'wurli', drums: 'jazz' },
-  bass: { rhythm: 'mixed', line: 55, tension: 15, approach: 'mixed', pattern: 'mixed' },
-  parts: { drums, bass, chords },
+  bass: { rhythm: 'mixed', line: 55, tension: 15, approach: 'mixed', pattern: 'mixed', fills: 40, length: 50, pocket: 50, loose: 50 },
+  comp: { rhythm: 'auto', density: 65, sync: 30, variety: 50, tension: 25, range: 40, spread: 55, length: 50, power: 50, pocket: 50, loose: 50 },
+  kit: { cymbal: 50, kick: 50, snare: 50, ghosts: 50, fills: 50, wild: 50, crash: 50, power: 50, pocket: 50, loose: 50 },
+  parts: { drums: bluesDrums, bass, chords },
 };
