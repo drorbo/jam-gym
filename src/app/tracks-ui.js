@@ -167,6 +167,7 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
   function renderAccount(t) {
     const box = $('account');
     box.replaceChildren();
+    $('sum-account').textContent = t.status === 'offline' ? 'offline' : t.me ? t.me.displayName : 'not saved yet';
     if (t.status === 'offline') return;
     const row = el('p', 'account-line');
     if (t.me) {
@@ -258,6 +259,8 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
     const t = state.tracks;
     const list = $('my-list');
     list.replaceChildren();
+    const published = t.mine.filter((x) => x.visibility === 'published').length;
+    $('sum-mine').textContent = t.status === 'offline' || !t.mine.length ? '' : `${t.mine.length}${published ? ` · ${published} published` : ''}`;
     if (t.status === 'offline') return;
     if (!t.mine.length) {
       const empty = el('li', 'track-empty');
@@ -275,11 +278,11 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
   function renderLocal(state) {
     const box = $('local-box');
     const saved = state.saved ?? [];
-    box.hidden = saved.length === 0;
+    $('sec-local').hidden = saved.length === 0;
+    $('sum-local').textContent = saved.length ? String(saved.length) : '';
     box.replaceChildren();
     if (!saved.length) return;
     const online = state.tracks.status === 'online';
-    box.append(el('h3', '', `On this device (${saved.length})`));
     box.append(el('p', 'msg', online
       ? 'Saved here by an earlier version, or while you were offline. Move them into your library to keep them safe.'
       : 'Saved on this device because there is no connection. They can be moved into your library once you are back online.'));
@@ -333,6 +336,9 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
     const b = state.tracks.browse;
     const list = $('browse-list');
     list.replaceChildren();
+    const active = Object.entries(b.params).filter(([k, v]) => k !== 'sort' && v !== '' && v != null).length;
+    $('sum-filters').textContent = active ? `${active} active` : '';
+    $('sum-results').textContent = b.loaded && !b.error ? String(b.total) : '';
     const count = $('browse-count');
     count.className = 'msg';
     if (state.tracks.status === 'offline') { count.textContent = 'Browsing needs a connection to the server.'; $('browse-more').hidden = true; return; }

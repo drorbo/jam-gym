@@ -4,7 +4,7 @@ import { MAX_BPM, MIN_BPM, RANDOM_MODES, describeInterval, INTERVAL_NAMES } from
 import { chordParts } from '../theory/chord.js';
 import { MAJOR_KEYS, MINOR_KEYS, keyPrefersFlats, parseKey } from '../theory/keys.js';
 import { describeSwing } from '../engine/feel.js';
-import { DRUM_SOUNDS, KEY_SOUNDS, defaultBass, defaultSwing, getStyle, listStyles, resolveTimbres } from '../styles/index.js';
+import { BASS_SOUNDS, DRUM_SOUNDS, KEY_SOUNDS, defaultBass, defaultSwing, getStyle, listStyles, resolveTimbres } from '../styles/index.js';
 import { transposeProgressionText } from '../theory/progression.js';
 import { METER_IDS, getMeter } from '../theory/meter.js';
 import { EXAMPLES } from './state.js';
@@ -115,6 +115,7 @@ export function mountUI({ store, player }) {
     for (const s of list) { const o = el('option', '', s.name); o.value = s.id; select.append(o); }
   };
   fillSounds($('snd-drums'), DRUM_SOUNDS);
+  fillSounds($('snd-bass'), BASS_SOUNDS);
   fillSounds($('snd-keys'), KEY_SOUNDS);
 
   const levelsEl = $('levels');
@@ -215,6 +216,7 @@ export function mountUI({ store, player }) {
   });
 
   $('snd-drums').addEventListener('change', (e) => patchConfig({ sounds: { ...store.get().config.sounds, drums: e.target.value } }));
+  $('snd-bass').addEventListener('change', (e) => patchConfig({ sounds: { ...store.get().config.sounds, bass: e.target.value } }));
   $('snd-keys').addEventListener('change', (e) => patchConfig({ sounds: { ...store.get().config.sounds, keys: e.target.value } }));
 
   $('mod-type').addEventListener('click', (e) => {
@@ -422,8 +424,10 @@ export function mountUI({ store, player }) {
     const t = resolveTimbres(style, {});
     const nameOf = (list, id) => list.find((x) => x.id === id)?.name ?? id;
     $('snd-drums').options[0].textContent = `Default: ${nameOf(DRUM_SOUNDS, t.drums)}`;
+    $('snd-bass').options[0].textContent = `Default: ${nameOf(BASS_SOUNDS, t.bass)}`;
     $('snd-keys').options[0].textContent = `Default: ${nameOf(KEY_SOUNDS, t.chords)}`;
     if (document.activeElement !== $('snd-drums')) $('snd-drums').value = config.sounds.drums;
+    if (document.activeElement !== $('snd-bass')) $('snd-bass').value = config.sounds.bass;
     if (document.activeElement !== $('snd-keys')) $('snd-keys').value = config.sounds.keys;
     const ss = state.soundStatus;
     $('snd-status').textContent = ss?.loading

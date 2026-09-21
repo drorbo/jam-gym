@@ -678,5 +678,520 @@
     }
    ]
   }
+ },
+ "basses": {
+  "double": {
+   "id": "double",
+   "name": "Double bass",
+   "kind": "multisample",
+   "release": 0.12,
+   "gain": 2.2,
+   "brightness": false,
+   "credit": "Meatbass double bass, pizzicato, by Karoryfer Samples and D. Smolken (CC0)",
+   "notes": [
+    {
+     "file": "basses/double/27_25.wav",
+     "ms": 2400,
+     "midi": 27,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/double/30_25.wav",
+     "ms": 2400,
+     "midi": 30,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/double/33_25.wav",
+     "ms": 2400,
+     "midi": 33,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/double/36_25.wav",
+     "ms": 2400,
+     "midi": 36,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/double/39_25.wav",
+     "ms": 2400,
+     "midi": 39,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/double/42_25.wav",
+     "ms": 2400,
+     "midi": 42,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/double/45_25.wav",
+     "ms": 2277,
+     "midi": 45,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/double/48_25.wav",
+     "ms": 2400,
+     "midi": 48,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/double/51_25.wav",
+     "ms": 2400,
+     "midi": 51,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/double/54_25.wav",
+     "ms": 2400,
+     "midi": 54,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/double/27_70.wav",
+     "ms": 2400,
+     "midi": 27,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/double/30_70.wav",
+     "ms": 2400,
+     "midi": 30,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/double/33_70.wav",
+     "ms": 2400,
+     "midi": 33,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/double/36_70.wav",
+     "ms": 2400,
+     "midi": 36,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/double/39_70.wav",
+     "ms": 2400,
+     "midi": 39,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/double/42_70.wav",
+     "ms": 2400,
+     "midi": 42,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/double/45_70.wav",
+     "ms": 2044,
+     "midi": 45,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/double/48_70.wav",
+     "ms": 2400,
+     "midi": 48,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/double/51_70.wav",
+     "ms": 2400,
+     "midi": 51,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/double/54_70.wav",
+     "ms": 2400,
+     "midi": 54,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/double/27_95.wav",
+     "ms": 2400,
+     "midi": 27,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/double/30_95.wav",
+     "ms": 2400,
+     "midi": 30,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/double/33_95.wav",
+     "ms": 2400,
+     "midi": 33,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/double/36_95.wav",
+     "ms": 2400,
+     "midi": 36,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/double/39_95.wav",
+     "ms": 2400,
+     "midi": 39,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/double/42_95.wav",
+     "ms": 2400,
+     "midi": 42,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/double/45_95.wav",
+     "ms": 2400,
+     "midi": 45,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/double/48_95.wav",
+     "ms": 2400,
+     "midi": 48,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/double/51_95.wav",
+     "ms": 2400,
+     "midi": 51,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/double/54_95.wav",
+     "ms": 2400,
+     "midi": 54,
+     "ref": 0.95
+    }
+   ]
+  },
+  "guitar": {
+   "id": "guitar",
+   "name": "Bass guitar",
+   "kind": "multisample",
+   "release": 0.1,
+   "gain": 2.1,
+   "brightness": false,
+   "credit": "Black And Blue Basses (darkblack) by Karoryfer Samples (CC0)",
+   "notes": [
+    {
+     "file": "basses/guitar/28_25.wav",
+     "ms": 2600,
+     "midi": 28,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/guitar/31_25.wav",
+     "ms": 2600,
+     "midi": 31,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/guitar/34_25.wav",
+     "ms": 2600,
+     "midi": 34,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/guitar/37_25.wav",
+     "ms": 2600,
+     "midi": 37,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/guitar/40_25.wav",
+     "ms": 2600,
+     "midi": 40,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/guitar/43_25.wav",
+     "ms": 2600,
+     "midi": 43,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/guitar/46_25.wav",
+     "ms": 2600,
+     "midi": 46,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/guitar/49_25.wav",
+     "ms": 2600,
+     "midi": 49,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/guitar/52_25.wav",
+     "ms": 2600,
+     "midi": 52,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/guitar/55_25.wav",
+     "ms": 2600,
+     "midi": 55,
+     "ref": 0.25
+    },
+    {
+     "file": "basses/guitar/28_70.wav",
+     "ms": 2600,
+     "midi": 28,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/guitar/31_70.wav",
+     "ms": 2600,
+     "midi": 31,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/guitar/34_70.wav",
+     "ms": 2600,
+     "midi": 34,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/guitar/37_70.wav",
+     "ms": 2600,
+     "midi": 37,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/guitar/40_70.wav",
+     "ms": 2600,
+     "midi": 40,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/guitar/43_70.wav",
+     "ms": 2600,
+     "midi": 43,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/guitar/46_70.wav",
+     "ms": 2600,
+     "midi": 46,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/guitar/49_70.wav",
+     "ms": 2600,
+     "midi": 49,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/guitar/52_70.wav",
+     "ms": 2600,
+     "midi": 52,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/guitar/55_70.wav",
+     "ms": 2600,
+     "midi": 55,
+     "ref": 0.7
+    },
+    {
+     "file": "basses/guitar/28_95.wav",
+     "ms": 2600,
+     "midi": 28,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/guitar/31_95.wav",
+     "ms": 2600,
+     "midi": 31,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/guitar/34_95.wav",
+     "ms": 2600,
+     "midi": 34,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/guitar/37_95.wav",
+     "ms": 2600,
+     "midi": 37,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/guitar/40_95.wav",
+     "ms": 2600,
+     "midi": 40,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/guitar/43_95.wav",
+     "ms": 2600,
+     "midi": 43,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/guitar/46_95.wav",
+     "ms": 2600,
+     "midi": 46,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/guitar/49_95.wav",
+     "ms": 2600,
+     "midi": 49,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/guitar/52_95.wav",
+     "ms": 2600,
+     "midi": 52,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/guitar/55_95.wav",
+     "ms": 2600,
+     "midi": 55,
+     "ref": 0.95
+    }
+   ]
+  },
+  "bright": {
+   "id": "bright",
+   "name": "Bass guitar (bright)",
+   "kind": "multisample",
+   "release": 0.08,
+   "gain": 2.0,
+   "brightness": false,
+   "credit": "Black And Blue Basses (babyblue) by Karoryfer Samples (CC0)",
+   "notes": [
+    {
+     "file": "basses/bright/28_55.wav",
+     "ms": 2600,
+     "midi": 28,
+     "ref": 0.55
+    },
+    {
+     "file": "basses/bright/31_55.wav",
+     "ms": 2600,
+     "midi": 31,
+     "ref": 0.55
+    },
+    {
+     "file": "basses/bright/34_55.wav",
+     "ms": 2600,
+     "midi": 34,
+     "ref": 0.55
+    },
+    {
+     "file": "basses/bright/37_55.wav",
+     "ms": 2600,
+     "midi": 37,
+     "ref": 0.55
+    },
+    {
+     "file": "basses/bright/40_55.wav",
+     "ms": 2600,
+     "midi": 40,
+     "ref": 0.55
+    },
+    {
+     "file": "basses/bright/43_55.wav",
+     "ms": 2600,
+     "midi": 43,
+     "ref": 0.55
+    },
+    {
+     "file": "basses/bright/46_55.wav",
+     "ms": 2600,
+     "midi": 46,
+     "ref": 0.55
+    },
+    {
+     "file": "basses/bright/49_55.wav",
+     "ms": 2600,
+     "midi": 49,
+     "ref": 0.55
+    },
+    {
+     "file": "basses/bright/52_55.wav",
+     "ms": 2600,
+     "midi": 52,
+     "ref": 0.55
+    },
+    {
+     "file": "basses/bright/55_55.wav",
+     "ms": 2600,
+     "midi": 55,
+     "ref": 0.55
+    },
+    {
+     "file": "basses/bright/28_95.wav",
+     "ms": 2600,
+     "midi": 28,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/bright/31_95.wav",
+     "ms": 2600,
+     "midi": 31,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/bright/34_95.wav",
+     "ms": 2600,
+     "midi": 34,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/bright/37_95.wav",
+     "ms": 2600,
+     "midi": 37,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/bright/40_95.wav",
+     "ms": 2600,
+     "midi": 40,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/bright/43_95.wav",
+     "ms": 2600,
+     "midi": 43,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/bright/46_95.wav",
+     "ms": 2600,
+     "midi": 46,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/bright/49_95.wav",
+     "ms": 2600,
+     "midi": 49,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/bright/52_95.wav",
+     "ms": 2600,
+     "midi": 52,
+     "ref": 0.95
+    },
+    {
+     "file": "basses/bright/55_95.wav",
+     "ms": 2600,
+     "midi": 55,
+     "ref": 0.95
+    }
+   ]
+  }
  }
 }

@@ -128,7 +128,7 @@ export const blues = {
     bass: { t: 0.003, v: 0.05 },
     chords: { t: 0.006, v: 0.08, lay: 0.003 },
   },
-  timbres: { bass: 'electric', chords: 'wurli', drums: 'jazz' },
+  timbres: { bass: 'guitar', chords: 'wurli', drums: 'jazz' },
   bass: { rhythm: 'mixed', line: 55, tension: 15, approach: 'mixed', pattern: 'mixed' },
   parts: { drums, bass, chords },
 };

@@ -102,5 +102,5 @@ Edit `deploy/host-nginx/jam-gym.eardle.com.conf`, push, pull on the server, copy
 
 ## Recorded sounds and licences
 
-The image includes `samples/` (about 13 MB). Three of the four sources require attribution; it is shown in the site
-footer and in `samples/CREDITS.md`. Keep that when changing the footer.
+The image includes `samples/` (about 23 MB). Three of the six sources require attribution (the others are CC0, and are
+credited anyway); it is shown in the site footer and in `samples/CREDITS.md`. Keep that when changing the footer.

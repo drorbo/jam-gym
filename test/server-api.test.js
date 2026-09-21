@@ -250,7 +250,7 @@ test('creating a track stores the whole setup privately', withServer(async ({ br
   const a = browser();
   const data = trackData({
     song: { progressionText: 'Dm7 G7 | Cmaj7 | A7', key: 'C', tempo: 144, timeSignature: '4/4' },
-    config: { style: 'blues', swing: 61, sounds: { drums: 'rock', keys: 'organ' }, modulation: { type: 'interval', interval: 5, everyLoops: 2, randomMode: 'shuffle' }, tempoRamp: { enabled: true, increment: 4, everyLoops: 3, maxBpm: 180 }, loop: false, countIn: false },
+    config: { style: 'blues', swing: 61, sounds: { drums: 'rock', bass: 'guitar', keys: 'organ' }, modulation: { type: 'interval', interval: 5, everyLoops: 2, randomMode: 'shuffle' }, tempoRamp: { enabled: true, increment: 4, everyLoops: 3, maxBpm: 180 }, loop: false, countIn: false },
     mixer: { drums: { volume: 0.4, muted: true }, bass: { volume: 0.9, muted: false }, chords: { volume: 0.5, muted: false } },
   });
   const r = await a.post('/api/tracks', { title: '  My   groove  ', description: 'Slow it down first.', data });
@@ -264,7 +264,7 @@ test('creating a track stores the whole setup privately', withServer(async ({ br
   assert.deepEqual(t.chords, ['Dm7', 'G7', 'Cmaj7', 'A7']);
   // "everything" comes back exactly as it was saved
   assert.equal(t.data.song.progressionText, 'Dm7 G7 | Cmaj7 | A7');
-  assert.deepEqual(t.data.config.sounds, { drums: 'rock', keys: 'organ' });
+  assert.deepEqual(t.data.config.sounds, { drums: 'rock', bass: 'guitar', keys: 'organ' });
   assert.equal(t.data.config.swing, 61);
   assert.equal(t.data.config.loop, false);
   assert.equal(t.data.config.countIn, false);

@@ -29,11 +29,19 @@ export function registerStyle(style) {
   return style;
 }
 
-/** Sounds a user can pick for drums and for the chord instrument. `sampled` ones are recordings (see ./samples). */
+/** Sounds a user can pick for drums, bass and the chord instrument. `sampled` ones are recordings (see ./samples). */
 export const DRUM_SOUNDS = [
   { id: 'jazz', name: 'Jazz kit', sampled: true },
   { id: 'rock', name: 'Rock kit', sampled: true },
   { id: 'electronic', name: 'Electronic drums', sampled: false },
+];
+export const BASS_SOUNDS = [
+  { id: 'double', name: 'Double bass', sampled: true },
+  { id: 'guitar', name: 'Bass guitar', sampled: true },
+  { id: 'bright', name: 'Bass guitar (bright)', sampled: true },
+  { id: 'upright', name: 'Upright (synth)', sampled: false },
+  { id: 'electric', name: 'Electric bass (synth)', sampled: false },
+  { id: 'pick', name: 'Pick bass (synth)', sampled: false },
 ];
 export const KEY_SOUNDS = [
   { id: 'piano', name: 'Grand piano', sampled: true },
@@ -45,13 +53,14 @@ export const KEY_SOUNDS = [
 
 /**
  * The timbres to play with: the style's defaults, overridden by the user's choices.
- * @param {{drums?: string, keys?: string}} [sounds]  'auto' (or missing) means "the style's own"
+ * @param {{drums?: string, bass?: string, keys?: string}} [sounds]  'auto' (or missing) means "the style's own"
  */
 export function resolveTimbres(style, sounds = {}) {
   const pick = (choice, list, fallback) => (list.some((s) => s.id === choice) ? choice : fallback);
   return {
     ...style.timbres,
     drums: pick(sounds.drums, DRUM_SOUNDS, style.timbres.drums),
+    bass: pick(sounds.bass, BASS_SOUNDS, style.timbres.bass),
     chords: pick(sounds.keys, KEY_SOUNDS, style.timbres.chords),
   };
 }

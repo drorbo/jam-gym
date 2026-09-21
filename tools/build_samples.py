@@ -10,6 +10,8 @@ Sources (see CREDITS.md for licences and attribution):
   rock drums   MuldjordKit (Lars Muldjord, DrumGizmo)                     CC BY 4.0
   piano        Salamander Grand Piano V3 (Alexander Holm), via Tone.js    CC BY 3.0
   e-piano      Wurlitzer EP200 (Greg Sullivan)                            CC BY 3.0
+  double bass  Meatbass, pizzicato (Karoryfer Samples / D. Smolken)       CC0
+  bass guitar  Black And Blue Basses (Karoryfer Samples): Dark Black, Baby Blue   CC0
 
 What the script does to each hit: mixes microphones (multi-mic kits), time-aligns and
 polarity-matches close mics to the overheads so they can't cancel, trims leading silence and
@@ -359,12 +361,106 @@ def build_wurli():
     }
 
 
+# ---- Basses -----------------------------------------------------------------------------
+
+MEATBASS = 'https://raw.githubusercontent.com/sfzinstruments/karoryfer.meatbass/master/Samples/pizz'
+BLACKBLUE = 'https://raw.githubusercontent.com/sfzinstruments/karoryfer.black-and-blue-basses/main/Samples'
+BASS_RATE = 24000      # bass has little above 8 kHz; 24 kHz keeps the pluck and halves the download
+FLATS = {'db': 1, 'eb': 3, 'gb': 6, 'ab': 8, 'bb': 10}
+
+
+def note_midi(name):
+    """'c2' -> 36, 'eb1' -> 27, 'gb3' -> 54 (scientific pitch, C4 = 60)."""
+    m = re.fullmatch(r'([a-g]b?)(\d)', name)
+    letter = m.group(1)
+    pc = FLATS[letter] if letter in FLATS else NOTE[letter.upper()]
+    return 12 * (int(m.group(2)) + 1) + pc
+
+
+def rms(x, sr, seconds=0.5):
+    seg = x[: int(sr * seconds)]
+    return float(np.sqrt(np.mean(np.square(seg))) + 1e-12)
+
+
+def squash(x, sr, threshold_db=-14, ratio=3.5, attack_ms=1.0, release_ms=90):
+    """
+    A gentle feed-forward compressor. A plucked bass note is all transient: its peak is far above its body, so at a level
+    where the peak is safe the note sounds thin next to a sustained synth. Taming the peak lets the body come up.
+    """
+    peak = float(np.max(np.abs(x))) + 1e-12
+    thr = peak * db(threshold_db)
+    env = np.abs(x)
+    a = np.exp(-1 / (sr * attack_ms / 1000))
+    r = np.exp(-1 / (sr * release_ms / 1000))
+    out = np.empty_like(x)
+    level = 0.0
+    for i, v in enumerate(env):
+        level = a * level + (1 - a) * v if v > level else r * level + (1 - r) * v
+        gain = 1.0 if level <= thr else (thr / level) ** (1 - 1 / ratio)
+        out[i] = x[i] * gain
+    return out
+
+
+def bass_bank(bank_id, name, credit, layers, folder, release, gain, max_len):
+    """
+    layers: [(ref, {sounding_midi: url})]. Every note is trimmed, resampled, levelled to the same loudness as its
+    neighbours in the layer (so the line does not jump in volume), and each layer is then scaled with the same gentle
+    velocity curve the drums use, so soft notes stay usable.
+    """
+    urls = [u for _, notes in layers for u in notes.values()]
+    fetch_many(urls)
+    out = []
+    for ref, notes in layers:
+        raw = {}
+        for midi, url in notes.items():
+            x, sr = read(url)
+            y = resample(trim(x, sr, max_len, floor_db=-62), sr, BASS_RATE)
+            raw[midi] = squash(y, BASS_RATE)
+        target = float(np.median([rms(y, BASS_RATE) for y in raw.values()]))
+        scaled = {m: y * min(4.0, max(0.25, target / rms(y, BASS_RATE))) for m, y in raw.items()}
+        top = max(np.max(np.abs(y)) for y in scaled.values())
+        k = layer_target(ref, 1.0) / top
+        for midi, y in sorted(scaled.items()):
+            entry = write(f'basses/{bank_id}/{midi}_{int(ref * 100)}.wav', y * k, BASS_RATE)
+            out.append({**entry, 'midi': midi, 'ref': ref})
+    return {
+        'id': bank_id, 'name': name, 'kind': 'multisample', 'release': release, 'gain': gain, 'brightness': False,
+        'credit': credit, 'notes': out,
+    }
+
+
+def build_double():
+    """Meatbass pizzicato: a 1958 Otto Rubner double bass, four dynamics. File names are true (sounding) pitch."""
+    names = ['eb1', 'gb1', 'a1', 'c2', 'eb2', 'gb2', 'a2', 'c3', 'eb3', 'gb3']          # every third semitone
+    layers = [(ref, {note_midi(n): f'{MEATBASS}/{n}_vl{vl}_rr1.wav' for n in names})
+              for ref, vl in [(0.25, 1), (0.7, 3), (0.95, 4)]]
+    return bass_bank('double', 'Double bass', 'Meatbass double bass, pizzicato, by Karoryfer Samples and D. Smolken (CC0)',
+                     layers, 'double', release=0.12, gain=2.2, max_len=2.4)
+
+
+def build_guitar_lib(bank_id, name, lib, dyn, release, gain):
+    """Black And Blue Basses file names are written an octave above the sounding pitch (bass-guitar notation)."""
+    written = ['e2', 'g2', 'bb2', 'db3', 'e3', 'g3', 'bb3', 'db4', 'e4', 'g4']        # sounds E1 to G3
+    layers = [(ref, {note_midi(n) - 12: f'{BLACKBLUE}/{lib}/reg/{lib}_{n}_{d}_rr1.wav' for n in written}) for ref, d in dyn]
+    return bass_bank(bank_id, name, f'Black And Blue Basses ({lib}) by Karoryfer Samples (CC0)', layers, bank_id,
+                     release=release, gain=gain, max_len=2.6)
+
+
+def build_guitar():
+    return build_guitar_lib('guitar', 'Bass guitar', 'darkblack', [(0.25, 'p'), (0.7, 'mf'), (0.95, 'f')], release=0.1, gain=2.1)
+
+
+def build_bright():
+    return build_guitar_lib('bright', 'Bass guitar (bright)', 'babyblue', [(0.55, 'f'), (0.95, 'ff')], release=0.08, gain=2.0)
+
+
 # ---- main -------------------------------------------------------------------------------
 
 if __name__ == '__main__':
     only = set(sys.argv[1:])
     manifest_path = os.path.join(OUT, 'manifest.json')
     manifest = json.load(open(manifest_path)) if os.path.exists(manifest_path) else {'drums': {}, 'keys': {}}
+    manifest.setdefault('basses', {})
     if not only or 'jazz' in only:
         print('jazz kit...'); manifest['drums']['jazz'] = build_jazz()
     if not only or 'rock' in only:
@@ -373,6 +469,12 @@ if __name__ == '__main__':
         print('piano...'); manifest['keys']['piano'] = build_piano()
     if not only or 'wurli' in only:
         print('wurlitzer...'); manifest['keys']['wurli'] = build_wurli()
+    if not only or 'double' in only:
+        print('double bass...'); manifest['basses']['double'] = build_double()
+    if not only or 'guitar' in only:
+        print('bass guitar...'); manifest['basses']['guitar'] = build_guitar()
+    if not only or 'bright' in only:
+        print('bright bass guitar...'); manifest['basses']['bright'] = build_bright()
     os.makedirs(OUT, exist_ok=True)
     json.dump(manifest, open(manifest_path, 'w'), indent=1)
     total = sum(os.path.getsize(os.path.join(d, f)) for d, _, fs in os.walk(OUT) for f in fs)

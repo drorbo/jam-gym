@@ -108,7 +108,7 @@ export const jazz = {
     bass: { t: 0.003, v: 0.06 },
     chords: { t: 0.008, v: 0.1, lay: 0.004 },
   },
-  timbres: { bass: 'upright', chords: 'piano', drums: 'jazz' },
+  timbres: { bass: 'double', chords: 'piano', drums: 'jazz' },
   // the walking-bass panel's starting point for this style
   bass: { rhythm: 'mixed', line: 40, tension: 30, approach: 'mixed', pattern: 'walk' },
   parts: { drums, bass, chords },

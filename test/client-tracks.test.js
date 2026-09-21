@@ -131,7 +131,7 @@ test('failures become ApiErrors: server messages, rate limits and no connection'
 test('what the app saves is exactly what the server would store (no silent changes)', () => {
   const state = defaultState();
   state.song.progressionText = 'Dm7 G7 | Cmaj7 | Am7 D7';
-  state.config = { ...state.config, style: 'blues', swing: 61, loop: false, countIn: false, sounds: { drums: 'rock', keys: 'organ' },
+  state.config = { ...state.config, style: 'blues', swing: 61, loop: false, countIn: false, sounds: { drums: 'rock', bass: 'guitar', keys: 'organ' },
     modulation: { type: 'random', interval: 3, everyLoops: 2, randomMode: 'fifths' }, tempoRamp: { enabled: true, increment: 3, everyLoops: 2, maxBpm: 180 } };
   state.mixer.bass = { volume: 0.33, muted: true };
   const built = buildTrackData(state);
@@ -250,14 +250,14 @@ test('loading a track restores the ENTIRE setup', withServer(async (server) => {
   const a = person(server);
   await a.tracks.init();
   a.setSong({ progressionText: 'Gm7 | C7 | Fmaj7 Bbmaj7', key: 'F', tempo: 173, timeSignature: '4/4' });
-  a.setConfig({ style: 'rock', swing: 57, loop: false, countIn: false, sounds: { drums: 'electronic', keys: 'wurli' },
+  a.setConfig({ style: 'rock', swing: 57, loop: false, countIn: false, sounds: { drums: 'electronic', bass: 'pick', keys: 'wurli' },
     modulation: { type: 'interval', interval: -2, everyLoops: 3, randomMode: 'any' }, tempoRamp: { enabled: true, increment: 6, everyLoops: 2, maxBpm: 200 } });
   a.store.set({ mixer: { drums: { volume: 0.2, muted: true }, bass: { volume: 0.9, muted: false }, chords: { volume: 0.45, muted: false } } });
   const saved = await a.tracks.save('Everything');
   const before = structuredClone(buildTrackData(a.store.get()));
   // wreck the state, then load
   a.setSong({ progressionText: 'C', key: 'C', tempo: 60 });
-  a.setConfig({ style: 'jazz', swing: 65, loop: true, countIn: true, sounds: { drums: 'auto', keys: 'auto' }, modulation: { type: 'off', interval: 2, everyLoops: 1, randomMode: 'no-repeat' }, tempoRamp: { enabled: false, increment: 5, everyLoops: 2, maxBpm: 220 } });
+  a.setConfig({ style: 'jazz', swing: 65, loop: true, countIn: true, sounds: { drums: 'auto', bass: 'auto', keys: 'auto' }, modulation: { type: 'off', interval: 2, everyLoops: 1, randomMode: 'no-repeat' }, tempoRamp: { enabled: false, increment: 5, everyLoops: 2, maxBpm: 220 } });
   a.store.set({ mixer: defaultState().mixer });
   assert.notDeepEqual(buildTrackData(a.store.get()), before);
   const opened = await a.tracks.open(a.state().mine.find((t) => t.id === saved.id));

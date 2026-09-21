@@ -4,7 +4,7 @@ import { readFileSync, existsSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { findVoice, layerGain, pickLayer, pickNote, pitchRate } from '../src/audio/samplemap.js';
-import { DRUM_SOUNDS, KEY_SOUNDS, getStyle, listStyles, resolveTimbres } from '../src/styles/index.js';
+import { BASS_SOUNDS, DRUM_SOUNDS, KEY_SOUNDS, getStyle, listStyles, resolveTimbres } from '../src/styles/index.js';
 
 const SAMPLES = fileURLToPath(new URL('../samples/', import.meta.url));
 const manifest = JSON.parse(readFileSync(join(SAMPLES, 'manifest.json'), 'utf8'));
@@ -70,10 +70,16 @@ test('sound choices: the style decides unless the user overrides', () => {
   assert.equal(resolveTimbres(jazz, { drums: 'rock', keys: 'organ' }).chords, 'organ');
   assert.equal(resolveTimbres(jazz, { drums: 'auto', keys: 'auto' }).chords, 'piano');
   assert.equal(resolveTimbres(jazz, { drums: 'nonsense', keys: 'nope' }).drums, 'jazz'); // unknown ids are ignored
-  assert.equal(resolveTimbres(jazz, {}).bass, 'upright');
+  assert.equal(resolveTimbres(jazz, {}).bass, 'double');
+  assert.equal(resolveTimbres(getStyle('blues'), {}).bass, 'guitar');
+  assert.equal(resolveTimbres(getStyle('rock'), {}).bass, 'bright');
+  assert.equal(resolveTimbres(jazz, { bass: 'pick' }).bass, 'pick');
+  assert.equal(resolveTimbres(jazz, { bass: 'auto' }).bass, 'double');
+  assert.equal(resolveTimbres(jazz, { bass: 'tuba' }).bass, 'double', 'unknown ids are ignored');
   for (const s of listStyles()) {
     assert.ok(DRUM_SOUNDS.some((d) => d.id === s.timbres.drums), `${s.id} default drums exist`);
     assert.ok(KEY_SOUNDS.some((k) => k.id === s.timbres.chords), `${s.id} default keys exist`);
+    assert.ok(BASS_SOUNDS.some((b) => b.id === s.timbres.bass), `${s.id} default bass exists`);
   }
 });
 
@@ -82,6 +88,8 @@ test('every sampled sound in the UI has a bank in the manifest, and vice versa',
   for (const k of KEY_SOUNDS.filter((x) => x.sampled)) assert.ok(manifest.keys[k.id], `keys:${k.id}`);
   assert.deepEqual(Object.keys(manifest.drums).sort(), DRUM_SOUNDS.filter((x) => x.sampled).map((x) => x.id).sort());
   assert.deepEqual(Object.keys(manifest.keys).sort(), KEY_SOUNDS.filter((x) => x.sampled).map((x) => x.id).sort());
+  for (const b of BASS_SOUNDS.filter((x) => x.sampled)) assert.ok(manifest.basses[b.id], `basses:${b.id}`);
+  assert.deepEqual(Object.keys(manifest.basses).sort(), BASS_SOUNDS.filter((x) => x.sampled).map((x) => x.id).sort());
 });
 
 const NEEDED_VOICES = ['kick', 'snare', 'hat', 'hatOpen', 'ride', 'crash', 'tomHigh', 'tomMid', 'tomLow'];
@@ -134,11 +142,39 @@ for (const [id, bank] of Object.entries(manifest.keys)) {
   });
 }
 
+for (const [id, bank] of Object.entries(manifest.basses)) {
+  test(`bass "${id}": covers a bass's range in small steps, layers get louder, files are sound WAVs, credit present`, () => {
+    assert.ok(bank.credit && bank.name && bank.release > 0 && bank.gain > 0);
+    const layers = new Map();
+    for (const n of bank.notes) layers.set(n.ref, [...(layers.get(n.ref) ?? []), n]);
+    assert.ok(layers.size >= 2, 'at least two dynamics');
+    let lastPeak = 0;
+    for (const ref of [...layers.keys()].sort((a, b) => a - b)) {
+      const notes = layers.get(ref).sort((a, b) => a.midi - b.midi);
+      assert.ok(notes[0].midi <= 28 && notes[notes.length - 1].midi >= 52, `layer ${ref} spans ${notes[0].midi}-${notes[notes.length - 1].midi} (E1 to E3 is 28-52)`);
+      for (let i = 1; i < notes.length; i++) assert.ok(notes[i].midi - notes[i - 1].midi <= 4, `gap ${notes[i - 1].midi}-${notes[i].midi}: a recorded bass is pitch-shifted by at most two semitones`);
+      const peaks = notes.map((n) => {
+        assert.ok(existsSync(join(SAMPLES, n.file)), n.file);
+        const w = readWav(join(SAMPLES, n.file));
+        assert.equal(w.channels, 1);
+        assert.equal(w.bits, 16);
+        assert.ok(w.seconds > 1.2 && w.seconds < 3.2, `${n.file} is ${w.seconds}s: long enough for a half note, short enough to load fast`);
+        assert.ok(w.peak > 0.12 && w.peak <= 1, `${n.file} peak ${w.peak}`);
+        return w.peak;
+      });
+      const avg = peaks.reduce((a, b) => a + b, 0) / peaks.length;
+      assert.ok(avg >= lastPeak - 0.03, `${id}: layer ${ref} is quieter than the one below`);
+      lastPeak = avg;
+    }
+  });
+}
+
 test('the bundle stays a reasonable size', () => {
   let total = 0;
   const files = new Set();
   for (const kit of Object.values(manifest.drums)) for (const l of Object.values(kit.voices).flat()) l.files.forEach((f) => files.add(f));
   for (const bank of Object.values(manifest.keys)) bank.notes.forEach((n) => files.add(n.file));
+  for (const bank of Object.values(manifest.basses)) bank.notes.forEach((n) => files.add(n.file));
   for (const f of files) total += statSync(join(SAMPLES, f)).size;
-  assert.ok(total < 20e6, `${(total / 1e6).toFixed(1)} MB`);
+  assert.ok(total < 26e6, `${(total / 1e6).toFixed(1)} MB`);
 });

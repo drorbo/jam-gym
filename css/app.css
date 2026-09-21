@@ -225,9 +225,24 @@ input[type='number'] { width: 4.5rem; min-height: 40px; padding: 0 0.5rem; text-
 .loaded-line { margin: 0.8rem 0 0; font-size: 0.9375rem; color: var(--brass); overflow-wrap: anywhere; }
 .loaded-now { margin: 0.35rem 0 0; font-size: 0.875rem; color: var(--muted); overflow-wrap: anywhere; }
 .tracks-msg { min-height: 1.5rem; }
-.tracks [role='tabpanel'] { margin-top: 0.8rem; }
+.tracks [role='tabpanel'] { margin-top: 0.4rem; }
+.sec-tools { display: flex; justify-content: flex-end; margin: 0.4rem 0 0; }
 
-.account { margin: 0 0 0.9rem; font-size: 0.9375rem; color: var(--muted); }
+/* collapsible sections: the same summary style as the bass line panel */
+.sec { border-top: 1px solid var(--fret); }
+.sec > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem 0.9rem; padding: 0.75rem 0; cursor: pointer; list-style: none; }
+.sec > summary::-webkit-details-marker { display: none; }
+.sec > summary::before {
+  content: ''; flex: none; align-self: center; width: 0.5rem; height: 0.5rem; margin-right: -0.2rem;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-45deg); transition: transform 0.15s;
+}
+.sec[open] > summary::before { transform: rotate(45deg); }
+.sec > summary:hover .sec-title { color: var(--brass); }
+.sec-title { font-size: 0.9375rem; font-weight: 600; color: var(--text); }
+.sec-sum { min-width: 0; font-size: 0.875rem; color: var(--muted); overflow-wrap: anywhere; }
+.sec-body { padding: 0 0 1.1rem; }
+
+.account { margin: 0 0 0.6rem; font-size: 0.9375rem; color: var(--muted); }
 .account-line { margin: 0; }
 .account-line strong { color: var(--text); font-weight: 600; }
 .account-links { display: flex; flex-wrap: wrap; gap: 0 1.1rem; margin-top: 0.3rem; }
@@ -245,7 +260,7 @@ input[type='number'] { width: 4.5rem; min-height: 40px; padding: 0 0.5rem; text-
 .inline-panel input[type='text'] { flex: 1 1 12rem; min-width: 0; min-height: 40px; padding: 0 0.8rem; background: var(--field); border: 1px solid var(--fret-strong); border-radius: 8px; color: var(--text); }
 .inline-panel .chip { min-height: 36px; font-size: 0.875rem; }
 .code { flex: 1 1 100%; padding: 0.55rem 0.8rem; background: var(--field); border: 1px solid var(--fret-strong); border-radius: 8px; color: var(--text); font: 600 1.0625rem/1.4 ui-monospace, 'Cascadia Mono', Consolas, monospace; letter-spacing: 0.04em; overflow-wrap: anywhere; user-select: all; }
-.note { margin: 0 0 0.9rem; padding: 0.7rem 0.9rem; border-left: 2px solid var(--brass); background: var(--raised); font-size: 0.875rem; color: var(--muted); }
+.note { margin: 0 0 0.6rem; padding: 0.7rem 0.9rem; border-left: 2px solid var(--brass); background: var(--raised); font-size: 0.875rem; color: var(--muted); }
 .note p { margin: 0 0 0.5rem; }
 .note .chip { min-height: 32px; font-size: 0.875rem; }
 
@@ -258,7 +273,7 @@ input[type='number'] { width: 4.5rem; min-height: 40px; padding: 0 0.5rem; text-
 .save-form .chip.is-update { color: var(--brass); border-color: var(--brass); }
 
 /* one list style for every kind of track: fret lines between rows */
-.track-list { list-style: none; margin: 0.6rem 0 0; padding: 0; border-top: 1px solid var(--fret); }
+.track-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--fret); }
 .track { position: relative; padding: 0.7rem 0 0.55rem; border-bottom: 1px solid var(--fret); }
 .track.is-active::before { content: ''; position: absolute; left: -0.7rem; top: 0.9rem; width: 6px; height: 6px; border-radius: 50%; background: var(--brass); }
 .track-main { display: flex; align-items: flex-start; gap: 0.6rem; }
@@ -294,8 +309,7 @@ input[type='number'] { width: 4.5rem; min-height: 40px; padding: 0 0.5rem; text-
 .confirm .report-reason { display: block; width: 100%; max-width: 32rem; min-height: 40px; margin-bottom: 0.6rem; padding: 0 0.8rem; background: var(--field); border: 1px solid var(--fret-strong); border-radius: 8px; color: var(--text); }
 .confirm-yes { color: var(--brass); border-color: var(--brass); }
 
-.local-box { margin-top: 1.8rem; padding-top: 1rem; border-top: 1px solid var(--fret-strong); }
-.local-box h3 { margin: 0; font-size: 0.9375rem; font-weight: 600; }
+.local-box { padding-top: 0.2rem; }
 .local-box .msg { margin-bottom: 0.6rem; }
 
 .browse-form input[type='search'] {

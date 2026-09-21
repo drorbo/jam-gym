@@ -9,7 +9,7 @@ import { clampBpm } from '../engine/planner.js';
 import { keyPrefersFlats, parseKey, formatKey } from '../theory/keys.js';
 import { mod12 } from '../theory/notes.js';
 import { parseProgression, transposeProgressionText } from '../theory/progression.js';
-import { DRUM_SOUNDS, KEY_SOUNDS, defaultBass, getStyle, resolveTimbres } from '../styles/index.js';
+import { BASS_SOUNDS, DRUM_SOUNDS, KEY_SOUNDS, defaultBass, getStyle, resolveTimbres } from '../styles/index.js';
 import { removeSaved, restoreSaved, saveSnapshot, signatureOf } from './saved.js';
 import { buildTrackData, dataFromLocalSave } from './tracks-model.js';
 
@@ -54,12 +54,13 @@ export class Player {
 
   // ---- recorded sounds -------------------------------------------------------------------
 
-  /** The recorded banks the current style and choices need: [['drums', 'jazz'], ['keys', 'piano']]. */
+  /** The recorded banks the current style and choices need: [['drums', 'jazz'], ['basses', 'double'], ['keys', 'piano']]. */
   neededBanks() {
     const { config } = this.store.get();
     const t = resolveTimbres(getStyle(config.style), config.sounds);
     const banks = [];
     if (DRUM_SOUNDS.find((d) => d.id === t.drums)?.sampled) banks.push(['drums', t.drums]);
+    if (BASS_SOUNDS.find((b) => b.id === t.bass)?.sampled) banks.push(['basses', t.bass]);
     if (KEY_SOUNDS.find((k) => k.id === t.chords)?.sampled) banks.push(['keys', t.chords]);
     return banks;
   }
@@ -70,7 +71,7 @@ export class Player {
     if (!lib) return;
     const missing = this.neededBanks().filter(([kind, id]) => !lib.isReady(kind, id));
     if (!missing.length) { this.store.set({ soundStatus: { loading: false, failed: [] } }); return; }
-    const label = ([kind, id]) => (kind === 'drums' ? DRUM_SOUNDS : KEY_SOUNDS).find((x) => x.id === id)?.name ?? id;
+    const label = ([kind, id]) => ({ drums: DRUM_SOUNDS, basses: BASS_SOUNDS, keys: KEY_SOUNDS }[kind]).find((x) => x.id === id)?.name ?? id;
     this.store.set({ soundStatus: { loading: true, failed: [], names: missing.map(label) } });
     await Promise.all(missing.map(([kind, id]) => lib.load(kind, id)));
     const failed = missing.filter(([kind, id]) => !lib.isReady(kind, id)).map(label);

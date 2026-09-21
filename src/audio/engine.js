@@ -13,7 +13,9 @@ const INSTRUMENTS = ['drums', 'bass', 'chords'];
 // Output trims so equal fader positions sound roughly balanced.
 const TRIM = { drums: 1.15, bass: 0.45, chords: 1.35 };
 // Recorded kits and keyboards are normalised to about -2 dBFS, hotter than the synths above.
-const SAMPLE_LEVEL = { drums: 1.0, keys: 0.75 };
+const SAMPLE_LEVEL = { drums: 1.0, keys: 0.75, bass: 1.0 };
+// While a recorded bass is still loading (or could not load), its synth cousin plays instead.
+const BASS_FALLBACK = { double: 'upright', guitar: 'electric', bright: 'pick' };
 // How much of each instrument goes to the room reverb.
 const SEND = { drums: 0.1, bass: 0, chords: 0.22 };
 
@@ -117,7 +119,12 @@ export class Bus {
     switch (n.inst) {
       case 'drums': this.#drum(n, t); break;
       case 'click': playDrum(this.ctx, this.clickOut, 'click', t, n.vel); break;
-      case 'bass': playBass(this.ctx, this.faders.bass, t, n.dur, n.midi, n.vel, n.timbre); break;
+      case 'bass': {
+        const bank = this.library?.get('basses', n.timbre);
+        if (bank) playSampledNote(this.ctx, this.faders.bass, bank, t, n.dur, n.midi, n.vel * SAMPLE_LEVEL.bass);
+        else playBass(this.ctx, this.faders.bass, t, n.dur, n.midi, n.vel, BASS_FALLBACK[n.timbre] ?? n.timbre);
+        break;
+      }
       case 'chords': {
         const bank = this.library?.get('keys', n.timbre);
         if (bank) {

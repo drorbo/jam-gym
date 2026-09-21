@@ -1,6 +1,6 @@
 // App state: defaults, a tiny observable store, and localStorage persistence.
 
-import { DRUM_SOUNDS, KEY_SOUNDS, defaultBass, defaultSwing, getStyle } from '../styles/index.js';
+import { BASS_SOUNDS, DRUM_SOUNDS, KEY_SOUNDS, defaultBass, defaultSwing, getStyle } from '../styles/index.js';
 import { sanitizeBass } from '../styles/walking.js';
 import { clampSwing } from '../engine/feel.js';
 import { MAX_BPM, MIN_BPM } from '../engine/planner.js';
@@ -27,7 +27,7 @@ export const defaultState = () => ({
     bass: defaultBass(getStyle('jazz')), // walking-bass settings; picking a style resets these too
     loop: true,
     countIn: true,
-    sounds: { drums: 'auto', keys: 'auto' },
+    sounds: { drums: 'auto', bass: 'auto', keys: 'auto' },
     modulation: { type: 'off', interval: 2, everyLoops: 1, randomMode: 'no-repeat' },
     tempoRamp: { enabled: false, increment: 5, everyLoops: 2, maxBpm: MAX_BPM },
   },
@@ -86,6 +86,7 @@ export function sanitize(saved) {
       countIn: c.countIn !== false,
       sounds: {
         drums: oneOf(c.sounds?.drums, ['auto', ...DRUM_SOUNDS.map((x) => x.id)], 'auto'),
+        bass: oneOf(c.sounds?.bass, ['auto', ...BASS_SOUNDS.map((x) => x.id)], 'auto'),
         keys: oneOf(c.sounds?.keys, ['auto', ...KEY_SOUNDS.map((x) => x.id)], 'auto'),
       },
       modulation: {

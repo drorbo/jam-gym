@@ -4,6 +4,7 @@ import { loadSaved, persistSaved } from './saved.js';
 import { createStore, loadState, saveState } from './state.js';
 import { createTracksController } from './tracks.js';
 import { mountBassUI } from './bass-ui.js';
+import { mountCollapsibles } from './collapsible.js';
 import { mountSidebar } from './sidebar.js';
 import { mountTracksUI } from './tracks-ui.js';
 import { mountUI } from './ui.js';
@@ -20,6 +21,7 @@ try { storage = window.localStorage; } catch { /* storage blocked: the cookie no
 const tracks = createTracksController({ store, player, api: createApi(), storage, search: location.search });
 const sidebar = mountSidebar({ storage });
 mountTracksUI({ store, player, tracks, sidebar });
+mountCollapsibles({ root: document.getElementById('sidebar'), storage, toggleAll: document.getElementById('sec-toggle-all') });
 tracks.init();
 
 store.subscribe((state, patch) => {

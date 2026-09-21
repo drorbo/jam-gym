@@ -107,6 +107,6 @@ export const rock = {
     bass: { t: 0.002, v: 0.05 },
     chords: { t: 0.004, v: 0.07 },
   },
-  timbres: { bass: 'pick', chords: 'guitar', drums: 'rock' },
+  timbres: { bass: 'bright', chords: 'guitar', drums: 'rock' },
   parts: { drums, bass, chords },
 };

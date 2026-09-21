@@ -381,7 +381,7 @@ test('the bass setting reaches the audio events untouched by feel and humanising
     for (const events of render('jazz', PROG, { seed: 8, bass: { rhythm } }).out) {
       for (const e of bassOf(events)) {
         assert.ok(e.dur > 0 && e.vel > 0 && e.vel <= 1 && Number.isFinite(e.beat));
-        assert.equal(e.timbre, 'upright');
+        assert.equal(e.timbre, 'double');
       }
     }
   }

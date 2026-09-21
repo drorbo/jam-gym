@@ -128,6 +128,9 @@
             <label class="field">Drums
               <select id="snd-drums"></select>
             </label>
+            <label class="field">Bass
+              <select id="snd-bass"></select>
+            </label>
             <label class="field">Keys
               <select id="snd-keys"></select>
             </label>
@@ -224,14 +227,14 @@
 
     <footer class="foot">
       <p>Space plays and pauses. The band runs in your browser, so it plays offline; saving and sharing tracks needs a connection.</p>
-      <p>Recorded sounds: Virtuosity Drums (CC0), MuldjordKit by Lars Muldjord (CC BY 4.0), Salamander Grand Piano by Alexander Holm (CC BY 3.0), Wurlitzer EP200 by Greg Sullivan (CC BY 3.0). <a href="samples/CREDITS.md">Details</a></p>
+      <p>Recorded sounds: Virtuosity Drums (CC0), MuldjordKit by Lars Muldjord (CC BY 4.0), Salamander Grand Piano by Alexander Holm (CC BY 3.0), Wurlitzer EP200 by Greg Sullivan (CC BY 3.0), Meatbass double bass and Black And Blue Basses by Karoryfer Samples (CC0). <a href="samples/CREDITS.md">Details</a></p>
     </footer>
   </div>
 
   <!-- Tracks: my library and the community. A sidebar, so it never sits in the middle of the practice controls. -->
   <aside class="sidebar" id="sidebar" aria-labelledby="tracks-title" inert>
     <div class="sidebar-inner">
-        <div class="tracks" id="tracks">
+      <div class="tracks" id="tracks">
         <div class="tracks-head">
           <h2 id="tracks-title">Tracks</h2>
           <button class="icon-btn sidebar-close" id="sidebar-close" type="button" aria-label="Close tracks" title="Close">
@@ -245,38 +248,65 @@
 
         <p class="loaded-line" id="loaded-line" hidden></p>
         <p class="msg tracks-msg" id="tracks-msg" role="status"></p>
+        <p class="sec-tools"><button class="link" id="sec-toggle-all" type="button">Collapse all</button></p>
 
         <section id="panel-mine" role="tabpanel" aria-labelledby="tab-mine">
-          <div class="account" id="account"></div>
-          <div class="note" id="cookie-note" hidden></div>
-          <form class="save-form" id="save-form" autocomplete="off">
-            <label class="sr-only" for="save-name">Name for this track</label>
-            <input id="save-name" type="text" maxlength="80" placeholder="Name this track" spellcheck="false">
-            <button class="chip" id="save-btn" type="submit">Save</button>
-          </form>
-          <ul class="track-list" id="my-list"></ul>
-          <div class="local-box" id="local-box" hidden></div>
+          <details class="sec" data-section="account" open>
+            <summary><span class="sec-title">Account</span><span class="sec-sum" id="sum-account"></span></summary>
+            <div class="sec-body">
+              <div class="account" id="account"></div>
+              <div class="note" id="cookie-note" hidden></div>
+            </div>
+          </details>
+          <details class="sec" data-section="save" open>
+            <summary><span class="sec-title">Save this setup</span></summary>
+            <div class="sec-body">
+              <form class="save-form" id="save-form" autocomplete="off">
+                <label class="sr-only" for="save-name">Name for this track</label>
+                <input id="save-name" type="text" maxlength="80" placeholder="Name this track" spellcheck="false">
+                <button class="chip" id="save-btn" type="submit">Save</button>
+              </form>
+            </div>
+          </details>
+          <details class="sec" data-section="mine" open>
+            <summary><span class="sec-title">My tracks</span><span class="sec-sum" id="sum-mine"></span></summary>
+            <div class="sec-body"><ul class="track-list" id="my-list"></ul></div>
+          </details>
+          <details class="sec" data-section="local" id="sec-local" open hidden>
+            <summary><span class="sec-title">On this device</span><span class="sec-sum" id="sum-local"></span></summary>
+            <div class="sec-body"><div class="local-box" id="local-box"></div></div>
+          </details>
         </section>
 
         <section id="panel-browse" role="tabpanel" aria-labelledby="tab-browse" hidden>
-          <form class="browse-form" id="browse-form" role="search" autocomplete="off">
-            <label class="sr-only" for="browse-q">Search published tracks</label>
-            <input id="browse-q" type="search" maxlength="200" placeholder="Search titles, names or chords, e.g. Dm7 G7" spellcheck="false">
-            <div class="filters">
-              <label class="field">Style <select id="f-style"></select></label>
-              <label class="field">Time <select id="f-meter"></select></label>
-              <label class="field">Key <select id="f-key"></select></label>
-              <label class="field">Tempo
-                <input id="f-bpm-min" type="number" min="40" max="220" inputmode="numeric" placeholder="from" aria-label="Lowest tempo">
-                <span>to</span>
-                <input id="f-bpm-max" type="number" min="40" max="220" inputmode="numeric" placeholder="to" aria-label="Highest tempo">
-              </label>
-              <label class="field">Sort <select id="f-sort"></select></label>
+          <details class="sec" data-section="filters" open>
+            <summary><span class="sec-title">Search and filters</span><span class="sec-sum" id="sum-filters"></span></summary>
+            <div class="sec-body">
+              <form class="browse-form" id="browse-form" role="search" autocomplete="off">
+                <label class="sr-only" for="browse-q">Search published tracks</label>
+                <input id="browse-q" type="search" maxlength="200" placeholder="Search titles, names or chords, e.g. Dm7 G7" spellcheck="false">
+                <div class="filters">
+                  <label class="field">Style <select id="f-style"></select></label>
+                  <label class="field">Time <select id="f-meter"></select></label>
+                  <label class="field">Key <select id="f-key"></select></label>
+                  <label class="field">Tempo
+                    <input id="f-bpm-min" type="number" min="40" max="220" inputmode="numeric" placeholder="from" aria-label="Lowest tempo">
+                    <span>to</span>
+                    <input id="f-bpm-max" type="number" min="40" max="220" inputmode="numeric" placeholder="to" aria-label="Highest tempo">
+                  </label>
+                  <label class="field">Sort <select id="f-sort"></select></label>
+                </div>
+              </form>
             </div>
-          </form>
-          <p class="msg" id="browse-count" role="status"></p>
-          <ul class="track-list" id="browse-list"></ul>
-          <button class="chip" id="browse-more" type="button" hidden>Show more</button>
+          </details>
+          <details class="sec" data-section="results" open>
+            <summary><span class="sec-title">Results</span><span class="sec-sum" id="sum-results"></span></summary>
+            <div class="sec-body">
+              <p class="msg" id="browse-count" role="status"></p>
+              <ul class="track-list" id="browse-list"></ul>
+              <button class="chip" id="browse-more" type="button" hidden>Show more</button>
+            </div>
+          </details>
         </section>
       </div>
     </div>

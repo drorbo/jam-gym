@@ -11,7 +11,7 @@ synthesised in the browser. The band plays offline; saving and sharing tracks ne
 
 ```
 npm start        # serves http://localhost:5173 (the site and the tracks API), data in ./data
-npm test         # 300 tests, Node's built-in runner, no install needed
+npm test         # 303 tests, Node's built-in runner, no install needed
 npm run admin -- stats     # moderation and upkeep, see "Tracks" below
 ```
 
@@ -32,14 +32,17 @@ To ship a change (tests, commit, push, deploy, verify, in one go): `bash scripts
   groove follows it (kick and snare on group downbeats, a ride ping or walking-bass step on each), and chords
   share a bar by group: in 7/8, two chords split it 3+2 | 2. Tempo is always quarter-note BPM, so changing
   meter keeps the eighth-note pace the same; the tempo hint says what that means in each meter.
-- **Sounds**: drums are a Jazz kit, a Rock kit or Electronic drums. Keys are a Grand piano, a Wurlitzer, or
-  the synth electric piano, organ or guitar. Each style has its own default; you can override either.
+- **Sounds**: drums are a Jazz kit, a Rock kit or Electronic drums. Bass is a recorded Double bass, a Bass guitar,
+  a brighter Bass guitar, or a synth upright, electric or pick bass. Keys are a Grand piano, a Wurlitzer, or
+  the synth electric piano, organ or guitar. Each style has its own default (jazz: double bass; blues: bass guitar;
+  rock: bright bass guitar); you can override any of them. Sounds are saved with a track.
 - **Swing**: a percentage slider from 50% (straight eighths) through about 67% (triplet swing) to 75% (hard swing).
   Choosing a style sets it to that style's default (jazz 65% at its default tempo, blues 67%, rock 50%; jazz eases toward
   straighter as the default tempo rises); a small button restores the default after you've moved it. It applies from
   the next bar, is saved with saved progressions, and is disabled in 6/8, 7/8 and 10/8, whose feel comes from their groupings.
 - **Bass line** (jazz and blues): a panel under the controls that shapes how the walking bass is played. See below.
-- **Tracks**: the button in the header opens the tracks sidebar, described below. A track is the whole setup, not just the chords.
+- **Tracks**: the button in the header opens the tracks sidebar, described below. Every section of it folds away, and
+  remembers whether it was open. A track is the whole setup, not just the chords.
 - **Key change**: *Step* moves by an interval (−11…+11 semitones, named) every N loops.
   *Random* picks a key every N loops: never the same twice, completely random, all 12 in random order,
   circle of fifths, circle of fourths, or chromatic.
@@ -146,7 +149,7 @@ spacing and zero drift over 500 bars in every meter, with irregular timer ticks.
 
 ### Recorded sounds
 
-The Jazz kit, Rock kit, Grand piano and Wurlitzer are recordings, downloaded when first needed (a few MB each) and
+The Jazz kit, Rock kit, Grand piano, Wurlitzer, Double bass and both Bass guitars are recordings, downloaded when first needed (a few MB each) and
 kept in memory. If one can't be loaded, that instrument falls back to its synth and the app says so. See
 [samples/CREDITS.md](samples/CREDITS.md) for the sources and licences (CC0 and CC BY, which need attribution) and for
 what was changed. `python tools/build_samples.py` (needs `numpy` and `soundfile`) rebuilds them.
