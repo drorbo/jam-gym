@@ -37,9 +37,10 @@ ssh "$SSH_HOST" "cd $REMOTE_DIR && $COMPOSE ps"
 echo "==> Recent logs"
 ssh "$SSH_HOST" "docker logs jam-gym-web-1 --tail 10"
 
-echo "==> Verifying the public site"
-curl -s -o /dev/null -w 'jam-gym home:      %{http_code}\n' https://jam-gym.eardle.com/
-curl -s -o /dev/null -w 'jam-gym manifest:  %{http_code}\n' https://jam-gym.eardle.com/samples/manifest.json
-curl -s -o /dev/null -w 'eardle (unchanged): %{http_code}\n' https://eardle.com/
+echo "==> Verifying the public site (000 means not reachable yet, e.g. DNS or nginx not set up)"
+# The manifest only exists on Jam Gym, so a 200 here proves the request reached Jam Gym and not eardle.
+curl -s -o /dev/null -w 'jam-gym home:      %{http_code}\n' https://jam-gym.eardle.com/ || true
+curl -s -o /dev/null -w 'jam-gym manifest:  %{http_code}\n' https://jam-gym.eardle.com/samples/manifest.json || true
+curl -s -o /dev/null -w 'eardle (unchanged): %{http_code}\n' https://eardle.com/ || true
 
 echo "==> Deploy complete"
