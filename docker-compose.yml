@@ -1,0 +1,21 @@
+# Jam Gym on the production server, next to eardle.
+#
+# It is its own Compose project (`name: jam-gym`), so its containers, network and image are separate from
+# eardle's, and `docker compose` commands run in this folder can never touch eardle's containers.
+# Use `docker compose -f docker-compose.yml ...` (as with eardle); there is no override file here.
+name: jam-gym
+
+services:
+  web:
+    build: .
+    restart: always
+    ports:
+      # Loopback only: the host nginx proxies jam-gym.eardle.com to this. (eardle uses 127.0.0.1:3000.)
+      - "127.0.0.1:3100:80"
+    # A static file server needs very little. Cap it so it can never crowd out eardle on the shared host.
+    mem_limit: 64m
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

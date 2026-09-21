@@ -1,0 +1,10 @@
+# Keep Linux-facing files LF even when checked out on Windows (a CR would break shell scripts and nginx).
+*.sh   text eol=lf
+*.conf text eol=lf
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf
+.dockerignore text eol=lf
+
+# Binary assets: never touch line endings.
+*.wav   binary
+*.woff2 binary

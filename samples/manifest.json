@@ -1,0 +1,682 @@
+{
+ "drums": {
+  "jazz": {
+   "id": "jazz",
+   "name": "Jazz kit",
+   "credit": "Virtuosity Drums, Versilian Studios and Karoryfer Samples (CC0)",
+   "voices": {
+    "kick": [
+     {
+      "ref": 0.25,
+      "files": [
+       "drums/jazz/kick_1_1.wav",
+       "drums/jazz/kick_1_2.wav"
+      ]
+     },
+     {
+      "ref": 0.5,
+      "files": [
+       "drums/jazz/kick_2_1.wav",
+       "drums/jazz/kick_2_2.wav"
+      ]
+     },
+     {
+      "ref": 0.75,
+      "files": [
+       "drums/jazz/kick_3_1.wav",
+       "drums/jazz/kick_3_2.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/jazz/kick_4_1.wav",
+       "drums/jazz/kick_4_2.wav"
+      ]
+     }
+    ],
+    "snare": [
+     {
+      "ref": 0.25,
+      "files": [
+       "drums/jazz/snare_1_1.wav"
+      ]
+     },
+     {
+      "ref": 0.5,
+      "files": [
+       "drums/jazz/snare_2_1.wav"
+      ]
+     },
+     {
+      "ref": 0.75,
+      "files": [
+       "drums/jazz/snare_3_1.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/jazz/snare_4_1.wav"
+      ]
+     }
+    ],
+    "hat": [
+     {
+      "ref": 0.25,
+      "files": [
+       "drums/jazz/hat_1_1.wav",
+       "drums/jazz/hat_1_2.wav"
+      ]
+     },
+     {
+      "ref": 0.5,
+      "files": [
+       "drums/jazz/hat_2_1.wav",
+       "drums/jazz/hat_2_2.wav"
+      ]
+     },
+     {
+      "ref": 0.75,
+      "files": [
+       "drums/jazz/hat_3_1.wav",
+       "drums/jazz/hat_3_2.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/jazz/hat_4_1.wav",
+       "drums/jazz/hat_4_2.wav"
+      ]
+     }
+    ],
+    "hatOpen": [
+     {
+      "ref": 0.5,
+      "files": [
+       "drums/jazz/hatOpen_1_1.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/jazz/hatOpen_2_1.wav"
+      ]
+     }
+    ],
+    "hatPedal": [
+     {
+      "ref": 0.5,
+      "files": [
+       "drums/jazz/hatPedal_1_1.wav",
+       "drums/jazz/hatPedal_1_2.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/jazz/hatPedal_2_1.wav",
+       "drums/jazz/hatPedal_2_2.wav"
+      ]
+     }
+    ],
+    "ride": [
+     {
+      "ref": 0.33,
+      "files": [
+       "drums/jazz/ride_1_1.wav",
+       "drums/jazz/ride_1_2.wav"
+      ]
+     },
+     {
+      "ref": 0.67,
+      "files": [
+       "drums/jazz/ride_2_1.wav",
+       "drums/jazz/ride_2_2.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/jazz/ride_3_1.wav",
+       "drums/jazz/ride_3_2.wav"
+      ]
+     }
+    ],
+    "crash": [
+     {
+      "ref": 0.5,
+      "files": [
+       "drums/jazz/crash_1_1.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/jazz/crash_2_1.wav"
+      ]
+     }
+    ],
+    "tomHigh": [
+     {
+      "ref": 0.33,
+      "files": [
+       "drums/jazz/tomHigh_1_1.wav"
+      ]
+     },
+     {
+      "ref": 0.67,
+      "files": [
+       "drums/jazz/tomHigh_2_1.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/jazz/tomHigh_3_1.wav"
+      ]
+     }
+    ],
+    "tomLow": [
+     {
+      "ref": 0.33,
+      "files": [
+       "drums/jazz/tomLow_1_1.wav"
+      ]
+     },
+     {
+      "ref": 0.67,
+      "files": [
+       "drums/jazz/tomLow_2_1.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/jazz/tomLow_3_1.wav"
+      ]
+     }
+    ],
+    "tomMid": [
+     {
+      "ref": 0.33,
+      "files": [
+       "drums/jazz/tomLow_1_1.wav"
+      ],
+      "rate": 1.19
+     },
+     {
+      "ref": 0.67,
+      "files": [
+       "drums/jazz/tomLow_2_1.wav"
+      ],
+      "rate": 1.19
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/jazz/tomLow_3_1.wav"
+      ],
+      "rate": 1.19
+     }
+    ]
+   }
+  },
+  "rock": {
+   "id": "rock",
+   "name": "Rock kit",
+   "credit": "MuldjordKit by Lars Muldjord, drumgizmo.org (CC BY 4.0)",
+   "voices": {
+    "kick": [
+     {
+      "ref": 0.25,
+      "files": [
+       "drums/rock/kick_1_1.wav"
+      ]
+     },
+     {
+      "ref": 0.5,
+      "files": [
+       "drums/rock/kick_2_1.wav",
+       "drums/rock/kick_2_2.wav"
+      ]
+     },
+     {
+      "ref": 0.75,
+      "files": [
+       "drums/rock/kick_3_1.wav",
+       "drums/rock/kick_3_2.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/rock/kick_4_1.wav",
+       "drums/rock/kick_4_2.wav"
+      ]
+     }
+    ],
+    "snare": [
+     {
+      "ref": 0.25,
+      "files": [
+       "drums/rock/snare_1_1.wav",
+       "drums/rock/snare_1_2.wav"
+      ]
+     },
+     {
+      "ref": 0.5,
+      "files": [
+       "drums/rock/snare_2_1.wav",
+       "drums/rock/snare_2_2.wav"
+      ]
+     },
+     {
+      "ref": 0.75,
+      "files": [
+       "drums/rock/snare_3_1.wav",
+       "drums/rock/snare_3_2.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/rock/snare_4_1.wav",
+       "drums/rock/snare_4_2.wav"
+      ]
+     }
+    ],
+    "hat": [
+     {
+      "ref": 0.33,
+      "files": [
+       "drums/rock/hat_1_1.wav",
+       "drums/rock/hat_1_2.wav"
+      ]
+     },
+     {
+      "ref": 0.67,
+      "files": [
+       "drums/rock/hat_2_1.wav",
+       "drums/rock/hat_2_2.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/rock/hat_3_1.wav",
+       "drums/rock/hat_3_2.wav"
+      ]
+     }
+    ],
+    "hatOpen": [
+     {
+      "ref": 0.5,
+      "files": [
+       "drums/rock/hatOpen_1_1.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/rock/hatOpen_2_1.wav"
+      ]
+     }
+    ],
+    "ride": [
+     {
+      "ref": 0.33,
+      "files": [
+       "drums/rock/ride_1_1.wav"
+      ]
+     },
+     {
+      "ref": 0.67,
+      "files": [
+       "drums/rock/ride_2_1.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/rock/ride_3_1.wav"
+      ]
+     }
+    ],
+    "crash": [
+     {
+      "ref": 0.5,
+      "files": [
+       "drums/rock/crash_1_1.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/rock/crash_2_1.wav"
+      ]
+     }
+    ],
+    "tomHigh": [
+     {
+      "ref": 0.33,
+      "files": [
+       "drums/rock/tomHigh_1_1.wav"
+      ]
+     },
+     {
+      "ref": 0.67,
+      "files": [
+       "drums/rock/tomHigh_2_1.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/rock/tomHigh_3_1.wav"
+      ]
+     }
+    ],
+    "tomMid": [
+     {
+      "ref": 0.33,
+      "files": [
+       "drums/rock/tomMid_1_1.wav"
+      ]
+     },
+     {
+      "ref": 0.67,
+      "files": [
+       "drums/rock/tomMid_2_1.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/rock/tomMid_3_1.wav"
+      ]
+     }
+    ],
+    "tomLow": [
+     {
+      "ref": 0.33,
+      "files": [
+       "drums/rock/tomLow_1_1.wav"
+      ]
+     },
+     {
+      "ref": 0.67,
+      "files": [
+       "drums/rock/tomLow_2_1.wav"
+      ]
+     },
+     {
+      "ref": 1.0,
+      "files": [
+       "drums/rock/tomLow_3_1.wav"
+      ]
+     }
+    ]
+   }
+  }
+ },
+ "keys": {
+  "piano": {
+   "id": "piano",
+   "name": "Grand piano",
+   "kind": "multisample",
+   "release": 0.35,
+   "gain": 0.9,
+   "brightness": true,
+   "credit": "Salamander Grand Piano by Alexander Holm (CC BY 3.0)",
+   "notes": [
+    {
+     "file": "keys/piano/A1.wav",
+     "ms": 4200,
+     "midi": 33
+    },
+    {
+     "file": "keys/piano/C2.wav",
+     "ms": 4200,
+     "midi": 36
+    },
+    {
+     "file": "keys/piano/Ds2.wav",
+     "ms": 4200,
+     "midi": 39
+    },
+    {
+     "file": "keys/piano/Fs2.wav",
+     "ms": 4200,
+     "midi": 42
+    },
+    {
+     "file": "keys/piano/A2.wav",
+     "ms": 4200,
+     "midi": 45
+    },
+    {
+     "file": "keys/piano/C3.wav",
+     "ms": 4200,
+     "midi": 48
+    },
+    {
+     "file": "keys/piano/Ds3.wav",
+     "ms": 4200,
+     "midi": 51
+    },
+    {
+     "file": "keys/piano/Fs3.wav",
+     "ms": 4200,
+     "midi": 54
+    },
+    {
+     "file": "keys/piano/A3.wav",
+     "ms": 4200,
+     "midi": 57
+    },
+    {
+     "file": "keys/piano/C4.wav",
+     "ms": 3400,
+     "midi": 60
+    },
+    {
+     "file": "keys/piano/Ds4.wav",
+     "ms": 3400,
+     "midi": 63
+    },
+    {
+     "file": "keys/piano/Fs4.wav",
+     "ms": 3400,
+     "midi": 66
+    },
+    {
+     "file": "keys/piano/A4.wav",
+     "ms": 3400,
+     "midi": 69
+    },
+    {
+     "file": "keys/piano/C5.wav",
+     "ms": 3400,
+     "midi": 72
+    },
+    {
+     "file": "keys/piano/Ds5.wav",
+     "ms": 3400,
+     "midi": 75
+    },
+    {
+     "file": "keys/piano/Fs5.wav",
+     "ms": 2400,
+     "midi": 78
+    },
+    {
+     "file": "keys/piano/A5.wav",
+     "ms": 2400,
+     "midi": 81
+    },
+    {
+     "file": "keys/piano/C6.wav",
+     "ms": 2400,
+     "midi": 84
+    }
+   ]
+  },
+  "wurli": {
+   "id": "wurli",
+   "name": "Wurlitzer",
+   "kind": "multisample",
+   "release": 0.12,
+   "gain": 0.55,
+   "brightness": false,
+   "credit": "Wurlitzer EP200 by Greg Sullivan (CC BY 3.0)",
+   "notes": [
+    {
+     "file": "keys/wurli/a1f.wav",
+     "ms": 2600,
+     "midi": 33,
+     "ref": 0.85
+    },
+    {
+     "file": "keys/wurli/c2f.wav",
+     "ms": 2600,
+     "midi": 36,
+     "ref": 0.85
+    },
+    {
+     "file": "keys/wurli/f2f.wav",
+     "ms": 2600,
+     "midi": 41,
+     "ref": 0.85
+    },
+    {
+     "file": "keys/wurli/b2f.wav",
+     "ms": 2600,
+     "midi": 47,
+     "ref": 0.85
+    },
+    {
+     "file": "keys/wurli/e3f.wav",
+     "ms": 2365,
+     "midi": 52,
+     "ref": 0.85
+    },
+    {
+     "file": "keys/wurli/ab3f.wav",
+     "ms": 2484,
+     "midi": 56,
+     "ref": 0.85
+    },
+    {
+     "file": "keys/wurli/db4f.wav",
+     "ms": 2201,
+     "midi": 61,
+     "ref": 0.85
+    },
+    {
+     "file": "keys/wurli/ab4f.wav",
+     "ms": 2600,
+     "midi": 68,
+     "ref": 0.85
+    },
+    {
+     "file": "keys/wurli/db5f.wav",
+     "ms": 1800,
+     "midi": 73,
+     "ref": 0.85
+    },
+    {
+     "file": "keys/wurli/g5f.wav",
+     "ms": 946,
+     "midi": 79,
+     "ref": 0.85
+    },
+    {
+     "file": "keys/wurli/db6f.wav",
+     "ms": 1088,
+     "midi": 85,
+     "ref": 0.85
+    },
+    {
+     "file": "keys/wurli/ab6f.wav",
+     "ms": 1052,
+     "midi": 92,
+     "ref": 0.85
+    },
+    {
+     "file": "keys/wurli/a1mp.wav",
+     "ms": 2600,
+     "midi": 33,
+     "ref": 0.5
+    },
+    {
+     "file": "keys/wurli/e2mp.wav",
+     "ms": 2203,
+     "midi": 40,
+     "ref": 0.5
+    },
+    {
+     "file": "keys/wurli/a2mp.wav",
+     "ms": 2353,
+     "midi": 45,
+     "ref": 0.5
+    },
+    {
+     "file": "keys/wurli/eb3mp.wav",
+     "ms": 2172,
+     "midi": 51,
+     "ref": 0.5
+    },
+    {
+     "file": "keys/wurli/ab3mp.wav",
+     "ms": 2600,
+     "midi": 56,
+     "ref": 0.5
+    },
+    {
+     "file": "keys/wurli/db4mp.wav",
+     "ms": 2071,
+     "midi": 61,
+     "ref": 0.5
+    },
+    {
+     "file": "keys/wurli/gb4mp.wav",
+     "ms": 1479,
+     "midi": 66,
+     "ref": 0.5
+    },
+    {
+     "file": "keys/wurli/b4mp.wav",
+     "ms": 778,
+     "midi": 71,
+     "ref": 0.5
+    },
+    {
+     "file": "keys/wurli/db5mp.wav",
+     "ms": 1055,
+     "midi": 73,
+     "ref": 0.5
+    },
+    {
+     "file": "keys/wurli/g5mp.wav",
+     "ms": 665,
+     "midi": 79,
+     "ref": 0.5
+    },
+    {
+     "file": "keys/wurli/db6mp.wav",
+     "ms": 1241,
+     "midi": 85,
+     "ref": 0.5
+    },
+    {
+     "file": "keys/wurli/ab6mp.wav",
+     "ms": 830,
+     "midi": 92,
+     "ref": 0.5
+    }
+   ]
+  }
+ }
+}
