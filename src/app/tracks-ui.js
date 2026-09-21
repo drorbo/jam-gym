@@ -333,9 +333,10 @@ export function mountTracksUI({ store, tracks, player }) {
     } else if (b.loading && !b.items.length) count.textContent = 'Searching…';
     else if (b.loaded) {
       const q = b.params.q.trim();
-      count.textContent = b.total === 0
-        ? `No tracks match${q ? ` "${q}"` : ''}. Try fewer filters, or search for a chord such as Dm7.`
-        : `${plural(b.total, 'track')}${q ? ` matching "${q}"` : ''}`;
+      const filtered = q || Object.entries(b.params).some(([k, v]) => k !== 'q' && k !== 'sort' && v !== '' && v != null);
+      if (b.total > 0) count.textContent = `${plural(b.total, 'track')}${q ? ` matching "${q}"` : ''}`;
+      else if (filtered) count.textContent = `No tracks match${q ? ` "${q}"` : ''}. Try fewer filters, or search for a chord such as Dm7.`;
+      else count.textContent = 'Nothing has been published yet. Save a track in My tracks and publish it to be the first.';
     } else count.textContent = '';
     for (const t of b.items) list.append(browseRow(t));
     $('browse-more').hidden = !(b.items.length < b.total);
