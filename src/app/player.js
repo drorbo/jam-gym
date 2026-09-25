@@ -29,7 +29,6 @@ export class Player {
     this.queue = [];
     this.raf = null;
     this.rampApplied = false;
-    this.keyAutoChanged = false;
     this.seed = (Math.random() * 2 ** 31) | 0;
     this.applied = null;
     this.syncSong();
@@ -125,7 +124,6 @@ export class Player {
     });
     this.queue = [];
     this.rampApplied = false;
-    this.keyAutoChanged = false;
     this.applied = { ...this.applied, tempo: this.store.get().song.tempo };
 
     this.store.set({ transport: this.store.get().config.countIn ? 'countin' : 'playing', view: { ...IDLE_VIEW } });
@@ -187,24 +185,21 @@ export class Player {
   }
 
   /**
-   * Starting key. Stopped: the progression text is rewritten in the new key.
-   * Playing: the next chorus jumps to the new key.
+   * Starting key: the key the progression is written in. Choosing it never touches the chords you typed,
+   * unless `transpose` is set, which rewrites them from the old key into the new one.
+   * Stopped: it is the key playback starts in. Playing: the next chorus jumps to it and modulation carries on from there.
    */
-  setKey(key) {
+  setKey(key, { transpose = false } = {}) {
     const to = parseKey(key);
     const { song } = this.store.get();
     const from = parseKey(song.key);
     if (!to || !from) return;
-    const rewrite = () => {
-      const text = transposeProgressionText(song.progressionText, mod12(to.pc - from.pc), keyPrefersFlats(to.pc, to.minor));
-      this.updateSong({ key: formatKey(to.pc, to.minor), progressionText: text });
-    };
-    if (this.isRunning && this.conductor?.running) {
-      this.conductor.requestKey(to.pc);
-      if (!this.keyAutoChanged) rewrite();
-    } else {
-      rewrite();
+    const patch = { key: formatKey(to.pc, to.minor) };
+    if (transpose && to.pc !== from.pc) {
+      patch.progressionText = transposeProgressionText(song.progressionText, mod12(to.pc - from.pc), keyPrefersFlats(to.pc, to.minor));
     }
+    this.updateSong(patch);
+    if (this.isRunning && this.conductor?.running) this.conductor.requestKey(to.pc);
   }
 
   /** Time signature. While playing, the new meter starts with the next chorus. */
@@ -327,7 +322,6 @@ export class Player {
       } else if (e.type === 'chorus') {
         const { config } = this.store.get();
         if (e.chorus > 1 && config.tempoRamp.enabled && (e.chorus - 1) % config.tempoRamp.everyLoops === 0) this.rampApplied = true;
-        if (e.chorus > 1 && config.modulation.type !== 'off' && (e.chorus - 1) % config.modulation.everyLoops === 0) this.keyAutoChanged = true;
         view = { ...view, currentBars: e.bars, chorus: e.chorus, key: e.key, keyPc: e.keyPc, bpm: e.bpm, bars: e.bars.length, meter: e.meter };
       } else if (e.type === 'beat') {
         view = {

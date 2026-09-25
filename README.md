@@ -26,7 +26,9 @@ To ship a change (tests, commit, push, deploy, verify, in one go): `bash scripts
 - **Progression**: `Cmaj7 | Am7 | Dm7 G7 | %`. Bars are separated by `|` or a new line, chords in one bar by
   spaces (they share the bar), `%` repeats the previous bar, `NC` is a bar of silence for the harmony.
   Extensions work: `maj7 m7 7 m7b5 dim dim7 sus2 sus4 add9 6 6/9 9 13 7#9 7b13 7alt m(maj7) C/E` and more.
-- **Starting key** rewrites the progression into that key. The chord strip always shows what is
+- **Starting key**: the key your progression is written in, and the key playback starts in. Hover the button for a
+  short guide, click it to pick a tonic and major or minor. Your chords are never changed unless you tick
+  *Transpose my chords too*. While playing, the new key starts at the next chorus. The chord strip always shows what is
   sounding now, in the current key.
 - **Time signature**: 4/4, 6/8 (3+3), 7/8 (3+2+2) and 10/8 (3+3+2+2). The beat display shows the grouping, the
   groove follows it (kick and snare on group downbeats, a ride ping or walking-bass step on each), and chords

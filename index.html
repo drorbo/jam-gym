@@ -80,9 +80,25 @@
         <div class="entry">
           <div class="entry-head">
             <label for="prog">Progression</label>
-            <label class="inline" for="keysel">Starting key
-              <select id="keysel"></select>
-            </label>
+            <div class="keypick" id="keypick">
+              <button type="button" class="keybtn" id="keybtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="keypop" aria-describedby="keytip">
+                <span class="keybtn-label">Starting key</span><span class="keybtn-val" id="keybtn-val">C</span>
+              </button>
+              <div class="keytip" id="keytip" role="tooltip">
+                <strong>Starting key</strong>
+                <p>The key your progression is written in, and the key playback starts in.</p>
+                <ul>
+                  <li>Typed Bb chords? Pick <b>B♭</b>. Your chords are never changed.</li>
+                  <li>Want the chords moved into another key? Tick <b>Transpose my chords too</b> first.</li>
+                  <li>While playing, the new key starts at the next chorus. Key changes carry on from it.</li>
+                </ul>
+              </div>
+              <div class="keypop" id="keypop" role="dialog" aria-label="Choose the starting key" hidden>
+                <div class="seg" id="key-mode" role="radiogroup" aria-label="Major or minor"></div>
+                <div class="keygrid" id="key-grid" role="radiogroup" aria-label="Tonic"></div>
+                <label class="keycheck"><input type="checkbox" id="key-transpose"> Transpose my chords too</label>
+              </div>
+            </div>
           </div>
           <textarea id="prog" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-describedby="progmsg"></textarea>
           <p class="msg" id="progmsg" role="status"></p>

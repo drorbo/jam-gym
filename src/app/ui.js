@@ -2,7 +2,7 @@
 
 import { MAX_BPM, MIN_BPM, RANDOM_MODES, describeInterval, INTERVAL_NAMES } from '../engine/planner.js';
 import { chordParts } from '../theory/chord.js';
-import { MAJOR_KEYS, MINOR_KEYS, keyPrefersFlats, parseKey } from '../theory/keys.js';
+import { MAJOR_KEYS, formatKey, keyPrefersFlats, parseKey } from '../theory/keys.js';
 import { describeSwing } from '../engine/feel.js';
 import { BASS_SOUNDS, DRUM_SOUNDS, KEY_SOUNDS, defaultBass, defaultComp, defaultKit, defaultSwing, getStyle, listStyles, resolveTimbres } from '../styles/index.js';
 import { transposeProgressionText } from '../theory/progression.js';
@@ -76,14 +76,44 @@ export function mountUI({ store, player }) {
 
   // ---- static content ------------------------------------------------------------------
 
-  const keysel = $('keysel');
-  const optgroup = (label, keys) => {
-    const g = el('optgroup');
-    g.label = label;
-    for (const k of keys) { const o = el('option', '', prettyKey(k)); o.value = k; g.append(o); }
-    return g;
+  // ---- starting-key picker: a button showing the key, opening a mode switch and a grid of the 12 tonics ----
+  const keypick = $('keypick');
+  const keybtn = $('keybtn');
+  const keypop = $('keypop');
+  for (const [v, label] of [['major', 'Major'], ['minor', 'Minor']]) {
+    const b = el('button', '', label);
+    b.type = 'button';
+    b.setAttribute('role', 'radio');
+    b.dataset.mode = v;
+    $('key-mode').append(b);
+  }
+  MAJOR_KEYS.forEach((k, pc) => {
+    const b = el('button', 'keycell', prettyKey(k));
+    b.type = 'button';
+    b.setAttribute('role', 'radio');
+    b.dataset.pc = String(pc);
+    $('key-grid').append(b);
+  });
+  const setKeyPop = (open) => {
+    keypop.hidden = !open;
+    keybtn.setAttribute('aria-expanded', String(open));
+    keypick.classList.toggle('open', open);
   };
-  keysel.append(optgroup('Major', MAJOR_KEYS), optgroup('Minor', MINOR_KEYS));
+  const chooseKey = (pc, minor) => player.setKey(formatKey(pc, minor), { transpose: $('key-transpose').checked });
+  const currentKey = () => parseKey(store.get().song.key) ?? { pc: 0, minor: false };
+  keybtn.addEventListener('click', () => setKeyPop(keypop.hidden));
+  $('key-grid').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-pc]');
+    if (b) chooseKey(Number(b.dataset.pc), currentKey().minor);
+  });
+  $('key-mode').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-mode]');
+    if (b) chooseKey(currentKey().pc, b.dataset.mode === 'minor');
+  });
+  document.addEventListener('pointerdown', (e) => { if (!keypop.hidden && !keypick.contains(e.target)) setKeyPop(false); });
+  keypick.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !keypop.hidden) { setKeyPop(false); keybtn.focus(); e.stopPropagation(); }
+  });
 
   const intervalSel = $('mod-interval');
   const up = el('optgroup'); up.label = 'Up';
@@ -178,7 +208,6 @@ export function mountUI({ store, player }) {
   $('loop').addEventListener('click', () => patchConfig({ loop: !store.get().config.loop }));
 
   $('prog').addEventListener('input', (e) => player.setProgressionText(e.target.value));
-  keysel.addEventListener('change', () => player.setKey(keysel.value));
 
   const bpmNow = () => {
     const s = store.get();
@@ -444,7 +473,10 @@ export function mountUI({ store, player }) {
       row.classList.toggle('muted', mixer[inst].muted);
     }
 
-    if (document.activeElement !== keysel) keysel.value = song.key;
+    const sk = parseKey(song.key) ?? { pc: 0, minor: false };
+    $('keybtn-val').textContent = prettyKey(formatKey(sk.pc, sk.minor));
+    $$('#key-mode button').forEach((b) => b.setAttribute('aria-checked', String((b.dataset.mode === 'minor') === sk.minor)));
+    $$('#key-grid button').forEach((b) => b.setAttribute('aria-checked', String(Number(b.dataset.pc) === sk.pc)));
 
     const prog = $('prog');
     // while typing, the box and the state are already identical, so this only fires for external changes (load, example)
