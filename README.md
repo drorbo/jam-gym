@@ -11,7 +11,7 @@ synthesised in the browser. The band plays offline; saving and sharing tracks ne
 
 ```
 npm start        # serves http://localhost:5173 (the site and the tracks API), data in ./data
-npm test         # 348 tests, Node's built-in runner, no install needed
+npm test         # 434 tests, Node's built-in runner, no install needed
 npm run admin -- stats     # moderation and upkeep, see "Tracks" below
 ```
 
@@ -26,6 +26,17 @@ To ship a change (tests, commit, push, deploy, verify, in one go): `bash scripts
 - **Progression**: `Cmaj7 | Am7 | Dm7 G7 | %`. Bars are separated by `|` or a new line, chords in one bar by
   spaces (they share the bar), `%` repeats the previous bar, `NC` is a bar of silence for the harmony.
   Extensions work: `maj7 m7 7 m7b5 dim dim7 sus2 sus4 add9 6 6/9 9 13 7#9 7b13 7alt m(maj7) C/E` and more.
+- **Quick progressions**: under the progression box, in kinds (Jazz, Blues, Rock, Odd meters). The tabs start on your style. Choosing
+  one changes only the chords, moved into your starting key: never your style, settings or tempo. The odd-meter ones also set the
+  time (their tooltip says so), because they only make sense in their meter.
+- **Presets**: in the Style panel, three ways to play each style (jazz: Medium swing, Ballad, Bossa nova; blues: Shuffle, Slow
+  blues, Half-time shuffle; rock: Classic rock, Half-time heavy, Funk rock). Each one also sets the tempo it sounds best at
+  (from the next beat if you are playing), and never touches your chords, key or meter. Your own presets are in the sidebar's
+  **My presets** tab, next to My tracks and Browse (the *My presets* button in the Style panel opens it), so the quick row stays
+  short. There you name and save the band as it is now (style, swing, the Bass line, Keys and Drums panels with the groove and drum
+  mixer, the sound choices, and the tempo), use one over any progression, replace it with the current settings, or delete it (with
+  undo). Using one sets its tempo, like the built-in ones; a preset saved before tempo was included leaves yours alone. Presets are kept on this device, and once you have an account
+  (saving a track creates one) they also sync to it, so another device shows the same list. A preset never creates an account by itself.
 - **Starting key**: the key your progression is written in, and the key playback starts in. Hover the button for a
   short guide, click it to pick a tonic and major or minor. Your chords are never changed unless you tick
   *Transpose my chords too*. While playing, the new key starts at the next chorus. The chord strip always shows what is
@@ -62,6 +73,13 @@ sits, "Style default" restores the panel, choosing a style resets all three, and
 apply from the next bar, in every time signature. At the middle a slider plays what the style always played; less is
 sparser or simpler, more is busier or richer.
 
+**Greyed-out controls.** A control that would change nothing right now is greyed out, its Mix button with it, and the
+panel says why (hover it, or read the line under the panel): Snare with a groove that has its own snare pattern, Line and
+Approach with a fixed bass figure, Crashes with brushes, and so on. In 6/8, 7/8 and 10/8, where the groupings decide the
+feel, the lists also drop choices that would sound like another one (the named blues and rock bass figures, two-feel, the
+named Keys rhythms, the blues and rock grooves). A choice you made in 4/4 is kept, shows as what plays in the /8 meter,
+and comes back when you return to 4/4.
+
 **Mixed.** Every parameter can vary by itself. Each dropdown has a **Mixed** choice (the band picks for itself: a
 different Keys rhythm each bar, a mix of bass patterns, approaches or rhythms). Each slider has a **Mix** button: the
 slider then wanders up to 30 either side of where you left it, drifting smoothly from bar to bar (a new target every four
@@ -69,6 +87,22 @@ bars) and differently in each run, instead of staying put. The stored setting ne
 is saved with the track.
 
 **Drums**
+- **Groove**. *Jazz*: sticks (ride, hat and feathered kick), **brushes: swing** (the swing pattern as brush taps on the snare,
+  with a sweeping left hand that leans on two and four) and **brushes: ballad sweeps** (slow circular sweeps carry the time).
+  Two Latin grooves, both in straight eighths: **bossa nova** (eighth-note hat, the two-bar clave on the cross-stick, a rocking
+  kick) and **Afro-Cuban** (a bell-like ride on the beat, cascara on the cross-stick, the foot on two and four). Choosing one
+  sets Swing to 50% so the bass and keys agree, and leaving it puts the style's swing back; they are 4/4 grooves and play as
+  sticks in 6/8, 7/8 and 10/8. The cross-stick is synthesised. Mixed never picks a Latin groove.
+  Brushes are synthesised, work with either kit and in every meter, and their crashes are brushed crashes: a soft swell
+  rather than a stick strike (the Crashes slider and the Crash fader still control them). *Blues and rock, in 4/4*: *Blues*: classic shuffle, slow 12/8 (three even hat notes to a beat), half-time shuffle
+  (Purdie: one big snare on three, ghost notes through the shuffle), Chicago (kick on every beat under a shuffled ride) and
+  the train beat (a brushed snare shuffle). *Rock*: classic rock, four on the floor, half-time, stomp and clap, ride groove,
+  funk rock (sixteenth hats, ghosted snares) and Bo Diddley (the clave on the toms). *Mixed* (every style) changes groove every four bars.
+  The sliders below still shape whichever groove is playing. In 6/8, 7/8 and 10/8 the kit follows the groupings instead.
+- **Drum mixer**: a folded-away section at the bottom of the panel with a small fader for each drum: kick, snare, hi-hat,
+  ride, crash, toms and (in jazz) brushes. Each runs from silent through 0 dB at the middle (the kit as recorded) to +12 dB,
+  and double-clicking a fader puts it back. It answers straight away, even mid-bar, whatever the groove, and is saved with
+  the track like the rest of the panel.
 - **Ride and hi-hat**: just quarters (room to breathe) up to a full ride or sixteenth-note hats.
 - **Kick**: only on the beat, up to syncopated. **Snare**: the backbeat only (in jazz, no comping) up to chatty.
 - **Ghost notes**: none to lots. **Fills**: how often one leads into the next phrase. **Fill style**: one snare pickup,
@@ -92,8 +126,11 @@ is saved with the track.
   how the last note leads into the next chord: a half step, a scale step, the fifth above, an enclosure, or a mix. The blues
   **Pattern** is the boogie with a lead into each change and a walking turnaround (the default), walking throughout, or
   boogie throughout.
-- **Rock** has its own **Pattern**: mixed, driving eighths, octaves, pushes, quarter notes, syncopated, or a melodic
-  line. **Line** runs from root notes to a melodic part (fifths, octaves, and with Tensions sevenths, fourths and
+  The blues **Pattern** also offers fixed figures: classic boogie, Chicago shuffle (root, fifth, sixth, fifth), rising boogie,
+  roots and fifths, pushed roots, stop-time, and a slow 12/8 pulse of triplet roots. They lead a half step into each change and
+  switch the walking controls off.
+- **Rock** has its own **Pattern**: mixed, driving eighths, octaves, pushes, quarter notes, syncopated, a melodic
+  line, rock and roll boogie, gallop, three-three-two, off-beat pumps or held half-note roots. **Line** runs from root notes to a melodic part (fifths, octaves, and with Tensions sevenths, fourths and
   sixths), **Approach** can be none, and **Bass fills** add a short run at the end of a phrase.
 - **Note length**, **Timing** and **Feel** for every style.
 
@@ -116,6 +153,9 @@ whether you had it open.
 - **Identity** is one random ID in an HttpOnly cookie (`jg_session`), set the first time you save, publish or like, never
   for just listening. Your name defaults to something like `Player-4F2K` and can be changed. A **recovery code** opens
   your library in another browser; keep it private. **Delete my data** removes your name, tracks and likes.
+- **A track keeps the whole setup**: progression, key, meter, tempo (set again when you open it, even while playing), style, swing, all three panels (grooves, patterns and the drum mixer
+  included), sounds, key change, tempo ramp and the mixer. Saved, published, opened by someone else or copied, it comes back the same
+  (`test/track-band.test.js`); a track saved before a setting existed opens with that setting at the style's own value.
 - **Publish** makes a track public under your name (with a confirmation that says so); **Make private** takes it back.
   Published tracks have a link (`/?track=ID`) that opens them straight into the player.
 - **Browse**: search titles, authors and chords together (`Dm7 G7` finds tracks that contain those chords, however they
@@ -143,10 +183,12 @@ src/audio/     voices        synthesised instruments
                samples       loader + player for recorded instruments (samplemap: pure selection logic)
                engine, ticker  mixer bus, worker-driven timer
 src/app/       state, player, ui, band-ui, sidebar         store, playback wiring, DOM
+               progressions, quick-ui                      the quick progression chips (data, and the row under the box)
+               presets, presets-controller, presets-ui     band presets: model, controller (device + account sync), the row
                api, tracks-model, tracks, tracks-ui        tracks: HTTP client, setup <-> track data, controller, panel
                saved                                       older browser-only saves (offline fallback, migration)
 server/        index, app, static, db, tracks, users,      the site + /api on Node's built-in http and node:sqlite;
-               search, trackdata, limits, backup, admin    reuses src/app/state.js and src/theory to validate tracks
+               presets, search, trackdata, limits, backup, admin   reuses src/app/state.js and src/theory to validate tracks and presets
 samples/       recorded kits and keyboards + manifest.json + CREDITS.md
 tools/         build_samples.py                            rebuilds ./samples from the original libraries
 ```

@@ -33,6 +33,8 @@ export const LIMITS = Object.freeze({
   bodyBytes: 32 * 1024,
   progressionChars: 4000,
   maxBars: 200,
+  presetBodyBytes: 192 * 1024,
+  presetDeletions: 300,
   tracksPerUser: 200,
   publishedPerUser: 50,
   browsePageMax: 50,

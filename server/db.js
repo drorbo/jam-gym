@@ -69,6 +69,20 @@ const MIGRATIONS = [
       tokenize = 'unicode61 remove_diacritics 2'
     );
   `),
+
+  // 2: saved band settings (presets). One row per preset per person; a deleted preset stays as a marker for a while so
+  // another device does not bring it back.
+  (db) => db.exec(`
+    CREATE TABLE presets (
+      owner_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      id         TEXT    NOT NULL,
+      name       TEXT    NOT NULL,
+      data       TEXT    NOT NULL,
+      updated_at INTEGER NOT NULL,
+      deleted    INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (owner_id, id)
+    );
+  `),
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

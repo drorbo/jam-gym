@@ -10,6 +10,7 @@ import { keyPrefersFlats, parseKey, formatKey } from '../theory/keys.js';
 import { mod12 } from '../theory/notes.js';
 import { parseProgression, transposeProgressionText } from '../theory/progression.js';
 import { BASS_SOUNDS, DRUM_SOUNDS, KEY_SOUNDS, defaultBass, defaultComp, defaultKit, getStyle, resolveTimbres } from '../styles/index.js';
+import { sanitizeBass, sanitizeComp, sanitizeKit } from '../styles/settings.js';
 import { removeSaved, restoreSaved, saveSnapshot, signatureOf } from './saved.js';
 import { buildTrackData, dataFromLocalSave } from './tracks-model.js';
 
@@ -41,7 +42,11 @@ export class Player {
       const sig = JSON.stringify(this.neededBanks());
       if (sig !== this.bankSig) { this.bankSig = sig; this.loadSounds(); }
     };
-    store.subscribe((_, patch) => { if (patch.config) preload(); });
+    store.subscribe((state, patch) => {
+      if (!patch.config) return;
+      preload();
+      this.bus?.setDrumLevels(state.config.kit.levels); // the drum mixer answers straight away, even mid-bar
+    });
     preload();
 
     this.ticker = createTicker(() => {
@@ -113,6 +118,7 @@ export class Player {
     await Promise.race([this.loadSounds(), new Promise((r) => setTimeout(r, 6000))]);
 
     this.bus = this.engine.createBus(this.store.get().mixer);
+    this.bus.setDrumLevels(this.store.get().config.kit.levels);
     this.seed = (Math.random() * 2 ** 31) | 0;
     this.conductor = new Conductor({
       clock: { now: () => this.engine.now },
@@ -243,7 +249,8 @@ export class Player {
     this.store.set({
       config: {
         ...this.store.get().config, ...config,
-        bass: config.bass ?? defaultBass(style), comp: config.comp ?? defaultComp(style), kit: config.kit ?? defaultKit(style),
+        // tracks saved before a setting existed (a groove, the drum mixer...) are missing it: each panel is completed from the style's own
+        bass: sanitizeBass(config.bass, defaultBass(style)), comp: sanitizeComp(config.comp, defaultComp(style)), kit: sanitizeKit(config.kit, defaultKit(style)),
       },
       mixer,
     });

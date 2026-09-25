@@ -70,6 +70,9 @@ export function createApi({ fetch: fetchImpl = globalThis.fetch?.bind(globalThis
     unpublish: (trackId) => call('POST', `/api/tracks/${id(trackId)}/unpublish`).then((r) => r.track),
     copy: (trackId) => call('POST', `/api/tracks/${id(trackId)}/copy`).then((r) => r.track),
 
+    // presets: send this device's list and deletions, get the merged list back
+    syncPresets: (payload) => call('POST', '/api/presets/sync', payload),
+
     // community
     browse: (params) => call('GET', `/api/browse${qs(params)}`),
     like: (trackId) => call('PUT', `/api/tracks/${id(trackId)}/like`),

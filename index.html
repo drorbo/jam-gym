@@ -102,7 +102,13 @@
           </div>
           <textarea id="prog" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-describedby="progmsg"></textarea>
           <p class="msg" id="progmsg" role="status"></p>
-          <div class="examples" id="examples" role="group" aria-label="Example progressions"></div>
+          <div class="quick">
+            <div class="quick-head">
+              <span class="quick-title" id="quick-title">Quick progressions</span>
+              <div class="seg" id="quick-tabs" role="radiogroup" aria-labelledby="quick-title"></div>
+            </div>
+            <div class="examples" id="examples" role="group" aria-labelledby="quick-title"></div>
+          </div>
         </div>
       </section>
 
@@ -129,6 +135,15 @@
           <h2>Style</h2>
           <div class="seg seg-col" id="styles" role="radiogroup" aria-label="Style"></div>
           <p class="hint" id="style-desc"></p>
+          <!-- Presets: three ways to play the chosen style. Your own are in the sidebar (drawn by src/app/presets-ui.js) -->
+          <div class="presets" id="presets">
+            <div class="presets-head">
+              <h3>Presets <span class="presets-style" id="preset-style"></span></h3>
+              <button class="chip" id="preset-open" type="button" title="The band settings you saved: open them in the sidebar">My presets</button>
+            </div>
+            <div class="preset-chips" id="preset-builtin" role="group" aria-label="Presets for this style"></div>
+            <p class="hint" id="preset-note" role="status" aria-live="polite"></p>
+          </div>
           <div class="swing" id="swing-box">
             <div class="swing-head">
               <label for="swing">Swing</label>
@@ -226,6 +241,7 @@
           </button>
           <div class="tabs" role="tablist" aria-label="Tracks">
             <button type="button" role="tab" id="tab-mine" aria-selected="true" aria-controls="panel-mine">My tracks</button>
+            <button type="button" role="tab" id="tab-presets" aria-selected="false" aria-controls="panel-presets" tabindex="-1">My presets</button>
             <button type="button" role="tab" id="tab-browse" aria-selected="false" aria-controls="panel-browse" tabindex="-1">Browse</button>
           </div>
         </div>
@@ -259,6 +275,28 @@
           <details class="sec" data-section="local" id="sec-local" open hidden>
             <summary><span class="sec-title">On this device</span><span class="sec-sum" id="sum-local"></span></summary>
             <div class="sec-body"><div class="local-box" id="local-box"></div></div>
+          </details>
+        </section>
+
+        <section id="panel-presets" role="tabpanel" aria-labelledby="tab-presets" hidden>
+          <details class="sec" data-section="preset-save" open>
+            <summary><span class="sec-title">Save these settings</span></summary>
+            <div class="sec-body">
+              <p class="msg">Keeps the style, swing, Bass line, Keys, Drums (with the drum mixer), sounds and the tempo as they are now: not your chords, key or time. Use it over any progression.</p>
+              <form class="save-form" id="preset-save" autocomplete="off">
+                <label class="sr-only" for="preset-name">Name for this preset</label>
+                <input id="preset-name" type="text" maxlength="40" placeholder="Name this preset" spellcheck="false">
+                <button class="chip" id="preset-save-btn" type="submit">Save</button>
+              </form>
+            </div>
+          </details>
+          <details class="sec" data-section="preset-list" open>
+            <summary><span class="sec-title">My presets</span><span class="sec-sum" id="sum-presets"></span></summary>
+            <div class="sec-body">
+              <ul class="track-list" id="preset-list"></ul>
+              <p class="hint" id="preset-sync"></p>
+              <p class="msg" id="presets-msg" role="status" aria-live="polite"></p>
+            </div>
           </details>
         </section>
 

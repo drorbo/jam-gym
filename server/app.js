@@ -3,6 +3,7 @@
 import { LIMITS } from './config.js';
 import { SCHEMA_VERSION } from './db.js';
 import { createLimiter } from './limits.js';
+import { createPresets } from './presets.js';
 import { createStatic } from './static.js';
 import { createTracks } from './tracks.js';
 import { createUsers, publicMe } from './users.js';
@@ -29,6 +30,7 @@ function parseCookies(header) {
 export function createApp({ db, config, root, limiter = createLimiter() }) {
   const users = createUsers(db);
   const tracks = createTracks(db);
+  const presets = createPresets(db);
   const serveStatic = createStatic(root, { watch: !config.production });
 
   // ---- request helpers -------------------------------------------------------------------
@@ -70,7 +72,7 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
     }
   }
 
-  function readJson(req) {
+  function readJson(req, maxBytes = LIMITS.bodyBytes) {
     return new Promise((resolve, reject) => {
       const type = String(req.headers['content-type'] ?? '');
       let size = 0;
@@ -80,10 +82,10 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
         // Over the limit: stop keeping it, but let the client finish so it receives our 413 (not a dropped connection).
         // Far over the limit: it isn't a real client, so cut it off.
         if (size > 1024 * 1024) { req.destroy(); return; }
-        if (size <= LIMITS.bodyBytes) chunks.push(c);
+        if (size <= maxBytes) chunks.push(c);
       });
       req.on('end', () => {
-        if (size > LIMITS.bodyBytes) return reject(new HttpError(413, 'too_large', 'That request is too large.'));
+        if (size > maxBytes) return reject(new HttpError(413, 'too_large', 'That request is too large.'));
         if (!chunks.length) return resolve({});
         if (!type.includes('application/json')) return reject(bad('Send JSON.', 'bad_content_type'));
         try {
@@ -177,6 +179,9 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
 
     ['POST', '/api/tracks/:id/report', { auth: 'create', limit: ['report', 20, HOUR, true] }, ({ user, params, body }) => tracks.report(user, params.id, body.reason)],
 
+    // a person's saved band settings: send what this device has, get the merged list back
+    ['POST', '/api/presets/sync', { auth: 'user', limit: ['presets', 60, MINUTE], bodyBytes: LIMITS.presetBodyBytes }, ({ user, body }) => presets.sync(user, body)],
+
     ['GET', '/api/browse', { auth: 'optional', limit: ['browse', 120, MINUTE, true] }, ({ user, url }) => tracks.browse(user, url.searchParams)],
   ].map(([method, path, opts, handler, status = 200]) => ({
     method, opts, handler, status,
@@ -206,7 +211,7 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
 
     const writes = !['GET', 'HEAD'].includes(req.method);
     if (writes) checkCsrf(req);
-    const body = writes ? await readJson(req) : {};
+    const body = writes ? await readJson(req, r.opts.bodyBytes) : {};
 
     const secret = parseCookies(req.headers.cookie)[COOKIE];
     let user = isSecret(secret) ? users.findBySecret(secret) : null;

@@ -10,7 +10,7 @@
 
 import { slotsWithin } from '../theory/meter.js';
 import { mod12, nearestMidi } from '../theory/notes.js';
-import { bassPc, note } from './helpers.js';
+import { bassPc, boogieSteps, note } from './helpers.js';
 import { spread } from './drumming.js';
 import { planApproach, walkBar, walkOddBar } from './walking.js';
 
@@ -24,6 +24,12 @@ const FIGURES = {
   pushes: [0, 1, 2, 2.5, 3, 3.5].map((b) => ({ b })),
   quarters: [0, 1, 2, 3].map((b) => ({ b })),
   syncopated: [0, 0.75, 1.5, 2, 2.75, 3.5].map((b) => ({ b })),
+  gallop: [0, 1, 2, 3].flatMap((n) => [{ b: n }, { b: n + 0.5 }, { b: n + 0.75 }]),
+  threethreetwo: [0, 1.5, 3].map((b) => ({ b })),
+  offbeat: [0.5, 1.5, 2.5, 3.5].map((b) => ({ b })),
+  held: [{ b: 0, d: 1.8 }, { b: 2, d: 1.8 }],
+  // the boogie in straight eighths: intervals come from the chord (see boogieSteps)
+  boogie: Array.from({ length: 8 }, (_, i) => ({ b: i / 2, boogie: i })),
 };
 
 /** Which figure this bar plays. "Mixed" is what rock bass always did: mostly eighths and octaves, pushes to end a phrase. */
@@ -93,9 +99,10 @@ export function rockBassBar(ctx) {
     steps.forEach((step, i) => {
       if (step.b >= runFrom) return;
       let midi = root + (step.o ? 12 : 0);
-      if (i > 0 && !step.o) midi = embellish(root, seg.chord, o, rng);
+      if (step.boogie !== undefined) midi = root + boogieSteps(seg.chord)[step.boogie];
+      else if (i > 0 && !step.o) midi = embellish(root, seg.chord, o, rng);
       if (isLast && i === steps.length - 1 && runFrom === Infinity) midi = approachNote(midi, seg, upcoming, o, rng);
-      ev.push(note('bass', midi, seg.startBeat + step.b, 0.42, step.b % 1 === 0 ? 0.82 : 0.68));
+      ev.push(note('bass', midi, seg.startBeat + step.b, step.d ?? (step.b % 0.5 === 0.25 ? 0.2 : 0.42), step.b % 1 === 0 ? 0.82 : 0.68));
       lastMidi = midi;
     });
     if (runFrom !== Infinity) {
@@ -116,7 +123,7 @@ export function rockBassOdd(ctx) {
   if (o.pattern === 'melodic') return walkOddBar({ ...ctx, bassOpts: { ...o, rhythm: o.line >= 60 ? 'eighths' : 'quarters' } }, 'rock');
   const variant = o.pattern === 'mixed'
     ? rng.weighted([['eighths', 5], ['pushes', 3]])
-    : o.pattern === 'quarters' ? 'quarters' : o.pattern === 'pushes' ? 'pushes' : 'eighths';
+    : o.pattern === 'quarters' || o.pattern === 'held' ? 'quarters' : o.pattern === 'pushes' ? 'pushes' : 'eighths';
   const ev = [];
   segments.forEach((seg, k) => {
     if (!seg.chord) return;

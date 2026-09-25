@@ -7,6 +7,7 @@
 //   click ──────────────────────────────────────^ (count-in ignores the mixer)
 
 import { SampleLibrary, chokeHat, playSampledDrum, playSampledNote } from './samples.js';
+import { DRUM_PARTS, levelGain, partOf } from '../styles/drumparts.js';
 import { distortionCurve, playBass, playChordNote, playDrum } from './voices.js';
 
 const INSTRUMENTS = ['drums', 'bass', 'chords'];
@@ -69,6 +70,13 @@ export class Bus {
       }
       this.faders[inst] = fader;
     }
+    // the drum mixer: one gain per drum in front of the drums fader (all at unity until setDrumLevels)
+    this.drumOut = {};
+    for (const p of DRUM_PARTS) {
+      const g = ctx.createGain();
+      g.connect(this.faders.drums);
+      this.drumOut[p.id] = g;
+    }
     this.clickOut = ctx.createGain();
     this.clickOut.gain.value = 0.7;
     this.clickOut.connect(this.master);
@@ -112,6 +120,14 @@ export class Bus {
     else p.setTargetAtTime(target, this.ctx.currentTime, 0.015);
   }
 
+  /** Set the level of each drum (0..100 per channel, 50 = unity). Takes effect straight away. */
+  setDrumLevels(levels = {}) {
+    for (const p of DRUM_PARTS) {
+      if (typeof levels[p.id] !== 'number') continue;
+      this.drumOut[p.id].gain.setTargetAtTime(levelGain(levels[p.id]), this.ctx.currentTime, 0.015);
+    }
+  }
+
   /** Sound one fully-timed note from the Conductor. Muted instruments aren't synthesised at all. */
   play(n) {
     if (n.inst !== 'click' && this.muted[n.inst]) return;
@@ -144,15 +160,16 @@ export class Bus {
   #drum(n, t) {
     const bank = this.library?.get('drums', n.timbre);
     const isHat = n.voice === 'hat' || n.voice === 'hatPedal';
+    const out = this.drumOut[partOf(n.voice)] ?? this.faders.drums;
     if (bank) {
       if (isHat) chokeHat(this.openHat, t); // closing the hat cuts an open one
-      const handle = playSampledDrum(this.ctx, this.faders.drums, bank, n.voice, t, n.vel, SAMPLE_LEVEL.drums);
+      const handle = playSampledDrum(this.ctx, out, bank, n.voice, t, n.vel, SAMPLE_LEVEL.drums);
       if (handle) {
         if (n.voice === 'hatOpen') this.openHat = handle;
         return;
       }
     }
-    playDrum(this.ctx, this.faders.drums, n.voice, t, n.vel);
+    playDrum(this.ctx, out, n.voice, t, n.vel);
   }
 
   /** Fade out and disconnect. Notes already scheduled land on a dead bus and are inaudible. */

@@ -2,12 +2,10 @@
 
 import { MAX_BPM, MIN_BPM, RANDOM_MODES, describeInterval, INTERVAL_NAMES } from '../engine/planner.js';
 import { chordParts } from '../theory/chord.js';
-import { MAJOR_KEYS, formatKey, keyPrefersFlats, parseKey } from '../theory/keys.js';
+import { MAJOR_KEYS, formatKey, parseKey } from '../theory/keys.js';
 import { describeSwing } from '../engine/feel.js';
 import { BASS_SOUNDS, DRUM_SOUNDS, KEY_SOUNDS, defaultBass, defaultComp, defaultKit, defaultSwing, getStyle, listStyles, resolveTimbres } from '../styles/index.js';
-import { transposeProgressionText } from '../theory/progression.js';
 import { METER_IDS, getMeter } from '../theory/meter.js';
-import { EXAMPLES } from './state.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => {
@@ -164,21 +162,6 @@ export function mountUI({ store, player }) {
     levelsEl.append(row);
     range.addEventListener('input', () => player.setMixer(inst, { volume: Number(range.value) / 100 }));
     mute.addEventListener('click', () => player.setMixer(inst, { muted: !store.get().mixer[inst].muted }));
-  }
-
-  const examplesEl = $('examples');
-  for (const ex of EXAMPLES) {
-    const b = el('button', 'chip', ex.name);
-    b.type = 'button';
-    b.addEventListener('click', () => {
-      const { song } = store.get();
-      const key = parseKey(song.key);
-      const text = transposeProgressionText(ex.text, key.pc, keyPrefersFlats(key.pc, key.minor));
-      if (ex.timeSignature) player.setTimeSignature(ex.timeSignature); // set first, so the text parses in the new meter
-      player.setProgressionText(text);
-      if (ex.style) setStyle(ex.style);
-    });
-    examplesEl.append(b);
   }
 
   // ---- actions -------------------------------------------------------------------------

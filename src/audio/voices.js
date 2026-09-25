@@ -109,6 +109,14 @@ function snare(ctx, out, t, vel) {
   body.connect(bg).connect(out);
 }
 
+// cross-stick ("rim click"): the stick laid across the snare and struck on the rim, a short dry "tock"
+function rim(ctx, out, t, vel) {
+  osc(ctx, 'triangle', 1700, t, t + 0.06).connect(envelope(ctx, t, { peak: vel * 0.5, attack: 0.0008, tc: 0.008 })).connect(out);
+  osc(ctx, 'sine', 420, t, t + 0.09).connect(envelope(ctx, t, { peak: vel * 0.3, attack: 0.001, tc: 0.02 })).connect(out);
+  const n = noiseSource(ctx, t, 0.08);
+  n.connect(filter(ctx, 'bandpass', 2600, 1.2)).connect(envelope(ctx, t, { peak: vel * 0.7, attack: 0.0008, tc: 0.012 })).connect(out);
+}
+
 function hat(ctx, out, t, vel, { open = false, pedal = false } = {}) {
   const n = noiseSource(ctx, t, open ? 1 : 0.2);
   const hp = filter(ctx, 'highpass', pedal ? 4200 : 7200);
@@ -141,6 +149,33 @@ function ride(ctx, out, t, vel) {
   n.connect(hp).connect(envelope(ctx, t, { peak: vel * 0.16, attack: 0.002, tc: 0.16 })).connect(out);
 }
 
+// brushes on a snare head: a tap is a short, soft-edged burst of filtered noise; a sweep is a long, slowly rising swish
+function brush(ctx, out, t, vel, { sweep = false } = {}) {
+  const n = noiseSource(ctx, t, sweep ? 0.9 : 0.4);
+  const hp = filter(ctx, 'highpass', sweep ? 1800 : 1500);
+  const bp = filter(ctx, 'bandpass', sweep ? 4200 : 3600, sweep ? 0.5 : 0.7);
+  const g = envelope(ctx, t, { peak: vel * (sweep ? 1.5 : 1.7), attack: sweep ? 0.07 : 0.006, tc: sweep ? 0.2 : 0.07 });
+  n.connect(hp).connect(bp).connect(g).connect(out);
+  if (!sweep && vel > 0.5) { // an accented tap has a little of the drum's body in it
+    const body = osc(ctx, 'triangle', 200, t, t + 0.15);
+    body.connect(envelope(ctx, t, { peak: vel * 0.25, attack: 0.002, tc: 0.03 })).connect(out);
+  }
+}
+
+// a brushed crash: the brush is dragged across the cymbal, so the sound swells in over about a tenth of a second and
+// hushes away, with the wash of the brush itself on top. Much softer and shorter-edged than a stick crash.
+function brushCrash(ctx, out, t, vel) {
+  const sum = ctx.createGain();
+  sum.gain.value = 0.11;
+  for (const f of [263, 421, 587, 845]) osc(ctx, 'square', f * 1.25, t, t + 2).connect(sum);
+  const band = filter(ctx, 'bandpass', 8000, 0.5);
+  const high = filter(ctx, 'highpass', 3500, 0.7);
+  sum.connect(band).connect(high).connect(envelope(ctx, t, { peak: vel * 0.9, attack: 0.09, tc: 0.4 })).connect(out);
+  const n = noiseSource(ctx, t, 1.4);
+  const hp = filter(ctx, 'highpass', 5000);
+  n.connect(hp).connect(envelope(ctx, t, { peak: vel * 0.32, attack: 0.1, tc: 0.32 })).connect(out);
+}
+
 const crash = (ctx, out, t, vel) =>
   metal(ctx, out, t, { vel, tc: 0.5, peak: 1.3, hp: 3500, bp: 8000, scale: 1.25, dur: 2.2, partials: [263, 421, 587, 845] });
 
@@ -163,6 +198,10 @@ const DRUM_VOICES = {
   hatOpen: (c, o, t, v) => hat(c, o, t, v, { open: true }),
   hatPedal: (c, o, t, v) => hat(c, o, t, v, { pedal: true }),
   ride,
+  rim,
+  brush,
+  brushCrash,
+  swish: (c, o, t, v) => brush(c, o, t, v, { sweep: true }),
   crash,
   tomHigh: (c, o, t, v) => tom(c, o, t, v, 220),
   tomMid: (c, o, t, v) => tom(c, o, t, v, 160),

@@ -64,11 +64,13 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
   fKey.append(option('Any', ''), ...[...MAJOR_KEYS, ...MINOR_KEYS].map((k) => option(prettyKey(k), k)));
   fSort.append(option('Best match', ''), option('Most liked', 'likes'), option('Newest', 'new'));
 
-  const tabs = { mine: $('tab-mine'), browse: $('tab-browse') };
+  const tabs = { mine: $('tab-mine'), presets: $('tab-presets'), browse: $('tab-browse') };
   for (const [name, tab] of Object.entries(tabs)) tab.addEventListener('click', () => tracks.setTab(name));
   $('tracks').querySelector('[role="tablist"]').addEventListener('keydown', (e) => {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-    const next = tracks.state.tab === 'mine' ? 'browse' : 'mine';
+    const names = Object.keys(tabs);
+    const at = names.indexOf(tracks.state.tab);
+    const next = names[(at + (e.key === 'ArrowRight' ? 1 : names.length - 1)) % names.length];
     tracks.setTab(next);
     tabs[next].focus();
   });
@@ -369,6 +371,7 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
     const tab = t.tab;
     for (const [name, node] of Object.entries(tabs)) { node.setAttribute('aria-selected', String(name === tab)); node.tabIndex = name === tab ? 0 : -1; }
     $('panel-mine').hidden = tab !== 'mine';
+    $('panel-presets').hidden = tab !== 'presets';
     $('panel-browse').hidden = tab !== 'browse';
 
     // only rebuild a region when something it shows has changed

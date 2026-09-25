@@ -166,6 +166,17 @@ h2 { margin: 0 0 0.85rem; font-size: 0.875rem; font-weight: 600; color: var(--mu
 }
 .chip:hover { color: var(--text); border-color: var(--text); }
 .chip[aria-pressed='true'] { color: var(--brass); border-color: var(--brass); }
+.chip:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ---- presets, in the Style panel ------------------------------------------------------- */
+.presets { margin-top: 1.1rem; }
+.presets-head { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; }
+.presets h3 { margin: 0; font-size: 0.875rem; font-weight: 600; color: var(--muted); }
+.presets-style { font-weight: 400; }
+.presets-style::before { content: '· '; }
+.preset-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+.ctl .presets .chip { margin-top: 0; min-height: 36px; font-size: 0.875rem; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--brass); text-decoration: underline; cursor: pointer; font: inherit; }
 
 /* ---- progression: the fretboard ---------------------------------------------------- */
 .board { border-top: 1px solid var(--fret); }
@@ -248,8 +259,8 @@ input[type='number'] { width: 4.5rem; min-height: 40px; padding: 0 0.5rem; text-
 /* ---- tracks: my library and the community ------------------------------------------- */
 .tracks-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; }
 .tracks-head h2 { margin: 0; font-size: 1.125rem; color: var(--text); }
-.tabs { order: 3; display: grid; grid-template-columns: 1fr 1fr; width: 100%; border: 1px solid var(--fret-strong); border-radius: 999px; padding: 2px; }
-.tabs button { min-height: 38px; padding: 0 1rem; background: none; border: 0; border-radius: 999px; color: var(--muted); font-size: 0.9375rem; }
+.tabs { order: 3; display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; border: 1px solid var(--fret-strong); border-radius: 999px; padding: 2px; }
+.tabs button { min-height: 38px; padding: 0 0.4rem; background: none; border: 0; border-radius: 999px; color: var(--muted); font-size: 0.9375rem; }
 .tabs button:hover { color: var(--text); }
 .tabs button[aria-selected='true'] { background: var(--brass); color: var(--brass-ink); font-weight: 600; }
 .loaded-line { margin: 0.8rem 0 0; font-size: 0.9375rem; color: var(--brass); overflow-wrap: anywhere; }
@@ -351,6 +362,11 @@ input[type='number'] { width: 4.5rem; min-height: 40px; padding: 0 0.5rem; text-
 #browse-more { margin-top: 1rem; }
 .msg { min-height: 1.5rem; margin: 0.4rem 0 0; font-size: 0.875rem; color: var(--muted); }
 .msg.bad { color: var(--danger); }
+.quick { margin-top: 0.6rem; }
+.quick-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 1rem; }
+.quick-title { font-size: 0.875rem; font-weight: 600; color: var(--muted); }
+.quick .seg { padding: 2px; }
+.quick .seg button { min-height: 32px; padding: 0 0.85rem; font-size: 0.875rem; }
 .examples { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
 .examples .chip { min-height: 36px; font-size: 0.875rem; }
 
@@ -549,3 +565,24 @@ body.sidebar-lock { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* the Drums panel's mini mixer */
+.minimix { margin: 1rem 0 0.4rem; border: 1px solid var(--fret); border-radius: 10px; padding: 0 0.9rem; }
+.minimix summary { display: flex; align-items: baseline; gap: 0.8rem; padding: 0.55rem 0; cursor: pointer; list-style: none; font-size: 0.9375rem; }
+.minimix summary::-webkit-details-marker { display: none; }
+.minimix summary::before {
+  content: ''; width: 0.5rem; height: 0.5rem; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg); transition: transform 0.15s; flex: none; align-self: center;
+}
+.minimix[open] summary::before { transform: rotate(45deg); }
+.minimix summary:hover .bl-title { color: var(--brass); }
+.mm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(9.5rem, 100%), 1fr)); gap: 0.4rem 1.4rem; padding: 0.2rem 0 1rem; }
+.mm-row { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 0 0.5rem; }
+.mm-row label { font-size: 0.875rem; font-weight: 600; }
+.mm-row output { font-size: 0.8125rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.mm-row .slider { grid-column: 1 / -1; margin-top: 0.2rem; }
+
+
+#preset-note, #presets-msg { min-height: 1.2em; }
+#preset-note { margin: 0.4rem 0 0; }
+#preset-note.error, #presets-msg.error { color: var(--danger); }

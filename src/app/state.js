@@ -7,18 +7,6 @@ import { MAX_BPM, MIN_BPM } from '../engine/planner.js';
 import { parseKey } from '../theory/keys.js';
 import { METER_IDS } from '../theory/meter.js';
 
-export const EXAMPLES = [
-  { name: 'ii–V–I', text: 'Dm7 | G7 | Cmaj7 | Cmaj7' },
-  { name: 'Major turnaround', text: 'Cmaj7 | Am7 | Dm7 | G7' },
-  { name: 'Minor ii–V–i', text: 'Dm7b5 | G7 | Cm7 | Cm7' },
-  { name: '12-bar blues', text: 'C7 | F7 | C7 | C7 | F7 | F7 | C7 | C7 | G7 | F7 | C7 | G7', style: 'blues' },
-  { name: 'Rock I–V–vi–IV', text: 'C | G | Am | F', style: 'rock' },
-  { name: 'Autumn Leaves (A)', text: 'Cm7 | F7 | Bbmaj7 | Ebmaj7 | Am7b5 | D7 | Gm7 | Gm7' },
-  { name: '6/8 blues', text: 'C7 | F7 | C7 | C7 | F7 | F7 | C7 | C7 | G7 | F7 | C7 | G7', style: 'blues', timeSignature: '6/8' },
-  { name: '7/8 minor vamp', text: 'Am7 | Am7 | Dm7 | E7 | Am7 | Fmaj7 | Dm7 E7 | Am7', style: 'jazz', timeSignature: '7/8' },
-  { name: '10/8 rock riff', text: 'Am | G | F | E', style: 'rock', timeSignature: '10/8' },
-];
-
 export const defaultState = () => ({
   song: { key: 'C', tempo: 132, timeSignature: '4/4', progressionText: 'Cmaj7 | Am7 | Dm7 | G7' },
   config: {

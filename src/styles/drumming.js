@@ -13,6 +13,7 @@
 
 import { slotsWithin } from '../theory/meter.js';
 import { drum } from './helpers.js';
+import { hashSeed } from '../engine/rng.js';
 import { gain, odds } from './settings.js';
 
 /** A probability that is `base` at the middle of a slider, 0 at the bottom and 1 at the top. */
@@ -108,8 +109,100 @@ const SNARE_COMP = [
 
 const RIDE = [[0, 0.6], [1, 0.76], [1.5, 0.48], [2, 0.6], [3, 0.76], [3.5, 0.48]];
 
+/**
+ * Turn the stick jazz kit into brushes. The ride pattern and the snare comping are played with brush taps, the crash
+ * becomes a brushed crash (a soft swell), the open hat goes, and a left-hand sweep is added: a swish on each beat, leaning on two and four. In "sweep" (the ballad
+ * sound) the ride pattern goes too and the sweep carries the time on its own.
+ */
+function brushify(ctx, ev, mode) {
+  const { rng, kitOpts: k } = ctx;
+  const out = [];
+  for (const e of ev) {
+    if (e.voice === 'hatOpen') continue;
+    if (mode === 'sweep' && e.voice === 'ride') continue;
+    if (e.voice === 'ride') out.push({ ...e, voice: 'brush', vel: Math.min(1, e.vel * 1.1) });
+    else if (e.voice === 'crash') out.push({ ...e, voice: 'brushCrash', vel: Math.min(1, e.vel * 0.85), dur: Math.max(e.dur, 1.2) });
+    else if (e.voice === 'snare') out.push({ ...e, voice: 'brush', vel: Math.min(1, e.vel * 1.15) });
+    else out.push(e);
+  }
+  const at = ctx.meter.id === '4/4' ? [0, 1, 2, 3] : ctx.meter.groupSpans.map((g) => g.start);
+  at.forEach((b, i) => {
+    const back = i % 2 === 1;
+    if (mode === 'sweep') {
+      out.push(drum('swish', b, (back ? 0.5 : 0.4) + rng.next() * 0.1, 0.5));
+      if (k.cymbal > 50 && rng.chance(((k.cymbal - 50) / 50) * 0.6)) out.push(drum('swish', b + 0.5, 0.3, 0.4));
+    } else if (back || rng.chance(0.5 * Math.min(1, gain(k.cymbal)))) {
+      out.push(drum('swish', b, back ? 0.5 + rng.next() * 0.08 : 0.3, 0.4));
+    }
+  });
+  return out;
+}
+
+// ---- Latin jazz --------------------------------------------------------------------------------
+// Straight eighths whatever the Swing slider says (every note is `fixed`; choosing one of these grooves sets Swing to 50%
+// so the bass and keys agree), and the cross-stick clave that runs through a Latin groove. 4/4 only.
+
+const straight = (voice, beat, vel, dur = 0.2) => drum(voice, beat, vel, dur, { fixed: true });
+// the two-bar clave, one bar at a time: the three side, then the two side (bossa nova and son clave share it)
+const CLAVE = [[0, 1.5, 3], [1, 2]];
+
+const LATIN = {
+  // bossa nova: eighth-note hat, a two-bar clave on the cross-stick, a kick that rocks between one, the "and" of two, three
+  bossa(ctx) {
+    const { rng, barIndex } = ctx;
+    const k = ctx.kitOpts;
+    const ev = [];
+    const offKept = Math.min(1, gain(k.cymbal));
+    for (let i = 0; i < 8; i++) {
+      if (i % 2 === 1 && !rng.chance(offKept)) continue;
+      ev.push(straight('hat', i / 2, i % 2 === 0 ? 0.52 : 0.36, 0.15));
+    }
+    ev.push(straight('hatPedal', 1, 0.42, 0.1), straight('hatPedal', 3, 0.42, 0.1));
+    ev.push(straight('kick', 0, 0.8, 0.25), straight('kick', 2, 0.72, 0.25));
+    if (rng.chance(odds(0.85, k.kick))) ev.push(straight('kick', 1.5, 0.6, 0.25));
+    if (rng.chance(odds(0.8, k.kick))) ev.push(straight('kick', 3.5, 0.58, 0.25));
+    for (const b of CLAVE[barIndex % 2]) ev.push(straight('rim', b, 0.62, 0.15));
+    if (rng.chance(odds(0.2, k.snare))) ev.push(straight('rim', rng.pick([0.5, 2.5, 3.5]), 0.4, 0.12));
+    for (const b of [0.5, 1.5, 2.5, 3.5]) if (rng.chance(odds(0.25, k.ghosts))) ev.push(straight('snare', b, 0.26 + rng.next() * 0.1, 0.12));
+    return ev;
+  },
+
+  // Afro-Cuban: a bell-like ride on the beat, cascara on the cross-stick, the foot on two and four, a sparse tumbao kick
+  afro(ctx) {
+    const { rng } = ctx;
+    const k = ctx.kitOpts;
+    const ev = [];
+    for (let b = 0; b < 4; b++) ev.push(straight('ride', b, b % 2 === 0 ? 0.6 : 0.72, 0.4));
+    if (k.cymbal > 60) for (let b = 0; b < 4; b++) if (rng.chance(((k.cymbal - 60) / 40) * 0.6)) ev.push(straight('ride', b + 0.5, 0.36, 0.3));
+    const keep = Math.min(1, 0.6 + 0.4 * gain(k.snare)); // the cascara: 1 & . & 3 . & . in the 2-3 spirit
+    [0, 0.5, 1.5, 2, 3].forEach((b, i) => { if (i === 0 || rng.chance(keep)) ev.push(straight('rim', b, i === 0 ? 0.62 : 0.5, 0.15)); });
+    if (k.snare > 50) for (const b of [1, 2.5]) if (rng.chance(((k.snare - 50) / 50) * 0.5)) ev.push(straight('rim', b, 0.42, 0.12));
+    ev.push(straight('hatPedal', 1, 0.55, 0.1), straight('hatPedal', 3, 0.55, 0.1));
+    ev.push(straight('kick', 3, 0.7, 0.25));
+    if (rng.chance(odds(0.9, k.kick))) ev.push(straight('kick', 1.5, 0.62, 0.25));
+    if (rng.chance(odds(0.5, k.kick))) ev.push(straight('kick', 0, 0.6, 0.25));
+    if (rng.chance(odds(0.3, k.kick))) ev.push(straight('kick', 2.5, 0.5, 0.25));
+    for (const b of [0.5, 2.5, 3.5]) if (rng.chance(odds(0.3, k.ghosts))) ev.push(straight('tomMid', b, 0.28 + rng.next() * 0.1, 0.2));
+    return ev;
+  },
+};
+
+function latinJazz(ctx, id) {
+  const ev = LATIN[id](ctx);
+  ev.push(...crashes(ctx, { firstBase: ctx.chorus > 1 ? 0.6 : 0, vel: 0.5, len: 1 }));
+  addFill(ctx, ev, 'jazz', { last: 0.7, mid: 0.3 });
+  return ev;
+}
+
 export function jazzDrums(ctx) {
-  if (ctx.meter.id !== '4/4') return oddDrums(ctx, 'jazz');
+  // Latin grooves are 4/4 grooves: in the /8 meters they fall back to sticks, like the blues and rock grooves do
+  const g = grooveFor(ctx, ['classic', 'brushes', 'sweep'], ['classic', 'brushes', 'sweep', 'bossa', 'afro']);
+  if (LATIN[g] && ctx.meter.id === '4/4') return latinJazz(ctx, g);
+  const ev = ctx.meter.id !== '4/4' ? oddDrums(ctx, 'jazz') : stickJazz(ctx);
+  return g === 'brushes' || g === 'sweep' ? brushify(ctx, ev, g) : ev;
+}
+
+function stickJazz(ctx) {
   const { rng, chorus } = ctx;
   const k = ctx.kitOpts;
   const ev = [];
@@ -156,33 +249,131 @@ export function jazzDrums(ctx) {
 
 // ---- blues -------------------------------------------------------------------------------------
 
+/**
+ * Which groove this bar plays. "Mixed" changes groove every four bars, differently in each run. A groove the style
+ * does not have (a track loaded from another style) plays the style's classic one.
+ */
+function grooveFor(ctx, ids, valid = ids) {
+  const g = ctx.kitOpts.groove;
+  if (g === 'mixed') return ids[hashSeed(ctx.seed ?? 0, ctx.chorus ?? 1, Math.floor(ctx.barIndex / 4)) % ids.length];
+  return valid.includes(g) ? g : 'classic';
+}
+
+/** Quiet snare notes at the given beats, as often as the Ghost notes slider allows. */
+function sprinkle(ctx, ev, spots, base = 0.3) {
+  const { rng, kitOpts: k } = ctx;
+  for (const b of spots) if (rng.chance(odds(base, k.ghosts))) ev.push(drum('snare', b, 0.3 + rng.next() * 0.14, 0.15));
+}
+
+// The blues grooves. Each returns the bar's notes before crashes and fills. Positions are beats; 0.5 is the swung "and".
+const BLUES_GROOVES = {
+  // the shuffle it has always played
+  classic(ctx) {
+    const { rng } = ctx;
+    const k = ctx.kitOpts;
+    const ev = [];
+    // shuffled hi-hat: each beat, plus the swung "and" (Cymbal thins those out, then adds an open hat on top)
+    const andKept = Math.min(1, gain(k.cymbal));
+    [0.72, 0.56, 0.66, 0.56].forEach((v, b) => {
+      ev.push(drum('hat', b, v, 0.3));
+      if (rng.chance(andKept)) ev.push(drum('hat', b + 0.5, v * 0.66, 0.3));
+    });
+    if (k.cymbal > 60 && rng.chance(((k.cymbal - 60) / 40) * 0.5)) ev.push(drum('hatOpen', 3.5, 0.5, 0.4));
+
+    // kick: one and three; Kick drops the three (half-time) or adds pushes on the shuffle's "and"
+    ev.push(drum('kick', 0, 0.82, 0.3));
+    if (k.kick >= 25 || rng.chance(k.kick / 25)) ev.push(drum('kick', 2, 0.76, 0.3));
+    if (rng.chance(odds(0.35, k.kick))) ev.push(drum('kick', 2.5, 0.55, 0.3));
+    if (k.kick > 60 && rng.chance(((k.kick - 60) / 40) * 0.4)) ev.push(drum('kick', rng.chance(0.5) ? 0.5 : 3.5, 0.5, 0.3));
+
+    // snare: the backbeat, always
+    ev.push(drum('snare', 1, 0.9, 0.3), drum('snare', 3, 0.92, 0.3));
+    // ghost notes on the shuffle's "a" just before each backbeat, and now and then a push into beat 1
+    sprinkle(ctx, ev, [0.5, 2.5], 0.4);
+    if (rng.chance(odds(0.2, k.snare))) ev.push(drum('snare', 3.5, 0.5 + rng.next() * 0.12, 0.2));
+    if (k.snare > 60 && rng.chance(((k.snare - 60) / 40) * 0.4)) ev.push(drum('snare', rng.chance(0.5) ? 1.5 : 2, 0.5 + rng.next() * 0.1, 0.2));
+    return ev;
+  },
+
+  // slow blues in 12/8: every beat is three even notes on the hat, backbeat on two and four
+  slow(ctx) {
+    const { rng } = ctx;
+    const k = ctx.kitOpts;
+    const ev = [];
+    const t = (voice, beat, vel, dur = 0.25) => drum(voice, beat, vel, dur, { fixed: true });
+    const middleKept = Math.min(1, gain(k.cymbal));
+    for (let b = 0; b < 4; b++) {
+      ev.push(t('hat', b, b % 2 === 0 ? 0.7 : 0.58), t('hat', b + 2 / 3, 0.5));
+      if (rng.chance(middleKept)) ev.push(t('hat', b + 1 / 3, 0.36));
+    }
+    ev.push(drum('kick', 0, 0.84, 0.3), drum('kick', 2, 0.78, 0.3));
+    if (rng.chance(odds(0.3, k.kick))) ev.push(t('kick', 2 + 2 / 3, 0.56, 0.3));
+    if (k.kick > 60 && rng.chance(((k.kick - 60) / 40) * 0.4)) ev.push(t('kick', 1 + 2 / 3, 0.5, 0.3));
+    ev.push(drum('snare', 1, 0.9, 0.3), drum('snare', 3, 0.92, 0.3));
+    for (const b of [2 / 3, 2 + 2 / 3]) if (rng.chance(odds(0.35, k.ghosts))) ev.push(t('snare', b, 0.3 + rng.next() * 0.12, 0.15));
+    return ev;
+  },
+
+  // the half-time shuffle (Purdie, "Home at Last"): one big snare on three, ghost notes rolling through the shuffle
+  purdie(ctx) {
+    const { rng } = ctx;
+    const k = ctx.kitOpts;
+    const ev = [];
+    const andKept = Math.min(1, gain(k.cymbal));
+    [0.74, 0.5, 0.66, 0.5].forEach((v, b) => {
+      ev.push(drum('hat', b, v, 0.3));
+      if (rng.chance(andKept)) ev.push(drum('hat', b + 0.5, v * 0.66, 0.3));
+    });
+    ev.push(drum('kick', 0, 0.86, 0.3));
+    if (rng.chance(0.75)) ev.push(drum('kick', 1.5, 0.66, 0.3));
+    if (rng.chance(odds(0.3, k.kick))) ev.push(drum('kick', 2.5, 0.56, 0.3));
+    if (k.kick > 60 && rng.chance(((k.kick - 60) / 40) * 0.5)) ev.push(drum('kick', 3.5, 0.52, 0.3));
+    ev.push(drum('snare', 2, 0.96, 0.3));
+    sprinkle(ctx, ev, [0.5, 1, 1.5, 2.5, 3.5], 0.55); // the ghosts that make it swing
+    if (rng.chance(odds(0.2, k.snare))) ev.push(drum('snare', 3, 0.5 + rng.next() * 0.1, 0.2));
+    return ev;
+  },
+
+  // Chicago: a kick on every beat under a shuffled ride and the backbeat
+  chicago(ctx) {
+    const { rng } = ctx;
+    const k = ctx.kitOpts;
+    const ev = [];
+    const andKept = Math.min(1, gain(k.cymbal));
+    for (let b = 0; b < 4; b++) {
+      ev.push(drum('ride', b, b % 2 === 0 ? 0.64 : 0.74, 0.4));
+      if (rng.chance(andKept)) ev.push(drum('ride', b + 0.5, 0.44, 0.4));
+      ev.push(drum('kick', b, b % 2 === 0 ? 0.62 : 0.5, 0.25));
+    }
+    ev.push(drum('snare', 1, 0.9, 0.3), drum('snare', 3, 0.92, 0.3));
+    sprinkle(ctx, ev, [0.5, 2.5], 0.3);
+    if (rng.chance(odds(0.25, k.kick))) ev.push(drum('kick', 3.5, 0.55, 0.25));
+    return ev;
+  },
+
+  // the train beat: brushed-snare shuffle, quiet on every note, accented on the backbeat
+  train(ctx) {
+    const { rng } = ctx;
+    const k = ctx.kitOpts;
+    const ev = [];
+    const skipKept = Math.min(1, gain(k.cymbal));
+    for (let b = 0; b < 4; b++) {
+      const back = b % 2 === 1;
+      ev.push(drum('snare', b, back ? 0.86 : 0.42, 0.25));
+      if (rng.chance(skipKept)) ev.push(drum('snare', b + 0.5, back ? 0.5 : 0.34, 0.2));
+    }
+    ev.push(drum('kick', 0, 0.74, 0.3), drum('kick', 2, 0.68, 0.3));
+    if (rng.chance(odds(0.3, k.kick))) ev.push(drum('kick', 3.5, 0.5, 0.3));
+    ev.push(drum('hatPedal', 1, 0.44, 0.1), drum('hatPedal', 3, 0.44, 0.1));
+    return ev;
+  },
+};
+const BLUES_GROOVE_IDS = Object.keys(BLUES_GROOVES);
+
 export function bluesDrums(ctx) {
   if (ctx.meter.id !== '4/4') return oddDrums(ctx, 'blues');
-  const { rng, chorus } = ctx;
-  const k = ctx.kitOpts;
-  const ev = [];
-
-  // shuffled hi-hat: each beat, plus the swung "and" (Cymbal thins those out, then adds an open hat on top)
-  const andKept = Math.min(1, gain(k.cymbal));
-  [0.72, 0.56, 0.66, 0.56].forEach((v, b) => {
-    ev.push(drum('hat', b, v, 0.3));
-    if (rng.chance(andKept)) ev.push(drum('hat', b + 0.5, v * 0.66, 0.3));
-  });
-  if (k.cymbal > 60 && rng.chance(((k.cymbal - 60) / 40) * 0.5)) ev.push(drum('hatOpen', 3.5, 0.5, 0.4));
-
-  // kick: one and three; Kick drops the three (half-time) or adds pushes on the shuffle's "and"
-  ev.push(drum('kick', 0, 0.82, 0.3));
-  if (k.kick >= 25 || rng.chance(k.kick / 25)) ev.push(drum('kick', 2, 0.76, 0.3));
-  if (rng.chance(odds(0.35, k.kick))) ev.push(drum('kick', 2.5, 0.55, 0.3));
-  if (k.kick > 60 && rng.chance(((k.kick - 60) / 40) * 0.4)) ev.push(drum('kick', rng.chance(0.5) ? 0.5 : 3.5, 0.5, 0.3));
-
-  // snare: the backbeat, always
-  ev.push(drum('snare', 1, 0.9, 0.3), drum('snare', 3, 0.92, 0.3));
-  // ghost notes on the shuffle's "a" just before each backbeat, and now and then a push into beat 1
-  for (const b of [0.5, 2.5]) if (rng.chance(odds(0.4, k.ghosts))) ev.push(drum('snare', b, 0.3 + rng.next() * 0.14, 0.2));
-  if (rng.chance(odds(0.2, k.snare))) ev.push(drum('snare', 3.5, 0.5 + rng.next() * 0.12, 0.2));
-  if (k.snare > 60 && rng.chance(((k.snare - 60) / 40) * 0.4)) ev.push(drum('snare', rng.chance(0.5) ? 1.5 : 2, 0.5 + rng.next() * 0.1, 0.2));
-
+  const { chorus } = ctx;
+  const ev = BLUES_GROOVES[grooveFor(ctx, BLUES_GROOVE_IDS)](ctx);
   ev.push(...crashes(ctx, { firstBase: chorus > 1 ? 0.6 : 0, vel: 0.55, len: 1 }));
   addFill(ctx, ev, 'blues', { last: 0.75, mid: 0.25 });
   return ev;
@@ -194,15 +385,12 @@ const KICKS = [[0, 2], [0, 0.5, 2], [0, 2, 2.5], [0, 1.5, 2]];
 const KICKS_SIMPLE = [[0, 2]];
 const KICKS_BUSY = [[0, 0.5, 2, 2.5, 3.5], [0, 1.5, 2, 2.75, 3.5], [0, 0.75, 1.5, 2, 2.5], [0, 0.5, 1.75, 2, 3.5]];
 
-export function rockDrums(ctx) {
-  if (ctx.meter.id !== '4/4') return oddDrums(ctx, 'rock');
+/** Straight-eighth hi-hat: quarters when Cymbal is low, eighths in the middle, sixteenths and an open hat above that. */
+function rockHats(ctx, ev, { open = true } = {}) {
   const { rng } = ctx;
   const k = ctx.kitOpts;
-  const ev = [];
-
-  // hi-hat: quarters when Cymbal is low, eighths in the middle, with sixteenths and open hats added above that
   const offKept = Math.min(1, Math.max(0, (k.cymbal - 15) / 35));
-  const openHat = rng.chance(odds(0.15, k.cymbal));
+  const openHat = open && rng.chance(odds(0.15, k.cymbal));
   for (let i = 0; i < 8; i++) {
     const b = i / 2;
     if (i % 2 === 1 && !rng.chance(offKept)) continue;
@@ -210,26 +398,135 @@ export function rockDrums(ctx) {
     else ev.push(drum('hat', b, i % 2 === 0 ? 0.7 : 0.5, 0.2));
   }
   if (k.cymbal > 50) {
-    for (let i = 0; i < 8; i++) {
-      for (const off of [0.25]) if (rng.chance(((k.cymbal - 50) / 50) * 0.7)) ev.push(drum('hat', i / 2 + off, 0.34, 0.15));
-    }
+    for (let i = 0; i < 8; i++) if (rng.chance(((k.cymbal - 50) / 50) * 0.7)) ev.push(drum('hat', i / 2 + 0.25, 0.34, 0.15));
   }
+}
 
-  // kick: as simple as one and three, the usual rock patterns, or busy syncopation
-  const set = rng.weighted([
-    [KICKS_SIMPLE, Math.max(0, 60 - k.kick) / 20],
-    [KICKS, 3 * Math.min(1, k.kick / 20)],
-    [KICKS_BUSY, Math.max(0, k.kick - 40) / 15],
-  ]);
-  const kicks = set === KICKS ? (rng.chance(0.55) ? KICKS[0] : rng.pick(KICKS)) : rng.pick(set);
-  kicks.forEach((b) => ev.push(drum('kick', b, 0.88, 0.25)));
+const backbeat = (ev, a = 0.94, b = 0.96) => ev.push(drum('snare', 1, a, 0.3), drum('snare', 3, b, 0.3));
 
-  // snare: the backbeat, always; ghosts a sixteenth before it; extras around it
-  ev.push(drum('snare', 1, 0.94, 0.3), drum('snare', 3, 0.96, 0.3));
-  for (const b of [0.75, 2.75]) if (rng.chance(odds(0.3, k.ghosts))) ev.push(drum('snare', b, 0.3 + rng.next() * 0.12, 0.15));
-  if (rng.chance(odds(0.22, k.snare))) ev.push(drum('snare', 3.5, 0.62 + rng.next() * 0.1, 0.2));
-  if (k.snare > 60 && rng.chance(((k.snare - 60) / 40) * 0.35)) ev.push(drum('snare', rng.chance(0.5) ? 1.75 : 3.75, 0.5 + rng.next() * 0.1, 0.15));
+// The rock grooves. Each returns the bar's notes before crashes and fills.
+const ROCK_GROOVES = {
+  // the rock beat it has always played
+  classic(ctx) {
+    const { rng } = ctx;
+    const k = ctx.kitOpts;
+    const ev = [];
+    rockHats(ctx, ev);
+    // kick: as simple as one and three, the usual rock patterns, or busy syncopation
+    const set = rng.weighted([
+      [KICKS_SIMPLE, Math.max(0, 60 - k.kick) / 20],
+      [KICKS, 3 * Math.min(1, k.kick / 20)],
+      [KICKS_BUSY, Math.max(0, k.kick - 40) / 15],
+    ]);
+    const kicks = set === KICKS ? (rng.chance(0.55) ? KICKS[0] : rng.pick(KICKS)) : rng.pick(set);
+    kicks.forEach((b) => ev.push(drum('kick', b, 0.88, 0.25)));
+    // snare: the backbeat, always; ghosts a sixteenth before it; extras around it
+    backbeat(ev);
+    for (const b of [0.75, 2.75]) if (rng.chance(odds(0.3, k.ghosts))) ev.push(drum('snare', b, 0.3 + rng.next() * 0.12, 0.15));
+    if (rng.chance(odds(0.22, k.snare))) ev.push(drum('snare', 3.5, 0.62 + rng.next() * 0.1, 0.2));
+    if (k.snare > 60 && rng.chance(((k.snare - 60) / 40) * 0.35)) ev.push(drum('snare', rng.chance(0.5) ? 1.75 : 3.75, 0.5 + rng.next() * 0.1, 0.15));
+    return ev;
+  },
 
+  // four on the floor: a kick on every beat, open hats on the offbeats, the backbeat on top
+  fourfloor(ctx) {
+    const { rng } = ctx;
+    const k = ctx.kitOpts;
+    const ev = [];
+    for (let b = 0; b < 4; b++) {
+      ev.push(drum('kick', b, 0.86, 0.25), drum('hat', b, 0.5, 0.15));
+      if (rng.chance(Math.min(1, gain(k.cymbal)))) ev.push(drum('hatOpen', b + 0.5, 0.62, 0.3));
+    }
+    if (k.cymbal > 60) for (let b = 0; b < 4; b++) if (rng.chance(((k.cymbal - 60) / 40) * 0.5)) ev.push(drum('hat', b + 0.75, 0.32, 0.12));
+    backbeat(ev, 0.9, 0.92);
+    if (rng.chance(odds(0.2, k.snare))) ev.push(drum('snare', 3.75, 0.5 + rng.next() * 0.1, 0.15));
+    return ev;
+  },
+
+  // half-time: the backbeat drops to a single heavy snare on three
+  half(ctx) {
+    const { rng } = ctx;
+    const k = ctx.kitOpts;
+    const ev = [];
+    rockHats(ctx, ev, { open: false });
+    const kicks = rng.weighted([
+      [[0], Math.max(0.1, 50 - k.kick) / 20],
+      [[0, 1.5], 3],
+      [[0, 1.75], 2],
+      [[0, 0.5, 1.5], 1 + k.kick / 40],
+      [[0, 1.5, 3.5], k.kick / 30],
+    ]);
+    kicks.forEach((b) => ev.push(drum('kick', b, 0.9, 0.3)));
+    ev.push(drum('snare', 2, 0.98, 0.35));
+    for (const b of [1.75, 3.75]) if (rng.chance(odds(0.25, k.ghosts))) ev.push(drum('snare', b, 0.3 + rng.next() * 0.12, 0.15));
+    if (rng.chance(odds(0.15, k.snare))) ev.push(drum('snare', 3.5, 0.6, 0.2));
+    return ev;
+  },
+
+  // "boom boom clap": kick, kick, snare, twice, with the hats left out
+  stomp(ctx) {
+    const { rng } = ctx;
+    const k = ctx.kitOpts;
+    const ev = [];
+    for (const [a, b] of [[0, 1], [2, 3]]) {
+      ev.push(drum('kick', a, 0.92, 0.3), drum('kick', a + 0.5, 0.88, 0.3), drum('snare', b, 0.96, 0.3));
+    }
+    if (k.cymbal > 55) for (const b of [0, 1, 2, 3]) if (rng.chance(((k.cymbal - 55) / 45) * 0.9)) ev.push(drum('hat', b, 0.5, 0.15));
+    if (rng.chance(odds(0.2, k.snare))) ev.push(drum('snare', 1.5, 0.66, 0.2));
+    return ev;
+  },
+
+  // hard rock on the ride: eighth notes on the cymbal, big kick and snare underneath
+  ride(ctx) {
+    const { rng } = ctx;
+    const k = ctx.kitOpts;
+    const ev = [];
+    const offKept = Math.min(1, Math.max(0, (k.cymbal - 15) / 35));
+    for (let i = 0; i < 8; i++) {
+      if (i % 2 === 1 && !rng.chance(offKept)) continue;
+      ev.push(drum('ride', i / 2, i % 2 === 0 ? 0.74 : 0.5, 0.4));
+    }
+    const kicks = rng.weighted([[KICKS[0], 3], [KICKS[1], 2], [KICKS[2], 2], [KICKS_BUSY[0], Math.max(0, k.kick - 40) / 15]]);
+    kicks.forEach((b) => ev.push(drum('kick', b, 0.9, 0.25)));
+    backbeat(ev, 0.96, 0.98);
+    if (rng.chance(odds(0.22, k.snare))) ev.push(drum('snare', 3.5, 0.62 + rng.next() * 0.1, 0.2));
+    return ev;
+  },
+
+  // funk rock: sixteenth-note hats, ghosted snares, a syncopated kick
+  funk(ctx) {
+    const { rng } = ctx;
+    const k = ctx.kitOpts;
+    const ev = [];
+    const kept = Math.min(1, Math.max(0.35, gain(k.cymbal)));
+    for (let i = 0; i < 16; i++) {
+      if (i % 2 === 1 && !rng.chance(kept)) continue;
+      ev.push(drum('hat', i / 4, i % 4 === 0 ? 0.68 : i % 2 === 0 ? 0.5 : 0.32, 0.12));
+    }
+    const kicks = rng.weighted([[[0, 0.75, 2, 2.5], 3], [[0, 1.75, 2.5], 2], [[0, 0.75, 1.5, 2.75], 1 + k.kick / 40], [[0, 2, 3.75], 2]]);
+    kicks.forEach((b) => ev.push(drum('kick', b, 0.86, 0.2)));
+    backbeat(ev, 0.92, 0.94);
+    for (const b of [0.75, 1.25, 1.75, 2.75, 3.25, 3.75]) if (rng.chance(odds(0.4, k.ghosts))) ev.push(drum('snare', b, 0.28 + rng.next() * 0.12, 0.12));
+    return ev;
+  },
+
+  // Bo Diddley: the "shave and a haircut" clave on the toms, eighth-note hats, kick on one and three
+  diddley(ctx) {
+    const { rng } = ctx;
+    const k = ctx.kitOpts;
+    const ev = [];
+    rockHats(ctx, ev, { open: false });
+    [[0, 'tomLow'], [0.75, 'tomMid'], [1.5, 'tomLow'], [2.5, 'tomMid'], [3, 'tomLow']].forEach(([b, voice]) => ev.push(drum(voice, b, 0.82, 0.3)));
+    ev.push(drum('kick', 0, 0.86, 0.3), drum('kick', 2, 0.82, 0.3));
+    if (rng.chance(odds(0.3, k.snare))) ev.push(drum('snare', 3.5, 0.6, 0.2));
+    return ev;
+  },
+};
+const ROCK_GROOVE_IDS = Object.keys(ROCK_GROOVES);
+
+export function rockDrums(ctx) {
+  if (ctx.meter.id !== '4/4') return oddDrums(ctx, 'rock');
+  const ev = ROCK_GROOVES[grooveFor(ctx, ROCK_GROOVE_IDS)](ctx);
   ev.push(...crashes(ctx, { firstBase: 1, vel: 0.7, len: 1.5 }));
   addFill(ctx, ev, 'rock', { last: 0.75, mid: 0.22 });
   return ev;

@@ -68,7 +68,7 @@ test('the page asks for versioned scripts and styles, and only a current version
 test('the Keys and Drums panels are stored with the track; junk is repaired and older tracks get the style default', withServer(async ({ browser }) => {
   const b = browser();
   const comp = { rhythm: 'charleston', density: 20, sync: 90, variety: 10, tension: 80, range: 70, spread: 60, length: 30, power: 40, pocket: 60, loose: 20 };
-  const kit = { cymbal: 10, kick: 90, snare: 70, ghosts: 0, fills: 100, wild: 100, crash: 0, power: 80, pocket: 40, loose: 90 };
+  const kit = { levels: { kick: 70, snare: 50, hat: 20, ride: 50, crash: 0, toms: 50, brush: 50 }, groove: 'purdie', cymbal: 10, kick: 90, snare: 70, ghosts: 0, fills: 100, wild: 100, crash: 0, power: 80, pocket: 40, loose: 90 };
   const r = await b.post('/api/tracks', { title: 'Custom band', data: trackData({ config: { comp, kit } }) });
   assert.equal(r.status, 201);
   const back = (await b.get(`/api/tracks/${r.json.track.id}`)).json.track.data.config;
