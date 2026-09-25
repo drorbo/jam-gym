@@ -3,7 +3,7 @@
 
 export const DRUM_PARTS = [
   { id: 'kick', name: 'Kick', voices: ['kick'] },
-  { id: 'snare', name: 'Snare', voices: ['snare', 'rim'] },
+  { id: 'snare', name: 'Snare', voices: ['snare', 'rim', 'stick'] },
   { id: 'hat', name: 'Hi-hat', voices: ['hat', 'hatPedal', 'hatOpen'] },
   { id: 'ride', name: 'Ride', voices: ['ride'] },
   { id: 'crash', name: 'Crash', voices: ['crash', 'brushCrash'] },

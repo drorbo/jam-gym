@@ -5,7 +5,7 @@
 import { defaultBass, defaultComp, defaultKit, defaultSwing, getStyle } from '../styles/index.js';
 import { DRUM_PARTS, levelDb } from '../styles/drumparts.js';
 import {
-  GROUPS, GROUP_IDS, describeGroup, effectiveOption, effectiveValues, fieldsFor, grooveSwing, inactiveControls, isOddMeter, optionsFor, optionsForMeter,
+  GROUPS, GROUP_IDS, describeGroup, effectiveOption, effectiveValues, fieldsFor, bandSwing, inactiveControls, optionsFor, optionsForMeter,
   sanitizeGroup, wordFor, wordsFor,
 } from '../styles/settings.js';
 import { mountCollapsibles } from './collapsible.js';
@@ -24,7 +24,9 @@ function notes(group, v, style, song, bpm) {
   const meter = song.timeSignature;
   const eff = effectiveValues(group, v, style.id, meter);
   const field = (id) => GROUPS[group].fields.find((f) => f.id === id);
+  const idle = inactiveControls(group, v, style.id, meter);
   for (const id of ['groove', 'rhythm', 'pattern']) {
+    if (idle[id]) continue; // a control that is switched off is not described: only why it is off
     const f = field(id);
     const o = f && eff[id] !== undefined ? optionsFor(f, style.id).find((x) => x.id === eff[id]) : null;
     if (o?.hint && (f.type === 'select') && !(group === 'comp' && o.id === 'auto')) out.push(`${o.name}: ${o.hint}.`);
@@ -32,7 +34,7 @@ function notes(group, v, style, song, bpm) {
   if (v.mix?.length) out.push('A mixed slider wanders up to 30 either side of where you left it, drifting from bar to bar.');
   // the controls that do nothing right now, and why (each one is also greyed out, with the reason as its tooltip)
   const why = new Map();
-  for (const [id, reason] of Object.entries(inactiveControls(group, v, style.id, meter))) {
+  for (const [id, reason] of Object.entries(idle)) {
     if (!why.has(reason)) why.set(reason, []);
     why.get(reason).push(field(id).name);
   }
@@ -65,13 +67,17 @@ export function mountBandUI({ store, storage = null }) {
     store.set({ config: { ...config, [group]: sanitizeGroup(group, { ...config[group], ...change }, DEFAULTS[group](style)) } });
   };
 
-  /** A groove can ask for a swing (a straight Latin groove wants 50%). Leaving such a groove puts the style's own swing back. */
-  function presetSwing(from, to) {
+  /**
+   * A groove or bass figure can ask for a swing (the straight Latin ones want 50%). Choosing one sets it; leaving the last one
+   * puts the style's own swing back. `field` is what is being changed ('groove' or 'pattern') and `value` what it becomes.
+   */
+  function presetSwing(field, value) {
     const { config, song, transport, view } = store.get();
     const style = getStyle(config.style);
-    const wanted = grooveSwing(style.id, to);
-    if (wanted !== null) store.set({ config: { ...config, swing: wanted } });
-    else if (grooveSwing(style.id, from) !== null) {
+    const before = bandSwing(style.id, config.kit, config.bass);
+    const after = bandSwing(style.id, field === 'groove' ? { ...config.kit, groove: value } : config.kit, field === 'pattern' ? { ...config.bass, pattern: value } : config.bass);
+    if (after !== null) store.set({ config: { ...config, swing: after } });
+    else if (before !== null) {
       store.set({ config: { ...config, swing: defaultSwing(style, transport === 'stopped' ? song.tempo : (view?.bpm ?? song.tempo)) } });
     }
   }
@@ -90,7 +96,7 @@ export function mountBandUI({ store, storage = null }) {
         sel.id = id;
         for (const o of optionsForMeter(f, style.id, meter)) { const opt = el('option', '', o.name); opt.value = o.id; sel.append(opt); }
         sel.addEventListener('change', () => {
-          if (f.id === 'groove') presetSwing(store.get().config.kit.groove, sel.value);
+          if (f.id === 'groove' || (f.id === 'pattern' && group === 'bass')) presetSwing(f.id, sel.value);
           patch(group, { [f.id]: sel.value });
         });
         wrap.append(sel);
@@ -198,7 +204,7 @@ export function mountBandUI({ store, storage = null }) {
     if (sig === last) return; // the store fires on every beat; only redraw when these panels' inputs change
     last = sig;
 
-    const built = `${style.id}|${isOddMeter(song.timeSignature)}`; // the lists differ between 4/4 and the /8 meters
+    const built = `${style.id}|${song.timeSignature}`; // the lists differ between the meters (Bembé is a 6/8 groove)
     if (builtFor !== built) { builtFor = built; for (const g of GROUP_IDS) build(g, style, song.timeSignature); buildMixer(style); }
     for (const group of GROUP_IDS) {
       const p = panels[group];

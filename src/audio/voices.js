@@ -117,6 +117,14 @@ function rim(ctx, out, t, vel) {
   n.connect(filter(ctx, 'bandpass', 2600, 1.2)).connect(envelope(ctx, t, { peak: vel * 0.7, attack: 0.0008, tc: 0.012 })).connect(out);
 }
 
+// sticks: two drumsticks clicked together, a short, dry and woody "tick" (higher and harder than the cross-stick)
+function stick(ctx, out, t, vel) {
+  osc(ctx, 'triangle', 2400, t, t + 0.05).connect(envelope(ctx, t, { peak: vel * 0.55, attack: 0.0006, tc: 0.006 })).connect(out);
+  osc(ctx, 'sine', 900, t, t + 0.05).connect(envelope(ctx, t, { peak: vel * 0.22, attack: 0.0008, tc: 0.01 })).connect(out);
+  const n = noiseSource(ctx, t, 0.05);
+  n.connect(filter(ctx, 'bandpass', 3800, 1.6)).connect(envelope(ctx, t, { peak: vel * 0.45, attack: 0.0006, tc: 0.006 })).connect(out);
+}
+
 function hat(ctx, out, t, vel, { open = false, pedal = false } = {}) {
   const n = noiseSource(ctx, t, open ? 1 : 0.2);
   const hp = filter(ctx, 'highpass', pedal ? 4200 : 7200);
@@ -199,6 +207,7 @@ const DRUM_VOICES = {
   hatPedal: (c, o, t, v) => hat(c, o, t, v, { pedal: true }),
   ride,
   rim,
+  stick,
   brush,
   brushCrash,
   swish: (c, o, t, v) => brush(c, o, t, v, { sweep: true }),

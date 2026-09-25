@@ -25,7 +25,7 @@ function render(styleId, { kit, bass, swing, ts = '4/4', text = PROG, chorus = 1
 const signature = (bars) => JSON.stringify(bars.map((b) => b.filter((e) => e.inst === 'drums').map((e) => [e.voice, +e.beat.toFixed(3)])));
 
 for (const styleId of ['blues', 'rock']) {
-  const ids = optionsFor({ options: GROOVES }, styleId).map((o) => o.id);
+  const ids = optionsForMeter({ options: GROOVES }, styleId, '4/4').map((o) => o.id); // the 4/4 grooves
 
   test(`${styleId}: every drum groove is well-formed, inside the bar, and different from the classic one`, () => {
     const classic = signature(render(styleId, { kit: { groove: 'classic' } }));
@@ -81,7 +81,7 @@ for (const styleId of ['blues', 'rock']) {
 }
 
 test('every style offers grooves, and stored settings keep or repair them', () => {
-  assert.deepEqual(optionsFor({ options: GROOVES }, 'jazz').map((o) => o.id), ['classic', 'brushes', 'sweep', 'bossa', 'afro', 'mixed']);
+  assert.deepEqual(optionsForMeter({ options: GROOVES }, 'jazz', '4/4').map((o) => o.id), ['classic', 'brushes', 'sweep', 'bossa', 'afro', 'straightride', 'jazzfunk', 'latinballad', 'mixed']);
   assert.ok(fieldsFor('kit', 'blues').some((f) => f.id === 'groove'));
   assert.equal(sanitizeKit({ groove: 'purdie' }).groove, 'purdie');
   assert.equal(sanitizeKit({ groove: 'polka' }).groove, 'classic');
@@ -90,7 +90,7 @@ test('every style offers grooves, and stored settings keep or repair them', () =
 // ---- bass patterns ---------------------------------------------------------------------------
 
 for (const styleId of ['blues', 'rock']) {
-  const patterns = PATTERNS.filter((p) => !p.styles || p.styles.includes(styleId)).map((p) => p.id);
+  const patterns = optionsForMeter({ options: PATTERNS }, styleId, '4/4').map((p) => p.id); // the 4/4 patterns
 
   test(`${styleId}: every bass pattern makes in-range notes inside the bar`, () => {
     for (const pattern of patterns) {
@@ -208,7 +208,7 @@ test('drum mixer: every voice any style or groove plays belongs to a mixer chann
   const { partOf, DRUM_PARTS } = await import('../src/styles/drumparts.js');
   const voices = new Set();
   for (const styleId of ['jazz', 'blues', 'rock']) {
-    for (const g of optionsFor({ options: GROOVES }, styleId).map((o) => o.id)) {
+    for (const g of optionsFor({ options: GROOVES }, styleId).map((o) => o.id)) { // every groove, of every meter
       for (const ts of ['4/4', '7/8']) {
         for (const chorus of [1, 2]) {
           for (const seed of [1, 2, 3]) {
@@ -340,7 +340,7 @@ test('jazz bossa: the clave alternates between the three side and the two side, 
   const rims = (bar) => bar.filter((e) => e.voice === 'rim' && e.vel > 0.55).map((e) => +e.beat.toFixed(2));
   const bars = latinDrums('bossa', { kit: { snare: 0, ghosts: 0 } });
   assert.deepEqual(rims(bars[0]), [0, 1.5, 3]);
-  assert.deepEqual(rims(bars[1]), [1, 2]);
+  assert.deepEqual(rims(bars[1]), [1, 2.5], 'the bossa nova clave: the two side is 2 and the "and" of 3');
   assert.deepEqual(rims(bars[2]), [0, 1.5, 3]);
 });
 

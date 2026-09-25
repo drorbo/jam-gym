@@ -15,10 +15,11 @@
 
 import { applyFeel, clampSwing, humanize } from '../engine/feel.js';
 import { getMeter } from '../theory/meter.js';
+import { applySnareSound } from './drumming.js';
 import { blues } from './blues.js';
 import { jazz } from './jazz.js';
 import { rock } from './rock.js';
-import { DEFAULT_BASS, DEFAULT_COMP, DEFAULT_KIT, resolveMix, sanitizeBass, sanitizeComp, sanitizeKit } from './settings.js';
+import { DEFAULT_BASS, DEFAULT_COMP, DEFAULT_KIT, effectiveValues, resolveMix, sanitizeBass, sanitizeComp, sanitizeKit } from './settings.js';
 
 const registry = new Map();
 
@@ -122,6 +123,7 @@ const lengthFactor = (v) => (v <= 50 ? 0.35 + 0.013 * v : 1 + 0.011 * (v - 50));
  */
 function shapeEvents(events, ctx) {
   const { kitOpts, compOpts, bassOpts } = ctx;
+  events = applySnareSound(events, kitOpts.snareSound, ctx); // the snare part as a snare, a cross-stick or a stick click
   const vel = { drums: kitOpts.power, chords: compOpts.power };
   let out = events.map((e) => (vel[e.inst] !== undefined && vel[e.inst] !== 50
     ? { ...e, vel: Math.min(1, Math.max(0.02, e.vel * dynamics(vel[e.inst]))) } : e));
@@ -174,9 +176,11 @@ export function renderBar(style, ctx) {
   const where = { chorus: ctx.chorus, barIndex: ctx.barIndex, barCount: ctx.barCount, seed: ctx.seed };
   ctx = {
     ...ctx,
-    bassOpts: resolveMix('bass', sanitizeBass(ctx.bass, defaultBass(style)), where),
-    compOpts: resolveMix('comp', sanitizeComp(ctx.comp, defaultComp(style)), where),
-    kitOpts: resolveMix('kit', sanitizeKit(ctx.kit, defaultKit(style)), where),
+    // each dropdown as it plays in this meter: a choice that belongs to another meter (a 4/4 groove in 7/8, a 7/8 figure in 4/4)
+    // plays as its stand-in, the same way the panels show it
+    bassOpts: effectiveValues('bass', resolveMix('bass', sanitizeBass(ctx.bass, defaultBass(style)), where), style.id, ctx.meter.id),
+    compOpts: effectiveValues('comp', resolveMix('comp', sanitizeComp(ctx.comp, defaultComp(style)), where), style.id, ctx.meter.id),
+    kitOpts: effectiveValues('kit', resolveMix('kit', sanitizeKit(ctx.kit, defaultKit(style)), where), style.id, ctx.meter.id),
   };
   let events = [];
   for (const part of Object.values(style.parts)) events.push(...part(ctx));

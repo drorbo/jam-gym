@@ -13,6 +13,7 @@
 
 import { hashSeed } from '../engine/rng.js';
 import { DEFAULT_LEVELS, DRUM_PARTS } from './drumparts.js';
+import { ODD_BASS_OPTIONS, ODD_GROOVE_OPTIONS, ODD_METERS } from './oddoptions.js';
 
 // ---- rhythm, approach and pattern lists ---------------------------------------------------
 
@@ -34,6 +35,15 @@ export const APPROACHES = [
 ];
 
 export const PATTERNS = [
+  { id: 'walk', name: 'Walking line', hint: 'a walking line: the Rhythm, Line, Tensions and Approach controls shape it', styles: ['jazz'] },
+  { id: 'pedal', name: 'Pedal point', hint: 'one long root a bar, for modal tunes that stay on a chord', styles: ['jazz'] },
+  { id: 'vamp', name: 'Modal vamp', hint: 'root, an octave skip on the "and" of two, root and fifth, swinging', styles: ['jazz'] },
+  { id: 'space', name: 'Sparse (half-time)', hint: 'a long root, then the fifth on the "and" of three: room for everyone else', styles: ['jazz'] },
+  { id: 'funk', name: 'Jazz-funk groove', hint: 'a syncopated riff in straight sixteenths with ghosted notes; sets Swing to 50%', styles: ['jazz'], swing: 50 },
+  { id: 'bossa', name: 'Latin: bossa nova', hint: 'root, fifth and root on the dotted pulse, in straight eighths; sets Swing to 50%', styles: ['jazz'], swing: 50 },
+  { id: 'tumbao', name: 'Latin: tumbao', hint: 'the "and" of two, then four, then the next chord\'s root a half beat early; sets Swing to 50%', styles: ['jazz'], swing: 50 },
+  { id: 'bolero', name: 'Latin: bolero', hint: 'long roots for a slow Latin ballad, the fifth on three and the next root anticipated; sets Swing to 50%', styles: ['jazz'], swing: 50 },
+  { id: 'mixed', name: 'Mixed Latin figures', hint: 'a different Latin figure every four bars; sets Swing to 50%', styles: ['jazz'], swing: 50 },
   { id: 'mixed', name: 'Boogie, walking at turnarounds', hint: 'the eighth-note boogie, with a half-step lead into changes and a walking bar to turn the chorus around', styles: ['blues'] },
   { id: 'walk', name: 'Walking throughout', hint: 'a walking line for the whole chorus', styles: ['blues'] },
   { id: 'boogie', name: 'Boogie throughout', hint: 'the eighth-note boogie the whole way, changing figure now and then', styles: ['blues'] },
@@ -56,19 +66,26 @@ export const PATTERNS = [
   { id: 'threethreetwo', name: 'Three-three-two', hint: 'roots in groups of three eighths, three and two', styles: ['rock'] },
   { id: 'offbeat', name: 'Off-beat pumps', hint: 'roots on the "ands" only, leaving the beat to the drums', styles: ['rock'] },
   { id: 'held', name: 'Held roots', hint: 'long half-note roots, a wall under the guitars', styles: ['rock'] },
+  // figures that only exist in 6/8, 7/8 and 10/8, built from the groupings (see figures.js): in 4/4 they play as the style's usual choice
+  ...ODD_BASS_OPTIONS.map((o) => ({ ...o, meters: ODD_METERS })),
 ];
 
-/** The blues Pattern choices that play a fixed figure. Walking lines (Line, Tensions, Approach, Rhythm) do nothing for them. */
+/** The Pattern choices that play a fixed figure. Walking lines (Line, Tensions, Approach, Rhythm) do nothing for them. */
 export const BLUES_FIGURES = ['boogie', 'classic', 'chicago', 'rise', 'fifths', 'pushed', 'stoptime', 'triplets'];
-export const playsFigure = (v, styleId) => styleId === 'blues' && BLUES_FIGURES.includes(v.pattern);
+export const JAZZ_FIGURES = ['pedal', 'vamp', 'space', 'funk', 'bossa', 'tumbao', 'bolero', 'mixed'];
+export const ODD_FIGURES = ODD_BASS_OPTIONS.map((o) => o.id); // the /8-meter figures (their value is mapped away in 4/4 before this is asked)
+export const playsFigure = (v, styleId) => (styleId === 'blues' && BLUES_FIGURES.includes(v.pattern)) || (styleId === 'jazz' && JAZZ_FIGURES.includes(v.pattern)) || ODD_FIGURES.includes(v.pattern);
 
 // Drum grooves (Drums panel; in jazz it is Sticks or Brushes). The first, "Classic", is what each style played before there was a choice.
 export const GROOVES = [
   { id: 'classic', name: 'Sticks', hint: 'the ride cymbal, hi-hat on two and four, and a feathered kick', styles: ['jazz'] },
   { id: 'brushes', name: 'Brushes: swing', hint: 'the swing pattern played with brushes on the snare, with a sweeping left hand on every beat and a soft brushed crash', styles: ['jazz'] },
   { id: 'sweep', name: 'Brushes: ballad sweeps', hint: 'slow circular sweeps carry the time, with a soft kick and hi-hat and a brushed crash now and then', styles: ['jazz'] },
-  { id: 'bossa', name: 'Latin: bossa nova', hint: 'straight eighths on the hat, a two-bar clave on the cross-stick, a rocking kick; sets Swing to 50%', styles: ['jazz'], swing: 50 },
-  { id: 'afro', name: 'Latin: Afro-Cuban', hint: 'a bell-like ride on the beat, cascara on the cross-stick, the foot on two and four; sets Swing to 50%', styles: ['jazz'], swing: 50 },
+  { id: 'bossa', name: 'Latin: bossa nova', hint: 'straight eighths on the hat, the bossa nova clave on the cross-stick, a rocking kick; sets Swing to 50%', styles: ['jazz'], swing: 50 },
+  { id: 'afro', name: 'Latin: Afro-Cuban', hint: 'a bell-like ride on the beat, the clave on the cross-stick, a cascara on the hat, the foot on two and four; sets Swing to 50%', styles: ['jazz'], swing: 50 },
+  { id: 'straightride', name: 'Straight ride (Metheny style)', hint: 'a fast, even-eighths ride, the hi-hat on two and four, a feathered kick with syncopated bombs and a busy, interactive snare, in the manner of Pat Metheny\'s groups; sets Swing to 50%', styles: ['jazz'], swing: 50 },
+  { id: 'jazzfunk', name: 'Jazz-funk', hint: 'sixteenth-note hats, a backbeat on two and four, a kick and ghosted snares that lock with the jazz-funk bass riff; sets Swing to 50%', styles: ['jazz'], swing: 50 },
+  { id: 'latinballad', name: 'Latin: brushes (slow ballad)', hint: 'a bolero on brushes: a sweep on every beat, a soft clave on the cross-stick, a gentle kick; sets Swing to 50%', styles: ['jazz'], swing: 50 },
   { id: 'classic', name: 'Classic shuffle', hint: 'the shuffle: hat on every beat and swung "and", backbeat on two and four', styles: ['blues'] },
   { id: 'slow', name: 'Slow 12/8', hint: 'three even hat notes to every beat, the slow-blues feel', styles: ['blues'] },
   { id: 'purdie', name: 'Half-time shuffle', hint: 'one big snare on three, with ghost notes rolling through the shuffle', styles: ['blues'] },
@@ -81,9 +98,40 @@ export const GROOVES = [
   { id: 'ride', name: 'Ride groove', hint: 'eighth notes on the ride cymbal', styles: ['rock'] },
   { id: 'funk', name: 'Funk rock', hint: 'sixteenth-note hats, ghosted snares, a syncopated kick', styles: ['rock'] },
   { id: 'diddley', name: 'Bo Diddley', hint: 'the "shave and a haircut" clave on the toms', styles: ['rock'] },
+  // grooves that only exist in 6/8, 7/8 and 10/8 (built from the groupings; see oddgrooves.js): in 4/4 they play as the classic one
+  ...ODD_GROOVE_OPTIONS.map((o) => ({ ...o, meters: o.meters ?? ODD_METERS, elsewhere: 'classic' })),
   { id: 'mixed', name: 'Mixed', hint: 'a different groove every four bars', styles: ['jazz', 'blues', 'rock'] },
 ];
 
+// The snare sound (Drums panel): what the snare part is played on.
+export const SNARE_SOUNDS = [
+  { id: 'snare', name: 'Snare drum', hint: 'the snare drum, as the groove plays it' },
+  { id: 'rim', name: 'Cross-stick', hint: 'the snare part played as a cross-stick: a stick laid across the head and struck on the rim' },
+  { id: 'stick', name: 'Sticks', hint: 'the snare part played as a woody stick click (the cross-stick clave of a Latin groove too)' },
+  { id: 'mixed', name: 'Mixed', hint: 'a different sound every bar: snare, cross-stick or sticks' },
+];
+
+// The claves a Latin groove can play on the cross-stick. "3-2" starts on the three side, "2-3" on the two side.
+export const CLAVES = [
+  { id: 'auto', name: "The groove's own", hint: 'bossa nova plays the bossa clave, Afro-Cuban and the Latin ballad the son clave' },
+  { id: 'son32', name: 'Son clave 3-2', hint: '1, "and" of 2, 4, then 2, 3: the clave of Afro-Cuban music' },
+  { id: 'son23', name: 'Son clave 2-3', hint: 'the same clave starting on the two side' },
+  { id: 'rumba32', name: 'Rumba clave 3-2', hint: '1, "and" of 2, "and" of 4, then 2, 3: the last hit of the three side falls later' },
+  { id: 'rumba23', name: 'Rumba clave 2-3', hint: 'the rumba clave starting on the two side' },
+  { id: 'bossa32', name: 'Bossa nova clave 3-2', hint: '1, "and" of 2, 4, then 2, "and" of 3' },
+  { id: 'bossa23', name: 'Bossa nova clave 2-3', hint: 'the bossa nova clave starting on the two side' },
+  { id: 'mixed', name: 'Mixed', hint: 'a different clave every four bars' },
+];
+export const LATIN_GROOVES = ['bossa', 'afro', 'latinballad'];
+
+/**
+ * The swing the band asks for, or null: a straight Latin groove or bass figure wants 50%, so the bass, keys and drums
+ * agree. Choosing one sets Swing; leaving them all puts the style's own swing back.
+ */
+export function bandSwing(styleId, kit, bass) {
+  const from = (list, id) => list.find((o) => o.id === id && o.styles?.includes(styleId))?.swing ?? null;
+  return from(GROOVES, kit?.groove) ?? from(PATTERNS, bass?.pattern);
+}
 /** The swing a groove asks for (a straight Latin groove: 50), or null if it has no opinion. */
 export const grooveSwing = (styleId, grooveId) => GROOVES.find((o) => o.id === grooveId && o.styles?.includes(styleId))?.swing ?? null;
 
@@ -123,9 +171,10 @@ markOdd(RHYTHMS, '*', { two: 'quarters' }); // two-feel has no meaning where the
 markOdd(PATTERNS, 'blues', Object.fromEntries(['classic', 'chicago', 'rise', 'fifths', 'pushed', 'stoptime', 'triplets'].map((id) => [id, 'boogie'])));
 markOdd(PATTERNS, 'rock', { octaves: 'eighths', syncopated: 'eighths', boogie: 'eighths', gallop: 'eighths', threethreetwo: 'eighths', offbeat: 'eighths', held: 'quarters' });
 markOdd(COMP_RHYTHMS, '*', Object.fromEntries(COMP_RHYTHMS.filter((o) => o.id !== 'auto').map((o) => [o.id, 'auto'])));
-markOdd(GROOVES, 'jazz', { bossa: 'classic', afro: 'classic' }); // Latin grooves are 4/4 only
-markOdd(GROOVES, 'blues', { slow: 'classic', purdie: 'classic', chicago: 'classic', train: 'classic', mixed: 'classic' });
-markOdd(GROOVES, 'rock', { fourfloor: 'classic', half: 'classic', stomp: 'classic', ride: 'classic', funk: 'classic', diddley: 'classic', mixed: 'classic' });
+markOdd(GROOVES, 'jazz', { bossa: 'classic', afro: 'classic', latinballad: 'classic', jazzfunk: 'classic', straightride: 'classic' }); // Latin grooves are 4/4 only
+markOdd(PATTERNS, 'jazz', { pedal: 'walk', vamp: 'walk', space: 'walk', funk: 'walk', bossa: 'walk', tumbao: 'walk', bolero: 'walk', mixed: 'walk' }); // and so are the Latin bass figures: the /8 meters walk
+markOdd(GROOVES, 'blues', { slow: 'classic', purdie: 'classic', chicago: 'classic', train: 'classic' });
+markOdd(GROOVES, 'rock', { fourfloor: 'classic', half: 'classic', stomp: 'classic', ride: 'classic', funk: 'classic', diddley: 'classic' });
 
 // ---- field builders --------------------------------------------------------------------------
 
@@ -151,7 +200,7 @@ export const GROUPS = {
     title: 'Bass line',
     fields: [
       select('rhythm', 'Rhythm', RHYTHMS, { styles: ['jazz', 'blues'], inactive: (v, style) => figureWhy(v, style) }),
-      select('pattern', 'Pattern', PATTERNS, { styles: ['blues', 'rock'] }),
+      select('pattern', 'Pattern', PATTERNS, { styles: ['jazz', 'blues', 'rock'] }),
       slider('line', 'Line', ['Scales', 'Mostly scales', 'Scales and arpeggios', 'Mostly arpeggios', 'Arpeggios'], {
         wordsByStyle: { rock: ['Root notes', 'Mostly roots', 'Some movement', 'Melodic', 'Very melodic'] },
         inactive: (v, style, meter) => figureWhy(v, style)
@@ -206,21 +255,25 @@ export const GROUPS = {
   kit: {
     title: 'Drums',
     fields: [
-      select('groove', 'Groove', GROOVES, {
-        styles: ['jazz', 'blues', 'rock'],
-        inactive: (v, style, meter) => (isOddMeter(meter) && style !== 'jazz' ? `${ODD_TEXT}, so there are no grooves.` : null),
+      select('groove', 'Groove', GROOVES, { styles: ['jazz', 'blues', 'rock'] }),
+      select('snareSound', 'Snare sound', SNARE_SOUNDS, {
+        inactive: (v, style) => (style === 'jazz' && ['brushes', 'sweep'].includes(v.groove) ? 'This groove plays its snare part with brushes, so this does nothing.' : null),
+      }),
+      select('clave', 'Clave', CLAVES, {
+        styles: ['jazz'],
+        inactive: (v) => (LATIN_GROOVES.includes(v.groove) ? null : 'Only the Latin grooves play a clave, so this does nothing.'),
       }),
       slider('cymbal', 'Ride and hi-hat', ['Just quarters', 'Airy', 'Standard', 'Busy', 'Full'], {
         hint: 'Quarter notes with room to breathe, or the cymbal filling every gap',
       }),
       slider('kick', 'Kick', ['On the beat', 'Mostly on the beat', 'Some syncopation', 'Syncopated', 'Busy'], {
         hint: 'Kick drum only on the beat, or dropping in off it',
-        inactive: (v, style, meter) => (style === 'jazz' && isOddMeter(meter) ? 'The jazz kick is feathered on every beat, so this does nothing.'
+        inactive: (v, style, meter) => (style === 'jazz' && isOddMeter(meter) && ['classic', 'brushes', 'sweep'].includes(v.groove) ? 'The jazz kick is feathered on every beat here, so this does nothing. The odd-meter grooves do use it.'
           : style === 'rock' && !isOddMeter(meter) && ['fourfloor', 'stomp', 'diddley'].includes(v.groove) ? `${grooveName(v, style)} has its own kick pattern, so this does nothing.` : null),
       }),
       slider('snare', 'Snare', ['Backbeat only', 'Mostly backbeat', 'Some extras', 'Chatty', 'Busy'], {
         hint: 'Just the backbeat (or in jazz, no comping), or extra hits around it',
-        inactive: (v, style, meter) => (style !== 'jazz' && isOddMeter(meter) ? `${ODD_TEXT}, with the snare on the group downbeats, so this does nothing.`
+        inactive: (v, style, meter) => (style !== 'jazz' && isOddMeter(meter) && v.groove === 'classic' ? 'The classic groove puts the snare on the group downbeats, so this does nothing. The other odd-meter grooves do use it.'
           : style === 'blues' && ['slow', 'chicago', 'train'].includes(v.groove) ? `${grooveName(v, style)} has its own snare pattern, so this does nothing.`
           : style === 'rock' && v.groove === 'funk' ? 'Funk rock has its own snare pattern, so this does nothing.' : null),
       }),
@@ -256,14 +309,22 @@ export const wordFor = (field, styleId, value) => {
   return words[Math.min(words.length - 1, Math.max(0, Math.round(value / 25)))];
 };
 
-/** The options of a select for a style and meter: in 6/8, 7/8 and 10/8 the ones that sound like another are left out. */
-export const optionsForMeter = (field, styleId, meterId) => optionsFor(field, styleId).filter((o) => !(isOddMeter(meterId) && oddTarget(o, styleId)));
+/**
+ * The options of a select for a style and meter. Left out: in 6/8, 7/8 and 10/8 the 4/4 ones that sound like another choice
+ * there, and everywhere the choices that belong to other meters (the odd-meter grooves and figures are not offered in 4/4).
+ */
+export const optionsForMeter = (field, styleId, meterId) => optionsFor(field, styleId)
+  .filter((o) => !(isOddMeter(meterId) && oddTarget(o, styleId)) && (!o.meters || o.meters.includes(meterId)));
 
-/** The option that actually plays for a stored value in this meter (a choice that plays like another one in the /8 meters). */
+const elsewhereOf = (o, styleId) => (typeof o.elsewhere === 'string' ? o.elsewhere : o.elsewhere?.[styleId]);
+
+/** The option that actually plays for a stored value in this meter (a choice that plays like another one in another meter). */
 export function effectiveOption(field, value, styleId, meterId) {
-  if (!isOddMeter(meterId)) return value;
   const o = field.options.find((x) => x.id === value && appliesTo(x, styleId));
-  return (o && oddTarget(o, styleId)) || value;
+  if (!o) return value;
+  if (o.meters && !o.meters.includes(meterId)) return elsewhereOf(o, styleId) ?? value; // a choice that belongs to other meters
+  if (!isOddMeter(meterId)) return value;
+  return oddTarget(o, styleId) || value;
 }
 
 /** A group's values as they play in this meter: every select mapped through `effectiveOption`. */
@@ -292,7 +353,7 @@ export function inactiveControls(group, values, styleId, meterId = '4/4') {
 const NEUTRAL = {
   bass: { rhythm: 'quarters', line: 40, tension: 25, approach: 'mixed', pattern: 'mixed', fills: 40, length: 50, pocket: 50, loose: 50, mix: [] },
   comp: { rhythm: 'auto', density: 50, sync: 50, variety: 50, tension: 40, range: 45, spread: 40, length: 50, power: 50, pocket: 50, loose: 50, mix: [] },
-  kit: { levels: DEFAULT_LEVELS, groove: 'classic', cymbal: 50, kick: 50, snare: 50, ghosts: 50, fills: 50, wild: 50, crash: 50, power: 50, pocket: 50, loose: 50, mix: [] },
+  kit: { levels: DEFAULT_LEVELS, groove: 'classic', snareSound: 'snare', clave: 'auto', cymbal: 50, kick: 50, snare: 50, ghosts: 50, fills: 50, wild: 50, crash: 50, power: 50, pocket: 50, loose: 50, mix: [] },
 };
 export const DEFAULT_BASS = Object.freeze({ ...NEUTRAL.bass });
 export const DEFAULT_COMP = Object.freeze({ ...NEUTRAL.comp });

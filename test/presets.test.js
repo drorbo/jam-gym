@@ -18,11 +18,12 @@ const opts = () => ({ now: (clock += 10), makeId: () => randomId() });
 
 // ---- the built-in presets ---------------------------------------------------------------------
 
-test('there are three built-in presets for every style, each with a name, a description and valid settings', () => {
+test('every style has built-in presets (jazz five, with its Latin ones; blues and rock three), each with a name, a description and valid settings', () => {
   for (const style of listStyles()) {
     const list = builtinPresets(style.id);
-    assert.equal(list.length, 3, `${style.id} has ${list.length} presets`);
-    assert.equal(new Set(list.map((p) => p.name)).size, 3, 'names must differ');
+    const want = style.id === 'jazz' ? 5 : 3;
+    assert.equal(list.length, want, `${style.id} has ${list.length} presets`);
+    assert.equal(new Set(list.map((p) => p.name)).size, want, 'names must differ');
     for (const p of list) {
       assert.ok(p.name && p.blurb && p.tempo >= 40 && p.tempo <= 220, p.id);
       assert.equal(p.settings.style, style.id);
@@ -40,7 +41,7 @@ test('each style has a preset that is exactly the style as it has always been, a
     const defaults = sanitizePresetSettings({ style: style.id, bass: defaultBass(style), comp: defaultComp(style), kit: defaultKit(style) });
     assert.equal(presetSignature(first.settings), presetSignature({ ...defaults, swing: first.settings.swing }), `${style.id}'s first preset is not the plain style`);
     const sigs = new Set([first, ...rest].map((p) => presetSignature(p.settings)));
-    assert.equal(sigs.size, 3, `${style.id} has two identical presets`);
+    assert.equal(sigs.size, 1 + rest.length, `${style.id} has two identical presets`);
   }
 });
 

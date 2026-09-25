@@ -11,7 +11,7 @@ synthesised in the browser. The band plays offline; saving and sharing tracks ne
 
 ```
 npm start        # serves http://localhost:5173 (the site and the tracks API), data in ./data
-npm test         # 434 tests, Node's built-in runner, no install needed
+npm test         # 510 tests, Node's built-in runner, no install needed
 npm run admin -- stats     # moderation and upkeep, see "Tracks" below
 ```
 
@@ -29,7 +29,7 @@ To ship a change (tests, commit, push, deploy, verify, in one go): `bash scripts
 - **Quick progressions**: under the progression box, in kinds (Jazz, Blues, Rock, Odd meters). The tabs start on your style. Choosing
   one changes only the chords, moved into your starting key: never your style, settings or tempo. The odd-meter ones also set the
   time (their tooltip says so), because they only make sense in their meter.
-- **Presets**: in the Style panel, three ways to play each style (jazz: Medium swing, Ballad, Bossa nova; blues: Shuffle, Slow
+- **Presets**: in the Style panel, three ways to play each style (jazz: Medium swing, Ballad, Bossa nova, Afro-Cuban, Latin ballad; blues: Shuffle, Slow
   blues, Half-time shuffle; rock: Classic rock, Half-time heavy, Funk rock). Each one also sets the tempo it sounds best at
   (from the next beat if you are playing), and never touches your chords, key or meter. Your own presets are in the sidebar's
   **My presets** tab, next to My tracks and Browse (the *My presets* button in the Style panel opens it), so the quick row stays
@@ -80,6 +80,19 @@ feel, the lists also drop choices that would sound like another one (the named b
 named Keys rhythms, the blues and rock grooves). A choice you made in 4/4 is kept, shows as what plays in the /8 meter,
 and comes back when you return to 4/4.
 
+**In 6/8, 7/8 and 10/8** the feel comes from the groupings (3+3, 3+2+2, 3+3+2+2 eighths), so the Groove and Pattern lists change
+to choices built from the groups, for every style, and work in all three meters (Bembé is 6/8 only). A 4/4 choice you made
+shows as what plays there, and comes back when you return to 4/4.
+- **Grooves.** *Pushed groups* (the kick leans on the last eighth of each group, the snare answers on every other group), *Half-time
+  groups* (one heavy snare in the middle of the bar), *Tom drive* (low and middle toms on every group), *Bell pattern* (a bell-like
+  ride on each group and its last eighth), *Cross-stick groups* (a rim on every group with a light ride) and *Brushed train* (a
+  chugging snare on every eighth), and **Bembé**, the standard Afro-Cuban bell pattern (x.x.xx.x.x.x) across two bars of 6/8. Jazz gets
+  pushed groups, tom drive, bell, Bembé and cross-stick groups (and still its brushes); blues pushed groups, half-time, toms,
+  cross-stick groups and the brushed train; rock pushed groups, half-time, toms, bell and Bembé. Mixed changes among them every four bars.
+- **Bass lines**, for every style: *Group roots* (a long root on every group), *Roots and fifths* (the fifth on the last eighth of each
+  group), *Arpeggio* (an eighth-note arpeggio that runs on across the groups) and *Step-in* (a step into the next group, or into
+  the next chord, on the last eighth). They turn the walking controls off, and a note is cut where its chord ends.
+
 **Mixed.** Every parameter can vary by itself. Each dropdown has a **Mixed** choice (the band picks for itself: a
 different Keys rhythm each bar, a mix of bass patterns, approaches or rhythms). Each slider has a **Mix** button: the
 slider then wanders up to 30 either side of where you left it, drifting smoothly from bar to bar (a new target every four
@@ -89,10 +102,19 @@ is saved with the track.
 **Drums**
 - **Groove**. *Jazz*: sticks (ride, hat and feathered kick), **brushes: swing** (the swing pattern as brush taps on the snare,
   with a sweeping left hand that leans on two and four) and **brushes: ballad sweeps** (slow circular sweeps carry the time).
-  Two Latin grooves, both in straight eighths: **bossa nova** (eighth-note hat, the two-bar clave on the cross-stick, a rocking
-  kick) and **Afro-Cuban** (a bell-like ride on the beat, cascara on the cross-stick, the foot on two and four). Choosing one
-  sets Swing to 50% so the bass and keys agree, and leaving it puts the style's swing back; they are 4/4 grooves and play as
-  sticks in 6/8, 7/8 and 10/8. The cross-stick is synthesised. Mixed never picks a Latin groove.
+  **Straight ride (Metheny style)** is a fast, even-eighths ride in the manner of Pat Metheny's groups: the ride is unswung with the
+  beats a little stronger (Cymbal thins it to quarters, and at the top adds a quiet flutter of sixteenths), the hi-hat is on two and
+  four, the kick is feathered with syncopated bombs (Kick), and the snare is a busy, interactive comping on the sixteenth grid
+  (Snare for how much, Ghost notes for the quiet hits), with straight fills. It sets Swing to 50%; it is a 4/4 groove and plays as
+  sticks in 6/8, 7/8 and 10/8. The tempo goes up to 220, which is fast enough for it.
+  **Jazz-funk** is the groove to pair with the jazz-funk bass riff: sixteenth-note hats, a backbeat on two and four, ghosted
+  snares, and a kick that sits on the riff's own accents (1, the "a" of 1, the "and" of 2, 3, the "a" of 3, the "e" of 4, the "and"
+  of 4) so the two lock together. It is straight, so it sets Swing to 50%, and it plays as sticks in 6/8, 7/8 and 10/8.
+  Three Latin grooves, all in straight eighths: **bossa nova** (eighth-note hat, the bossa nova clave on the cross-stick, a rocking
+  kick), **Afro-Cuban** (a bell-like ride on the beat, the son clave on the cross-stick, a cascara on the hat, the foot on two and
+  four) and **Latin brushes (slow ballad)**, a bolero on brushes (a sweep on every beat, a soft clave on the cross-stick, a gentle
+  kick, brushed fills and crashes). Choosing one sets Swing to 50% so the bass and keys agree, and leaving it puts the style's swing
+  back; they are 4/4 grooves and play as sticks in 6/8, 7/8 and 10/8. Mixed never picks a Latin groove.
   Brushes are synthesised, work with either kit and in every meter, and their crashes are brushed crashes: a soft swell
   rather than a stick strike (the Crashes slider and the Crash fader still control them). *Blues and rock, in 4/4*: *Blues*: classic shuffle, slow 12/8 (three even hat notes to a beat), half-time shuffle
   (Purdie: one big snare on three, ghost notes through the shuffle), Chicago (kick on every beat under a shuffled ride) and
@@ -103,6 +125,13 @@ is saved with the track.
   ride, crash, toms and (in jazz) brushes. Each runs from silent through 0 dB at the middle (the kit as recorded) to +12 dB,
   and double-clicking a fader puts it back. It answers straight away, even mid-bar, whatever the groove, and is saved with
   the track like the rest of the panel.
+- **Snare sound**: play the snare part as a snare drum, a **cross-stick** (a stick laid across the head and struck on the rim) or
+  **sticks** (a woody click; the cross-stick clave of a Latin groove turns into a stick click too). Mixed changes it every bar.
+  It does nothing for brushes, which play the snare part with brushes.
+- **Clave** (jazz, and only for the Latin grooves): the cross-stick clave they play. *The groove's own* (bossa nova plays the bossa
+  clave, Afro-Cuban and the ballad the son clave), or **son**, **rumba** or **bossa nova**, each in **3-2** or **2-3**. A clave is two
+  bars, a three side and a two side: the son is 1, the "and" of 2, 4, then 2, 3; the rumba moves the last hit of the three side
+  to the "and" of 4; the bossa nova clave moves the last hit of the two side to the "and" of 3. Mixed changes clave every four bars.
 - **Ride and hi-hat**: just quarters (room to breathe) up to a full ride or sixteenth-note hats.
 - **Kick**: only on the beat, up to syncopated. **Snare**: the backbeat only (in jazz, no comping) up to chatty.
 - **Ghost notes**: none to lots. **Fills**: how often one leads into the next phrase. **Fill style**: one snare pickup,
@@ -121,6 +150,14 @@ is saved with the track.
   **Dynamics**, **Timing**, **Feel**.
 
 **Bass line** (all three styles)
+- **Jazz** walks, or plays a fixed figure (Pattern). The jazz figures: **pedal point** (one long root a bar, for modal tunes), **modal
+  vamp** (root, an octave skip on the "and" of two, root, fifth), **sparse** (a long root, then the fifth on the "and" of three) and
+  **jazz-funk** (a syncopated riff in straight sixteenths, with ghosted notes and the seventh of the chord; it sets Swing to 50%). The
+  first three swing with everything else. The **Latin figures**: *bossa nova* (root, fifth and root on the dotted pulse: 1, the "and" of 2, 4),
+  *tumbao* (the "and" of two, four, and the next chord's root a half beat early) or *bolero* (long roots for a slow Latin ballad,
+  the fifth on three, the next root anticipated); *Mixed* changes Latin figure every four bars. The Latin ones are straight
+  eighths, so choosing one sets Swing to 50% too. Every figure turns the walking controls off, is cut where its chord ends, and in
+  6/8, 7/8 and 10/8 jazz always walks.
 - **Jazz and blues walk.** **Rhythm**: steady quarters, quarters with swung skips, running eighths, two-feel, or mixed.
   **Line** runs from scales to arpeggios, **Tensions** from chord tones to colourful (9ths, 13ths, #11), and **Approach** is
   how the last note leads into the next chord: a half step, a scale step, the fifth above, an enclosure, or a mix. The blues

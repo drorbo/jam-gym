@@ -14,6 +14,8 @@
 import { slotsWithin } from '../theory/meter.js';
 import { drum } from './helpers.js';
 import { hashSeed } from '../engine/rng.js';
+import { ODD_GROOVES } from './oddgrooves.js';
+import { oddGrooveIds } from './oddoptions.js';
 import { gain, odds } from './settings.js';
 
 /** A probability that is `base` at the middle of a slider, 0 at the bottom and 1 at the top. */
@@ -140,14 +142,42 @@ function brushify(ctx, ev, mode) {
 
 // ---- Latin jazz --------------------------------------------------------------------------------
 // Straight eighths whatever the Swing slider says (every note is `fixed`; choosing one of these grooves sets Swing to 50%
-// so the bass and keys agree), and the cross-stick clave that runs through a Latin groove. 4/4 only.
+// so the bass and keys agree). The cross-stick plays the clave that runs through the groove. 4/4 only.
 
 const straight = (voice, beat, vel, dur = 0.2) => drum(voice, beat, vel, dur, { fixed: true });
-// the two-bar clave, one bar at a time: the three side, then the two side (bossa nova and son clave share it)
-const CLAVE = [[0, 1.5, 3], [1, 2]];
+
+/**
+ * The claves, one bar at a time (beats from the start of the bar). Every clave is two bars, a "three side" with three hits and
+ * a "two side" with two:
+ *   son    1, "and" of 2, 4          |  2, 3            the clave of Afro-Cuban music
+ *   rumba  1, "and" of 2, "and" of 4 |  2, 3            the last hit of the three side falls an eighth later
+ *   bossa  1, "and" of 2, 4          |  2, "and" of 3   the bossa nova clave: the two side's second hit falls an eighth later
+ * "3-2" plays the three side first, "2-3" starts on the two side.
+ */
+export const CLAVES = {
+  son: [[0, 1.5, 3], [1, 2]],
+  rumba: [[0, 1.5, 3.5], [1, 2]],
+  bossa: [[0, 1.5, 3], [1, 2.5]],
+};
+export const CLAVE_IDS = Object.keys(CLAVES).flatMap((name) => [`${name}32`, `${name}23`]);
+
+/** The clave hits for a bar of the chorus. `id` is like "son32" or "bossa23". */
+export function claveBar(id, barIndex) {
+  const sides = CLAVES[id.slice(0, -2)];
+  const start = id.endsWith('23') ? 1 : 0;
+  return sides[(barIndex + start) % 2];
+}
+
+/** Each Latin groove has a clave of its own; the Clave setting overrides it. */
+const OWN_CLAVE = { bossa: 'bossa32', afro: 'son32', latinballad: 'son32' };
+function claveFor(ctx, groove) {
+  const c = ctx.kitOpts.clave;
+  if (c === 'mixed') return CLAVE_IDS[hashSeed(ctx.seed ?? 0, ctx.chorus ?? 1, Math.floor(ctx.barIndex / 4) + 77) % CLAVE_IDS.length]; // a new clave every four bars
+  return CLAVE_IDS.includes(c) ? c : OWN_CLAVE[groove];
+}
 
 const LATIN = {
-  // bossa nova: eighth-note hat, a two-bar clave on the cross-stick, a kick that rocks between one, the "and" of two, three
+  // bossa nova: eighth-note hat, the clave on the cross-stick, a kick that rocks between one, the "and" of two, three
   bossa(ctx) {
     const { rng, barIndex } = ctx;
     const k = ctx.kitOpts;
@@ -161,22 +191,25 @@ const LATIN = {
     ev.push(straight('kick', 0, 0.8, 0.25), straight('kick', 2, 0.72, 0.25));
     if (rng.chance(odds(0.85, k.kick))) ev.push(straight('kick', 1.5, 0.6, 0.25));
     if (rng.chance(odds(0.8, k.kick))) ev.push(straight('kick', 3.5, 0.58, 0.25));
-    for (const b of CLAVE[barIndex % 2]) ev.push(straight('rim', b, 0.62, 0.15));
+    for (const b of claveBar(claveFor(ctx, 'bossa'), barIndex)) ev.push(straight('rim', b, 0.62, 0.15));
     if (rng.chance(odds(0.2, k.snare))) ev.push(straight('rim', rng.pick([0.5, 2.5, 3.5]), 0.4, 0.12));
     for (const b of [0.5, 1.5, 2.5, 3.5]) if (rng.chance(odds(0.25, k.ghosts))) ev.push(straight('snare', b, 0.26 + rng.next() * 0.1, 0.12));
     return ev;
   },
 
-  // Afro-Cuban: a bell-like ride on the beat, cascara on the cross-stick, the foot on two and four, a sparse tumbao kick
+  // Afro-Cuban: a bell-like ride on the beat, the clave on the cross-stick, a cascara on the hat, the foot on two and four
   afro(ctx) {
-    const { rng } = ctx;
+    const { rng, barIndex } = ctx;
     const k = ctx.kitOpts;
     const ev = [];
     for (let b = 0; b < 4; b++) ev.push(straight('ride', b, b % 2 === 0 ? 0.6 : 0.72, 0.4));
     if (k.cymbal > 60) for (let b = 0; b < 4; b++) if (rng.chance(((k.cymbal - 60) / 40) * 0.6)) ev.push(straight('ride', b + 0.5, 0.36, 0.3));
-    const keep = Math.min(1, 0.6 + 0.4 * gain(k.snare)); // the cascara: 1 & . & 3 . & . in the 2-3 spirit
-    [0, 0.5, 1.5, 2, 3].forEach((b, i) => { if (i === 0 || rng.chance(keep)) ev.push(straight('rim', b, i === 0 ? 0.62 : 0.5, 0.15)); });
-    if (k.snare > 50) for (const b of [1, 2.5]) if (rng.chance(((k.snare - 50) / 50) * 0.5)) ev.push(straight('rim', b, 0.42, 0.12));
+    const clave = claveBar(claveFor(ctx, 'afro'), barIndex);
+    for (const b of clave) ev.push(straight('rim', b, 0.62, 0.15));
+    // the cascara leans the same way as the clave: a fuller pattern against the three side, a sparser one against the two side
+    const keep = Math.min(1, 0.6 + 0.4 * gain(k.cymbal));
+    (clave.length === 3 ? [0, 0.5, 1.5, 2, 3] : [0, 1, 1.5, 2.5, 3]).forEach((b, i) => { if (i === 0 || rng.chance(keep)) ev.push(straight('hat', b, 0.36, 0.12)); });
+    if (rng.chance(odds(0.25, k.snare))) ev.push(straight('rim', rng.pick([0.5, 2.5, 3.5]), 0.4, 0.12));
     ev.push(straight('hatPedal', 1, 0.55, 0.1), straight('hatPedal', 3, 0.55, 0.1));
     ev.push(straight('kick', 3, 0.7, 0.25));
     if (rng.chance(odds(0.9, k.kick))) ev.push(straight('kick', 1.5, 0.62, 0.25));
@@ -185,20 +218,123 @@ const LATIN = {
     for (const b of [0.5, 2.5, 3.5]) if (rng.chance(odds(0.3, k.ghosts))) ev.push(straight('tomMid', b, 0.28 + rng.next() * 0.1, 0.2));
     return ev;
   },
+
+  // a slow Latin ballad (a bolero) on brushes: a sweep on every beat, a soft clave on the cross-stick, a gentle kick
+  latinballad(ctx) {
+    const { rng, barIndex } = ctx;
+    const k = ctx.kitOpts;
+    const ev = [];
+    for (let b = 0; b < 4; b++) {
+      ev.push(straight('swish', b, (b % 2 === 1 ? 0.5 : 0.38) + rng.next() * 0.06, 0.5));
+      if (k.cymbal > 50 && rng.chance(((k.cymbal - 50) / 50) * 0.55)) ev.push(straight('swish', b + 0.5, 0.28, 0.4));
+    }
+    ev.push(straight('hatPedal', 1, 0.36, 0.1), straight('hatPedal', 3, 0.36, 0.1));
+    ev.push(straight('kick', 0, 0.55, 0.3));
+    if (rng.chance(odds(0.8, k.kick))) ev.push(straight('kick', 2, 0.45, 0.3));
+    if (rng.chance(odds(0.45, k.kick))) ev.push(straight('kick', 3.5, 0.4, 0.3));
+    for (const b of claveBar(claveFor(ctx, 'latinballad'), barIndex)) ev.push(straight('rim', b, 0.42, 0.15));
+    if (rng.chance(odds(0.25, k.snare))) ev.push(straight('brush', rng.pick([0.5, 1.5, 2.5, 3.5]), 0.36, 0.2));
+    for (const b of [0.5, 1.5, 2.5, 3.5]) if (rng.chance(odds(0.22, k.ghosts))) ev.push(straight('brush', b, 0.24 + rng.next() * 0.08, 0.15));
+    return ev;
+  },
 };
 
-function latinJazz(ctx, id) {
-  const ev = LATIN[id](ctx);
-  ev.push(...crashes(ctx, { firstBase: ctx.chorus > 1 ? 0.6 : 0, vel: 0.5, len: 1 }));
-  addFill(ctx, ev, 'jazz', { last: 0.7, mid: 0.3 });
+// jazz-funk, made to lock with the jazz-funk bass riff (bass figure `funk`, hits on 1, the "a" of 1, the "and" of 2, 3, the "a" of 3,
+// the "e" of 4 and the "and" of 4): the kick sits on the same accents, the backbeat is on two and four, sixteenth hats and ghosts fill in
+LATIN.jazzfunk = function jazzfunk(ctx) {
+  const { rng } = ctx;
+  const k = ctx.kitOpts;
+  const ev = [];
+  const kept = Math.min(1, Math.max(0.35, gain(k.cymbal)));
+  for (let i = 0; i < 16; i++) {
+    if (i % 2 === 1 && !rng.chance(kept)) continue;
+    ev.push(straight('hat', i / 4, i % 4 === 0 ? 0.66 : i % 2 === 0 ? 0.48 : 0.3, 0.12));
+  }
+  if (rng.chance(odds(0.3, k.cymbal))) ev.push(straight('hatOpen', 3.5, 0.55, 0.3));
+  // the kick: the riff's main accents always, its ghosted notes as Kick allows
+  ev.push(straight('kick', 0, 0.9, 0.25), straight('kick', 1.5, 0.76, 0.2), straight('kick', 2.75, 0.7, 0.2));
+  for (const b of [0.75, 2, 3.5]) if (rng.chance(odds(0.55, k.kick))) ev.push(straight('kick', b, b === 2 ? 0.66 : 0.6, 0.2));
+  ev.push(straight('snare', 1, 0.92, 0.3), straight('snare', 3, 0.94, 0.3));
+  for (const b of [0.25, 1.75, 2.25, 3.75]) if (rng.chance(odds(0.4, k.ghosts))) ev.push(straight('snare', b, 0.26 + rng.next() * 0.1, 0.12));
+  if (rng.chance(odds(0.25, k.snare))) ev.push(straight('snare', 3.25, 0.5 + rng.next() * 0.1, 0.15));
   return ev;
+};
+
+// a fast straight ride, in the manner of Pat Metheny's groups: an even, unswung eighth-note ride (the beats a little stronger), the
+// hi-hat foot on two and four, a feathered kick with syncopated bombs, and a busy, interactive snare that comments around the
+// soloist on the sixteenth-note grid, some hits ghosted and some accented
+const STRAIGHT_COMP = [
+  [3, []],
+  [3, [[1.5, 0.55, 0.72]]],
+  [2.5, [[0.75, 0.5, 0.68], [2.5, 0.36, 0.5]]],
+  [2.5, [[1.75, 0.36, 0.5], [3.5, 0.55, 0.72]]],
+  [2, [[0.5, 0.34, 0.48], [1.75, 0.55, 0.7], [3.25, 0.34, 0.48]]],
+  [2, [[2.75, 0.55, 0.72], [3.5, 0.34, 0.48]]],
+  [1.5, [[0.75, 0.34, 0.48], [1.5, 0.55, 0.7], [2.25, 0.34, 0.48], [3.5, 0.6, 0.74]]],
+].map(([weight, hits]) => [hits, weight]);
+
+LATIN.straightride = function straightride(ctx) {
+  const { rng } = ctx;
+  const k = ctx.kitOpts;
+  const ev = [];
+  // the ride: even eighths, the beats a little stronger; Cymbal thins the "ands" away, and at the top adds a flutter of sixteenths
+  const offKept = Math.min(1, gain(k.cymbal));
+  for (let i = 0; i < 8; i++) {
+    if (i % 2 === 1 && !rng.chance(offKept)) continue;
+    ev.push(straight('ride', i / 2, i % 2 === 0 ? 0.68 : 0.46, 0.3));
+  }
+  if (k.cymbal > 60) for (const b of [0.25, 1.25, 2.25, 3.25]) if (rng.chance(((k.cymbal - 60) / 40) * 0.4)) ev.push(straight('ride', b, 0.3, 0.15));
+  ev.push(straight('hatPedal', 1, 0.5, 0.1), straight('hatPedal', 3, 0.5, 0.1));
+  // the kick: feathered on one and three, and syncopated bombs as Kick allows
+  ev.push(straight('kick', 0, 0.34, 0.2), straight('kick', 2, 0.3, 0.2));
+  for (const b of [0.75, 1.5, 2.75, 3.5]) if (rng.chance(odds(0.22, k.kick))) ev.push(straight('kick', b, 0.55 + rng.next() * 0.1, 0.2));
+  // the snare: one comping phrase a bar, more hits as Snare rises; the quiet ones follow Ghost notes
+  const s = Math.max(1, k.snare) / 50;
+  const cells = STRAIGHT_COMP.map(([hits, w]) => [hits, w * s ** hits.length]);
+  for (const [b, lo, hi] of rng.weighted(cells)) {
+    if (hi <= 0.55 && !rng.chance(Math.min(1, gain(k.ghosts)))) continue;
+    ev.push(straight('snare', b, lo + rng.next() * (hi - lo), 0.15));
+  }
+  return ev;
+};
+const LATIN_IDS = Object.keys(LATIN);
+/** The straight (unswung) jazz grooves fill in straight sixteenths; the rest fill in triplets. */
+const STRAIGHT_FILLS = ['jazzfunk', 'straightride'];
+
+function latinJazz(ctx, id) {
+  let ev = LATIN[id](ctx);
+  ev.push(...crashes(ctx, { firstBase: ctx.chorus > 1 ? 0.6 : 0, vel: 0.5, len: 1 }));
+  const before = ev.length;
+  addFill(ctx, ev, STRAIGHT_FILLS.includes(id) ? 'rock' : 'jazz', { last: 0.7, mid: 0.3 });
+  for (let i = before; i < ev.length; i++) ev[i] = { ...ev[i], fixed: true }; // these grooves are unswung, and so are their fills
+  if (id === 'latinballad') { // it is all brushes: a fill is brushed and a crash is a brushed crash
+    ev = ev.map((e) => {
+      if (e.voice === 'crash') return { ...e, voice: 'brushCrash', vel: Math.min(1, e.vel * 0.85), dur: Math.max(e.dur, 1.2) };
+      if (e.voice === 'snare') return { ...e, voice: 'brush', vel: Math.min(1, e.vel * 1.15) };
+      return e;
+    });
+  }
+  return ev;
+}
+
+/**
+ * The Snare sound setting: play the snare part as the snare drum (as it is), as a cross-stick (a stick laid across the head
+ * and struck on the rim), or as a woody stick click. The cross-stick clave of the Latin grooves follows too: it becomes a
+ * stick click with "Sticks". Brushes are left alone.
+ */
+export function applySnareSound(events, sound, ctx = {}) {
+  if (sound === 'mixed') sound = ['snare', 'rim', 'stick'][hashSeed(ctx.seed ?? 0, ctx.chorus ?? 1, (ctx.barIndex ?? 0) + 501) % 3]; // a different one each bar
+  if (sound !== 'rim' && sound !== 'stick') return events;
+  return events.map((e) => (e.inst === 'drums' && (e.voice === 'snare' || (sound === 'stick' && e.voice === 'rim')) ? { ...e, voice: sound } : e));
 }
 
 export function jazzDrums(ctx) {
   // Latin grooves are 4/4 grooves: in the /8 meters they fall back to sticks, like the blues and rock grooves do
-  const g = grooveFor(ctx, ['classic', 'brushes', 'sweep'], ['classic', 'brushes', 'sweep', 'bossa', 'afro']);
-  if (LATIN[g] && ctx.meter.id === '4/4') return latinJazz(ctx, g);
-  const ev = ctx.meter.id !== '4/4' ? oddDrums(ctx, 'jazz') : stickJazz(ctx);
+  const odd = ctx.meter.id !== '4/4';
+  const own = odd ? oddGrooveIds('jazz', ctx.meter.id) : [];
+  const g = grooveFor(ctx, ['classic', 'brushes', 'sweep', ...own], ['classic', 'brushes', 'sweep', ...LATIN_IDS, ...own]);
+  if (LATIN[g] && !odd) return latinJazz(ctx, g);
+  const ev = odd ? oddDrums(ctx, 'jazz', own.includes(g) ? g : 'classic') : stickJazz(ctx);
   return g === 'brushes' || g === 'sweep' ? brushify(ctx, ev, g) : ev;
 }
 
@@ -539,8 +675,26 @@ export function rockDrums(ctx) {
  * others (a ride ping or hat for jazz). The same panel applies: cymbal density, kick pushes, extra and ghosted snares,
  * fills that grow from one hit to a run through the last groups, and crashes.
  */
-export function oddDrums(ctx, flavor) {
-  const { meter, rng, isFirstBar, chorus, state } = ctx;
+export function oddDrums(ctx, flavor, groove) {
+  const g = groove ?? oddGrooveFor(ctx, flavor);
+  const ev = ODD_GROOVES[g] ? ODD_GROOVES[g](ctx, flavor) : classicOdd(ctx, flavor);
+  return oddFinish(ctx, ev, flavor);
+}
+
+/** Which groove a bar of a /8 meter plays: the chosen one if this style has it here, else the classic one. "Mixed" changes every four bars. */
+function oddGrooveFor(ctx, flavor) {
+  const ids = oddGrooveIds(flavor, ctx.meter.id);
+  const g = ctx.kitOpts.groove;
+  if (g === 'mixed') {
+    const pool = ['classic', ...ids];
+    return pool[hashSeed(ctx.seed ?? 0, ctx.chorus ?? 1, Math.floor(ctx.barIndex / 4) + 55) % pool.length];
+  }
+  return ids.includes(g) ? g : 'classic';
+}
+
+/** The classic /8 groove (what each style always played): kick, snare and ride or hat on the group downbeats. */
+function classicOdd(ctx, flavor) {
+  const { meter, rng } = ctx;
   const k = ctx.kitOpts;
   const ev = [];
   const skipKept = Math.min(1, gain(k.cymbal));
@@ -584,6 +738,13 @@ export function oddDrums(ctx, flavor) {
     ev.push(drum('snare', slot.start, 0.3 + rng.next() * 0.12, 0.15));
   }
 
+  return ev;
+}
+
+/** Crashes and fills for a bar of a /8 meter, whichever groove it plays. */
+function oddFinish(ctx, ev, flavor) {
+  const { meter, rng, isFirstBar, chorus, state } = ctx;
+  const k = ctx.kitOpts;
   const crashBase = flavor === 'rock' ? 1 : chorus > 1 ? 0.6 : 0;
   const after = state.crashNext;
   state.crashNext = false;

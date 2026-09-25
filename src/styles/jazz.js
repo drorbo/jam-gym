@@ -1,7 +1,9 @@
 // Jazz: medium swing. Ride cymbal, feathered kick, walking bass, rootless piano comping.
 
 import { keysBar, oddChords } from './comping.js';
+import { hashSeed } from '../engine/rng.js';
 import { jazzDrums } from './drumming.js';
+import { JAZZ_BASS_STEPS, LATIN_BASS_STEPS, figureBar, oddFigure } from './figures.js';
 import { oddBass } from './oddMeters.js';
 import { walkBar } from './walking.js';
 
@@ -12,8 +14,15 @@ function chords(ctx) {
 }
 
 function bass(ctx) {
-  if (ctx.meter.id !== '4/4') return oddBass(ctx, 'jazz');
-  return walkBar(ctx, 'jazz');
+  // the Latin and jazz figures are 4/4 figures: the /8 meters play a group figure if one is chosen, and otherwise walk
+  if (ctx.meter.id !== '4/4') return oddFigure(ctx) ?? oddBass(ctx, 'jazz');
+  let pattern = ctx.bassOpts.pattern;
+  if (pattern === 'mixed') { // a different Latin figure every four bars, differently in each run
+    const ids = Object.keys(LATIN_BASS_STEPS);
+    pattern = ids[hashSeed(ctx.seed ?? 0, ctx.chorus ?? 1, Math.floor(ctx.barIndex / 4) + 33) % ids.length];
+  }
+  const figure = LATIN_BASS_STEPS[pattern] ?? JAZZ_BASS_STEPS[pattern];
+  return figure ? figureBar(ctx, figure) : walkBar(ctx, 'jazz');
 }
 
 export const jazz = {

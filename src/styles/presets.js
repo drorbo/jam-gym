@@ -1,4 +1,4 @@
-// The built-in style presets: three ways to play each style, chosen from the Style panel.
+// The built-in style presets: ways to play each style (three for blues and rock, five for jazz with its Latin ones), chosen from the Style panel.
 //
 // A preset is band settings (style, swing, the Bass line, Keys and Drums panels, the sound choices) plus its best tempo.
 // It never touches the chords, key or meter. `settings` lists only what differs from the style's own defaults; the rest is filled in
@@ -24,12 +24,32 @@ export const BUILTIN_PRESETS = [
   },
   {
     id: 'jazz-bossa', style: 'jazz', name: 'Bossa nova', tempo: 120,
-    blurb: 'Straight eighths, the clave on the cross-stick, a two-feel bass.',
+    blurb: 'Straight eighths, the bossa nova clave on the cross-stick and the dotted bass pulse.',
     settings: {
       swing: 50,
-      bass: { rhythm: 'two', line: 30, approach: 'step', length: 60 },
+      bass: { pattern: 'bossa', length: 60 },
       comp: { density: 45, sync: 65, tension: 55, length: 35 },
       kit: { groove: 'bossa', power: 45 },
+    },
+  },
+  {
+    id: 'jazz-afro', style: 'jazz', name: 'Afro-Cuban', tempo: 150,
+    blurb: 'A bell-like ride, the son clave and a cascara, with a tumbao bass that anticipates each chord.',
+    settings: {
+      swing: 50,
+      bass: { pattern: 'tumbao' },
+      comp: { density: 60, sync: 75, tension: 60, length: 35 },
+      kit: { groove: 'afro', cymbal: 55, ghosts: 40, power: 60 },
+    },
+  },
+  {
+    id: 'jazz-latinballad', style: 'jazz', name: 'Latin ballad', tempo: 66,
+    blurb: 'A bolero on brushes: sweeps, a soft clave on the cross-stick and long bass roots.',
+    settings: {
+      swing: 50,
+      bass: { pattern: 'bolero', length: 80 },
+      comp: { density: 30, length: 75, power: 40, tension: 55, spread: 55 },
+      kit: { groove: 'latinballad', cymbal: 35, kick: 35, fills: 20, crash: 30, power: 35 },
     },
   },
 

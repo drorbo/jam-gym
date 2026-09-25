@@ -79,7 +79,7 @@ test('bass settings: junk is replaced by the base, good values are kept and clam
 
 test('bass settings: every style has a panel, showing the controls that make sense for it', () => {
   const ids = (style) => fieldsFor('bass', style).map((f) => f.id);
-  assert.ok(ids('jazz').includes('rhythm') && !ids('jazz').includes('pattern') && !ids('jazz').includes('fills'));
+  assert.ok(ids('jazz').includes('rhythm') && ids('jazz').includes('pattern') && !ids('jazz').includes('fills'), 'jazz walks, or plays a Latin figure');
   assert.ok(ids('blues').includes('pattern'));
   assert.ok(ids('rock').includes('pattern') && ids('rock').includes('fills') && !ids('rock').includes('rhythm'), 'rock has its own patterns and fills');
   assert.notDeepEqual(defaultBass(getStyle('jazz')), defaultBass(getStyle('blues')));

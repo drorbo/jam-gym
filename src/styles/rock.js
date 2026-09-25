@@ -2,10 +2,11 @@
 
 import { guitarBar, oddChords } from './comping.js';
 import { rockDrums } from './drumming.js';
+import { oddFigure } from './figures.js';
 import { rockBassBar, rockBassOdd } from './rockbass.js';
 
 const chords = (ctx) => (ctx.meter.id !== '4/4' ? oddChords(ctx, 'rock') : guitarBar(ctx));
-const bass = (ctx) => (ctx.meter.id !== '4/4' ? rockBassOdd(ctx) : rockBassBar(ctx));
+const bass = (ctx) => (ctx.meter.id !== '4/4' ? oddFigure(ctx) ?? rockBassOdd(ctx) : rockBassBar(ctx));
 
 export const rock = {
   id: 'rock',

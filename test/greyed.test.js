@@ -37,18 +37,23 @@ function notes(styleId, ts, group, settings) {
 
 test('in 6/8, 7/8 and 10/8 the lists leave out choices that sound like another one', () => {
   for (const ts of ['6/8', '7/8', '10/8']) {
-    assert.deepEqual(listIds('bass', 'pattern', 'blues', ts), ['mixed', 'walk', 'boogie']);
-    assert.deepEqual(listIds('bass', 'pattern', 'rock', ts), ['mixed', 'eighths', 'pushes', 'quarters', 'melodic']);
+    const figures = ['grouproots', 'bounce', 'arp', 'stepin']; // the /8 figures, for every style
+    assert.deepEqual(listIds('bass', 'pattern', 'blues', ts), ['mixed', 'walk', 'boogie', ...figures]);
+    assert.deepEqual(listIds('bass', 'pattern', 'rock', ts), ['mixed', 'eighths', 'pushes', 'quarters', 'melodic', ...figures]);
     assert.deepEqual(listIds('bass', 'rhythm', 'jazz', ts), ['quarters', 'skips', 'eighths', 'mixed']);
     assert.deepEqual(listIds('comp', 'rhythm', 'jazz', ts), ['auto']);
-    assert.deepEqual(listIds('kit', 'groove', 'blues', ts), ['classic']);
-    assert.deepEqual(listIds('kit', 'groove', 'rock', ts), ['classic']);
-    assert.deepEqual(listIds('kit', 'groove', 'jazz', ts), ['classic', 'brushes', 'sweep', 'mixed']); // brushes work in every meter
+    // 4/4 grooves are left out; each style has grooves built from the groups instead (Bembé is 6/8 only)
+    const bembe = ts === '6/8' ? ['bembe'] : [];
+    assert.deepEqual(listIds('kit', 'groove', 'blues', ts), ['classic', 'pushgroups', 'halfgroups', 'tomdrive', 'rimgroups', 'traingroups', 'mixed']);
+    assert.deepEqual(listIds('kit', 'groove', 'rock', ts), ['classic', 'pushgroups', 'halfgroups', 'tomdrive', 'bell', ...bembe, 'mixed']);
+    assert.deepEqual(listIds('kit', 'groove', 'jazz', ts), ['classic', 'brushes', 'sweep', 'pushgroups', 'tomdrive', 'bell', ...bembe, 'rimgroups', 'mixed']);
+    assert.deepEqual(listIds('bass', 'pattern', 'jazz', ts), ['walk', ...figures]); // the Latin bass figures are 4/4 figures
   }
   // 4/4 keeps every choice
   assert.equal(listIds('bass', 'pattern', 'blues', '4/4').length, 10);
   assert.equal(listIds('bass', 'pattern', 'rock', '4/4').length, 12);
   assert.equal(listIds('kit', 'groove', 'rock', '4/4').length, 8);
+  assert.deepEqual(listIds('bass', 'pattern', 'jazz', '4/4'), ['walk', 'pedal', 'vamp', 'space', 'funk', 'bossa', 'tumbao', 'bolero', 'mixed']);
 });
 
 test('a stored choice that is not offered in the /8 meters shows as the one it plays like', () => {
@@ -73,6 +78,18 @@ const IDLE = [
   ['rock', '4/4', 'kit', { groove: 'ride' }, ['ghosts']],
   ['rock', '4/4', 'kit', { groove: 'funk' }, ['snare']],
   ['jazz', '7/8', 'kit', { groove: 'brushes' }, ['kick']],
+  ['jazz', '4/4', 'kit', { groove: 'classic' }, ['clave']],
+  ['jazz', '4/4', 'kit', { groove: 'brushes' }, ['clave', 'snareSound']],
+  ['jazz', '4/4', 'kit', { groove: 'sweep' }, ['clave', 'snareSound']],
+  ['jazz', '7/8', 'kit', { groove: 'bossa' }, ['clave']], // in 6/8, 7/8 and 10/8 a Latin groove plays as sticks
+  ['jazz', '4/4', 'bass', { pattern: 'pedal' }, ['rhythm', 'line', 'tension', 'approach']],
+  ['jazz', '4/4', 'bass', { pattern: 'vamp' }, ['rhythm', 'line', 'tension', 'approach']],
+  ['jazz', '4/4', 'bass', { pattern: 'space' }, ['rhythm', 'line', 'tension', 'approach']],
+  ['jazz', '4/4', 'bass', { pattern: 'funk' }, ['rhythm', 'line', 'tension', 'approach']],
+  ['jazz', '4/4', 'bass', { pattern: 'bossa' }, ['rhythm', 'line', 'tension', 'approach']],
+  ['jazz', '4/4', 'bass', { pattern: 'tumbao' }, ['rhythm', 'line', 'tension', 'approach']],
+  ['jazz', '4/4', 'bass', { pattern: 'bolero' }, ['rhythm', 'line', 'tension', 'approach']],
+  ['jazz', '4/4', 'bass', { pattern: 'mixed' }, ['rhythm', 'line', 'tension', 'approach']],
   ['blues', '4/4', 'bass', { pattern: 'stoptime' }, ['rhythm', 'line', 'tension', 'approach']],
   ['blues', '7/8', 'bass', { pattern: 'triplets' }, ['rhythm', 'line', 'tension', 'approach']],
   ['rock', '4/4', 'bass', { pattern: 'melodic' }, ['fills']],
@@ -82,8 +99,10 @@ const IDLE = [
   ['blues', '6/8', 'bass', { rhythm: 'skips', pattern: 'mixed' }, ['line', 'tension']],
   ['blues', '6/8', 'bass', { rhythm: 'quarters', pattern: 'walk' }, ['tension']],
   ['jazz', '7/8', 'kit', {}, ['kick']],
-  ['blues', '7/8', 'kit', {}, ['groove', 'snare']],
-  ['rock', '10/8', 'kit', {}, ['groove', 'snare']],
+  ['blues', '7/8', 'kit', {}, ['snare']], // the classic groove: the group downbeats have the snare
+  ['rock', '10/8', 'kit', {}, ['snare']],
+  ['rock', '7/8', 'kit', { groove: 'bembe' }, ['snare']], // a 6/8-only groove plays as the classic one in 7/8
+  ['jazz', '7/8', 'kit', { groove: 'sweep' }, ['kick']],
   ['rock', '6/8', 'bass', {}, ['fills']],
   ['jazz', '6/8', 'comp', {}, ['rhythm', 'variety']],
   ['blues', '7/8', 'comp', {}, ['rhythm', 'variety']],
@@ -109,7 +128,11 @@ test('the controls that do nothing are greyed out, with a reason, and really do 
 test('nothing is greyed out at the style defaults in 4/4, and a control returns when its reason goes away', () => {
   for (const styleId of ['jazz', 'blues', 'rock']) {
     const style = getStyle(styleId);
-    for (const group of ['bass', 'comp', 'kit']) assert.deepEqual(inactiveControls(group, DEFAULTS[group](style), styleId), {}, `${styleId} ${group}`);
+    for (const group of ['bass', 'comp', 'kit']) {
+      // the one thing greyed at the start is the jazz Clave: only a Latin groove plays one
+      const expected = styleId === 'jazz' && group === 'kit' ? ['clave'] : [];
+      assert.deepEqual(Object.keys(inactiveControls(group, DEFAULTS[group](style), styleId)), expected, `${styleId} ${group}`);
+    }
   }
   const kit = { ...defaultKit(getStyle('rock')), groove: 'fourfloor' };
   assert.ok(inactiveControls('kit', kit, 'rock', '4/4').kick);
