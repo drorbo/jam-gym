@@ -11,7 +11,7 @@ synthesised in the browser. The band plays offline; saving and sharing tracks ne
 
 ```
 npm start        # serves http://localhost:5173 (the site and the tracks API), data in ./data
-npm test         # 510 tests, Node's built-in runner, no install needed
+npm test         # 520 tests, Node's built-in runner, no install needed
 npm run admin -- stats     # moderation and upkeep, see "Tracks" below
 ```
 
@@ -143,9 +143,17 @@ is saved with the track.
   pushed ahead; the chord that starts a change is always heard within its first beat. **Pattern**: repeat a rhythm bar to
   bar, or change it every bar. **Rhythm**: build it from those sliders, or choose a named one (Charleston, four to the
   bar, palm-muted chug, ...).
-- **Harmony**: jazz goes from shells (3rd and 7th) through rootless voicings and extended chords to upper-structure
-  triads and altered tones; the blues from triads through sevenths, ninths and thirteenths to the sharp-nine "Hendrix"
-  chord; rock from power chords through full chords and add 9 to open, ringing chords.
+- **Harmony**: jazz goes from shells (3rd and 7th) through rootless voicings and extended chords (9ths and 13ths) and upper structures
+  (just the 9th and 13th) to altered tones; the blues from triads through sevenths, ninths and thirteenths to the sharp-nine "Hendrix"
+  chord; rock from power chords through full chords and add 9 to open, ringing chords. Rules that hold at every setting:
+  - **What you write is played.** A tension in the chord symbol (F79, F7#9, F7b13, Cmaj9, C6/9, Cm11, F7alt...) is always in the voicing,
+    even at Shells, in jazz, blues and rock guitar (the guitar adds it above its chord; palm-muted chugs stay as they are).
+  - **Nothing clashes with it.** A written 9 (natural, flat or sharp) keeps out every other 9; a written 13 or #5 every other 13;
+    a written 11 or #11 every other 11; an altered fifth replaces the natural one.
+  - **A natural 9 or 13 means "not altered".** F79 or F713 stay natural even at Altered: no b9, #9, b13 or #11 is added to them.
+  - **Major chords never get an 11 or #11** from the Harmony setting except at Altered, where a #11 is added only now and then.
+    Extended and Upper structures give major and dominant chords 9ths and 13ths. Altered dominants get b9, #9 (now and then a #11
+    instead) and b13. Minor chords keep their natural 11.
 - **Register** (low to high on the keyboard), **Voicing** (close to wide), **Note length** (staccato to sustained),
   **Dynamics**, **Timing**, **Feel**.
 

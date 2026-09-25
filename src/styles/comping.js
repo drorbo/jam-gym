@@ -151,52 +151,92 @@ function pickStarts(seg, n, style, opts, rng) {
 
 /**
  * Pitch classes for a keyboard chord in a style at a tension level (0 to 4).
- * Jazz plays without the root (the bass has it); the blues keeps the root under the organ.
+ * Jazz plays without the root (the bass has it); the blues keeps the root under the organ. `rng` is only for the things the
+ * Altered level does "sometimes" (a #11); without it they never happen.
  */
-export function keyPcs(chord, style, level) {
-  return style === 'blues' ? bluesPcs(chord, level) : jazzPcs(chord, level);
+export function keyPcs(chord, style, level, rng = null) {
+  return style === 'blues' ? bluesPcs(chord, level) : jazzPcs(chord, level, rng);
 }
 
 const abs = (c, offsets) => [...new Set(offsets.map((i) => mod12(c.root + i)))];
 
-function jazzPcs(c, level) {
-  if (level === 1) return voicingPcs(c, 'rootless');
+/**
+ * The tensions a chord symbol spells out (pitch classes above the root): every tone it names beyond the root, the guide tones
+ * (third, seventh or sixth) and a natural fifth. "F79" spells the 9, "F7#9b13" the #9 and the b13, "F7alt" the b9, #9, b5 and b13.
+ */
+export function writtenTensions(c) {
+  const seventh = c.seventh ?? (c.sixth ? 9 : null);
+  return c.pcs.filter((pc) => pc !== 0 && pc !== c.third && pc !== seventh && !(pc === 7 && (c.fifth ?? 7) === 7));
+}
+
+/**
+ * Make a voicing keep to what the symbol says. Whatever the Harmony setting picked, every tension the symbol spells out is
+ * played, and no other tension of the same kind is added on top of it: a written 9 (natural, flat or sharp) keeps out every
+ * other 9, a written 13 or #5 every other 13, a written 11 or #11 every other 11, and a written altered fifth the natural one.
+ * @param {number[]} generic pitch classes above the root chosen by the level
+ */
+function reconcile(c, generic) {
+  const written = writtenTensions(c);
+  const seventh = c.seventh ?? (c.sixth ? 9 : null);
+  const guide = new Set([c.third, seventh].filter((x) => x !== null && x !== undefined));
+  const alt = /alt/.test(c.suffix);
+  const drop = new Set();
+  if (c.ninth !== null) [1, 2, 3].forEach((x) => drop.add(x));
+  if (c.thirteenth !== null || c.fifth === 8 || alt) [8, 9].forEach((x) => drop.add(x));
+  if (c.eleventh !== null || alt) [5, 6].forEach((x) => drop.add(x)); // (a written b5 keeps the natural 11 of a half-diminished chord)
+  if ((c.fifth ?? 7) !== 7) drop.add(7);
+  const kept = generic.filter((x) => guide.has(x) || !drop.has(x) || written.includes(x));
+  return [...new Set([...kept, ...written])];
+}
+
+function jazzPcs(c, level, rng) {
+  const rel = (pcs) => pcs.map((pc) => mod12(pc - c.root));
   const third = c.third ?? 7;
   const fifth = c.fifth ?? 7;
   const seventh = c.seventh ?? (c.sixth ? 9 : null);
-  const ninth = c.ninth ? c.ninth % 12 : 2;
-  const thirteenth = c.thirteenth ? c.thirteenth % 12 : 9;
   const guide = [third, seventh ?? 0];
+  // a chord that spells out a natural 9 or 13 is not an altered chord, so the Altered level does not alter it
+  const natural = c.ninth === 14 || c.thirteenth === 21;
+  const sometimes = (p) => !natural && rng !== null && rng.chance(p);
+  let tones;
   switch (c.family) {
     case 'dominant': {
       const sev = seventh ?? 10;
-      if (level === 0) return abs(c, [third, sev]);
-      if (level === 2) return abs(c, [third, sev, ninth, c.thirteenth ? thirteenth : fifth !== 7 ? fifth : 9, fifth !== 7 ? 7 : fifth]);
-      if (level === 3) return abs(c, [third, sev, ninth, 6, thirteenth]);
-      return abs(c, [third, sev, 1, 3, 8]);
+      if (level === 0) tones = [third, sev];
+      else if (level === 1) tones = rel(voicingPcs(c, 'rootless'));
+      else if (level === 2) tones = [third, sev, 2, 9, 7];
+      else if (level === 3 || natural) tones = [third, sev, 2, 9];
+      else tones = [third, sev, 1, sometimes(0.4) ? 6 : 3, 8]; // altered: b9, #9 (sometimes a #11 instead), b13
+      break;
     }
     case 'major': {
       const sev = seventh ?? 9;
-      if (level === 0) return abs(c, [third, sev]);
-      if (level === 2) return abs(c, [third, sev, 2, 9, fifth]);
-      if (level === 3) return abs(c, [third, sev, 2, 6, 9]);
-      return abs(c, [third, sev, 2, 6, fifth]);
+      if (level === 0) tones = [third, sev];
+      else if (level === 1) tones = rel(voicingPcs(c, 'rootless'));
+      else if (level === 2) tones = [third, sev, 2, 9, fifth];
+      else if (level === 3) tones = [third, sev, 2, 9]; // 9 and 13, never an 11 or a #11
+      else tones = [third, sev, 2, 9, ...(sometimes(0.35) ? [6] : [])]; // altered: now and then a #11
+      break;
     }
     case 'minor': {
       const sev = seventh ?? 9;
-      if (level === 0) return abs(c, [third, sev]);
-      if (level === 2) return abs(c, [third, sev, 2, 5]);
-      if (level === 3) return abs(c, [third, sev, 2, 5, fifth]);
-      return abs(c, [third, sev, 5, fifth, 9]);
+      if (level === 0) tones = [third, sev];
+      else if (level === 1) tones = rel(voicingPcs(c, 'rootless'));
+      else if (level === 2) tones = [third, sev, 2, 5];
+      else if (level === 3) tones = [third, sev, 2, 5, fifth];
+      else tones = [third, sev, 5, fifth, 9];
+      break;
     }
     case 'halfdim':
-      if (level === 0) return abs(c, [3, 10]);
-      if (level === 4) return abs(c, [3, 10, 5, 8]);
-      return abs(c, [3, 10, 6, 5, 8]);
+      if (level === 0) tones = [3, 10];
+      else if (level === 1) tones = rel(voicingPcs(c, 'rootless'));
+      else if (level === 4) tones = [3, 10, 5, 8];
+      else tones = [3, 10, 6, 5, 8];
+      break;
     default:
-      if (level === 0) return abs(c, guide.filter((x) => x !== null));
-      return voicingPcs(c, 'rootless');
+      tones = level === 0 ? guide.filter((x) => x !== null) : rel(voicingPcs(c, 'rootless'));
   }
+  return abs(c, reconcile(c, tones));
 }
 
 function bluesPcs(c, level) {
@@ -204,13 +244,16 @@ function bluesPcs(c, level) {
   const fifth = c.fifth ?? 7;
   const seventh = c.seventh ?? 10;
   const minor = c.family === 'minor';
+  const natural = c.ninth === 14 || c.thirteenth === 21;
+  let tones;
   switch (level) {
-    case 0: return abs(c, [0, third, fifth]);
-    case 1: return voicingPcs(c, 'block');
-    case 2: return abs(c, [0, third, seventh, 2]);
-    case 3: return abs(c, [third, seventh, 2, 9]);
-    default: return abs(c, minor ? [0, third, seventh, 2] : [0, third, seventh, 3]); // the "Hendrix" sharp nine
+    case 0: tones = [0, third, fifth]; break;
+    case 1: tones = [0, third, fifth, ...(c.seventh !== null || c.sixth ? [c.seventh ?? 9] : [])]; break;
+    case 2: tones = [0, third, seventh, 2]; break;
+    case 3: tones = [third, seventh, 2, 9]; break;
+    default: tones = minor || natural ? [0, third, seventh, 2] : [0, third, seventh, 3]; // the "Hendrix" sharp nine, unless a natural 9 is written
   }
+  return abs(c, reconcile(c, tones));
 }
 
 /** A guitar chord at a tension level: power chord, thirds, full, add 9, open and ringing. `shift` moves it up an octave. */
@@ -224,6 +267,15 @@ export function rockNotes(chord, level, { muted = false, shift = 0, spread = 50 
 }
 
 function rockShape(chord, level, { muted, shift }) {
+  const notes = rockShapeBase(chord, level, { muted, shift });
+  if (muted) return notes;
+  // a tension written in the symbol (C9, C7#9, Cadd9...) is played, an octave above the root, whatever the Harmony setting
+  const r = 40 + mod12(chord.root - 40) + shift;
+  const extra = writtenTensions(chord).map((pc) => r + 12 + pc).filter((m) => !notes.includes(m));
+  return [...notes, ...extra].sort((a, b) => a - b);
+}
+
+function rockShapeBase(chord, level, { muted, shift }) {
   const r = 40 + mod12(chord.root - 40) + shift;
   const fifth = chord.fifth ?? 7;
   const power = [r, r + fifth, r + 12];
@@ -249,7 +301,7 @@ export function keysBar(ctx, style) {
   for (const seg of segments) {
     if (!seg.chord) continue;
     const hits = compHits(seg, style, o, rng, state);
-    state.voicing = placeVoicing(keyPcs(seg.chord, style, level), state.voicing, win);
+    state.voicing = placeVoicing(keyPcs(seg.chord, style, level, rng), state.voicing, win);
     const end = seg.startBeat + seg.beats;
     for (const h of hits) {
       const beat = seg.startBeat + h.b;
@@ -341,7 +393,7 @@ export function oddChords(ctx, flavor) {
       if (sync > 0.5 && rng.chance(sync * 0.6)) hits.push({ beat: end - meter.slotLen, len: 0.4, vel: 0.68, full: true });
     }
 
-    if (style !== 'rock') state.voicing = placeVoicing(keyPcs(seg.chord, style, level), state.voicing, win);
+    if (style !== 'rock') state.voicing = placeVoicing(keyPcs(seg.chord, style, level, rng), state.voicing, win);
     hits.sort((a, b) => a.beat - b.beat);
     hits.forEach((h, i) => {
       if (h.beat >= end - 1e-9) return;

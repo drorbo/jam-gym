@@ -242,7 +242,7 @@ export const GROUPS = {
           blues: ['Triads', 'Sevenths', 'Ninths', 'Thirteenths', 'Blues colours'],
           rock: ['Power chords', 'Fifths and thirds', 'Full chords', 'Add 9 and sus', 'Open and ringing'],
         },
-        hint: 'How many tensions: 9ths, 13ths and, at the top, upper-structure triads',
+        hint: 'How many tensions: 9ths and 13ths, then, at the top, altered tensions on dominants. A tension you write in the chord (F79, C7#9) always plays, and nothing is added that clashes with it.',
       }),
       slider('range', 'Register', ['Low', 'Lowish', 'Middle', 'Highish', 'High'], { hint: 'Where on the keyboard' }),
       slider('spread', 'Voicing', ['Close', 'Compact', 'Medium', 'Open', 'Wide'], { hint: 'Notes packed together, or spread out' }),

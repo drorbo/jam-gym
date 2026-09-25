@@ -297,13 +297,14 @@ test('keys, harmony: shells at the bottom, more notes and more colour as it rise
     const r = render('jazz', { comp: { tension, density: 50 } }, { prog, seeds: 1 });
     return [...new Set(r.events.filter((e) => e.inst === 'chords' && e.bar === bar).map((e) => e.midi % 12))];
   };
-  // G7: 3rd and 7th; then the usual rootless voicing; then 9th, 13th; then a #11; then the altered tones
+  // G7: 3rd and 7th; then the usual rootless voicing; then 9th, 13th; then just the 9th and 13th; then the altered tones
   assert.deepEqual(pcsAt(0, 'G7', 0).sort((a, b) => a - b), [5, 11], 'a shell: B and F over G7');
   assert.equal(tensionLevel(30), 1);
   assert.ok(pcsAt(30, 'G7', 0).length >= 4);
   const ext = pcsAt(50, 'G7', 0);
   assert.ok(ext.includes(9) && ext.includes(4), 'level 2 adds the 13th (E) and 9th (A)');
-  assert.ok(pcsAt(75, 'G7', 0).includes(1), 'upper structure: C# (the #11)');
+  const upper = pcsAt(75, 'G7', 0);
+  assert.ok(upper.includes(9) && upper.includes(4) && !upper.includes(1), 'upper structure: the 9th and 13th, and no C# (#11): that is an altered tension');
   const alt = pcsAt(100, 'G7', 0);
   assert.ok(alt.includes(8) && alt.includes(3), `altered: Ab (b9) and Eb (b13), got ${alt}`);
   assert.ok(pcsAt(100, 'Dm7', 0).length >= 4 && pcsAt(0, 'Dm7', 0).length === 2);
