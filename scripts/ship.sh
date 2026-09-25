@@ -164,7 +164,8 @@ check() { # name, actual, expected
 }
 HTML="$(curl -s "$SITE/")"
 check "home page answers" "$(curl -s -o /dev/null -w '%{http_code}' "$SITE/")" 200
-check "api health" "$(curl -s "$SITE/api/health" | tr -d ' ')" '{"ok":true,"schema":1}'
+SCHEMA="$(node --input-type=module -e "import('./server/db.js').then((m) => console.log(m.SCHEMA_VERSION))")" # the version this code declares
+check "api health" "$(curl -s "$SITE/api/health" | tr -d ' ')" "{\"ok\":true,\"schema\":$SCHEMA}"
 ENTRY="$(echo "$HTML" | grep -o 'src/app/main.js?v=[0-9a-f]*' | head -1)"
 if [ -n "$ENTRY" ]; then
   check "entry script is versioned and cached for good" "$(curl -sI "$SITE/$ENTRY" | tr -d '\r' | grep -ci 'immutable')" 1
