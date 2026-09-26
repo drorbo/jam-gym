@@ -78,6 +78,14 @@ anything else revalidates. The CSP allows the import map by its hash. Nothing to
 file contents (`server/static.js`, tested in `test/server-unit.test.js`). If you add a script that is not under `src/`
 or a stylesheet not under `css/`, it will not be versioned.
 
+## Sign in with eardle
+
+Jam Gym uses eardle accounts (see `docs/eardle-accounts.md`). It needs `EARDLE_SSO_SECRET` in `~/drorbo/jam-gym/.env` on the server,
+the same value as eardle's `JAMGYM_SSO_SECRET`; `bash scripts/setup-eardle-sso.sh` creates it in both places once (`--status` checks it).
+**Deploy eardle first, then Jam Gym**: `scripts/ship.sh` fails its check "eardle answers /jam-gym/authorize" otherwise. Without the
+secret the feature is simply off and everything else works as before. The `sessions` table (schema 3) is created by the normal
+start-up migration, after the usual pre-deploy backup.
+
 ## Backups and restoring
 
 Users' tracks live in one SQLite file on the `jam-gym_data` volume. Three layers protect it:

@@ -83,6 +83,17 @@ const MIGRATIONS = [
       PRIMARY KEY (owner_id, id)
     );
   `),
+
+  // 3: sign in with eardle. A person who signs in with eardle on a second device gets a session of their own there
+  // (their original secret is on the first device); users.auth_provider / auth_subject say which eardle account they are.
+  (db) => db.exec(`
+    CREATE TABLE sessions (
+      token_hash TEXT    PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX sessions_user ON sessions(user_id);
+  `),
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

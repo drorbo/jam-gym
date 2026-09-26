@@ -11,7 +11,7 @@ synthesised in the browser. The band plays offline; saving and sharing tracks ne
 
 ```
 npm start        # serves http://localhost:5173 (the site and the tracks API), data in ./data
-npm test         # 520 tests, Node's built-in runner, no install needed
+npm test         # 542 tests, Node's built-in runner, no install needed
 npm run admin -- stats     # moderation and upkeep, see "Tracks" below
 ```
 
@@ -212,6 +212,15 @@ whether you had it open.
 Design and decisions: [docs/tracks-design.md](docs/tracks-design.md). Moderation is a command on the server:
 `docker exec jam-gym-web-1 node server/admin.js reports` (also `stats show hide restore delete ban unban backup`).
 
+## Accounts: Jam Gym is part of eardle
+
+Jam Gym runs as a subdomain of [eardle](https://eardle.com) on the same server, and people can **sign in with their eardle
+account** (Tracks panel, "Sign in with eardle"). It is optional: without it each browser has an anonymous library and a
+recovery code. Signing in links that library to the eardle account so it follows the person to every device; if a browser
+already had a library and the account has one too, they are merged. Jam Gym never sees a password or email, and keeps its own
+database. How it works, the setup script and the deploy order (eardle first) are in [docs/eardle-accounts.md](docs/eardle-accounts.md);
+the eardle side is in that repo's `docs/jam-gym-integration.md`.
+
 ## How it is put together
 
 ```
@@ -233,7 +242,7 @@ src/app/       state, player, ui, band-ui, sidebar         store, playback wirin
                api, tracks-model, tracks, tracks-ui        tracks: HTTP client, setup <-> track data, controller, panel
                saved                                       older browser-only saves (offline fallback, migration)
 server/        index, app, static, db, tracks, users,      the site + /api on Node's built-in http and node:sqlite;
-               presets, search, trackdata, limits, backup, admin   reuses src/app/state.js and src/theory to validate tracks and presets
+               presets, sso, search, trackdata, limits, backup, admin   reuses src/app/state.js and src/theory to validate tracks and presets
 samples/       recorded kits and keyboards + manifest.json + CREDITS.md
 tools/         build_samples.py                            rebuilds ./samples from the original libraries
 ```

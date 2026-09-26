@@ -54,6 +54,9 @@ export function createApi({ fetch: fetchImpl = globalThis.fetch?.bind(globalThis
     // identity
     session: () => call('POST', '/api/session').then((r) => r.me),
     me: () => call('GET', '/api/me').then((r) => r.me),
+    /** Who I am and what this server offers: { me, features: { eardle } }. */
+    whoami: () => call('GET', '/api/me'),
+    signOut: () => call('POST', '/api/me/signout'),
     rename: (displayName) => call('PATCH', '/api/me', { displayName }).then((r) => r.me),
     recoveryCode: () => call('GET', '/api/me/recovery').then((r) => r.code),
     recover: (code) => call('POST', '/api/me/recover', { code }).then((r) => r.me),

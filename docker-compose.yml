@@ -20,6 +20,10 @@ services:
       TRUST_PROXY: "1"
       BACKUPS: "1"
       DATA_DIR: /data
+      # "Sign in with eardle" (docs/eardle-accounts.md). The secret comes from ~/drorbo/jam-gym/.env on the server (made by
+      # scripts/setup-eardle-sso.sh); while it is empty the feature is off and nothing else changes.
+      EARDLE_SSO_SECRET: ${EARDLE_SSO_SECRET:-}
+      EARDLE_URL: ${EARDLE_URL:-https://eardle.com}
     volumes:
       # Tracks, likes and daily backups. Do NOT prune this volume: `docker volume prune` would delete every user's tracks.
       - data:/data

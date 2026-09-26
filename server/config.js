@@ -18,7 +18,9 @@ export function loadConfig(env = process.env) {
     trustProxy: env.TRUST_PROXY === '1',
     // Set to '1' to also snapshot the database daily (production does).
     backups: env.BACKUPS === '1',
-    backupKeep: Number(env.BACKUP_KEEP) || 28,
+    // "Sign in with eardle" (see server/sso.js and docs/eardle-accounts.md). Off unless the shared secret is set.
+    eardle: { url: (env.EARDLE_URL || 'https://eardle.com').replace(/\/+$/, ''), secret: env.EARDLE_SSO_SECRET || '' },
+    backupKeep:Number(env.BACKUP_KEEP) || 28,
     // every this many hours (checked at start-up and every six hours after); a deploy also takes one by hand first
     backupEveryHours: Number(env.BACKUP_EVERY_HOURS) || 6,
   };

@@ -15,7 +15,8 @@ export const emptyBrowse = () => ({
 
 export const initialTracksState = () => ({
   status: 'loading', // 'loading' | 'online' | 'offline'
-  me: null,          // { id, displayName, trackCount, publishedCount, banned } once an identity exists
+  me: null,          // { id, displayName, trackCount, publishedCount, banned, eardle } once an identity exists
+  features: { eardle: false }, // what the server offers: sign in with eardle
   mine: [], mineLoaded: false,
   active: null,      // the track whose setup is loaded: { id, title, author, likes, isMine, signature }
   tab: 'mine',
@@ -105,9 +106,13 @@ export function createTracksController({ store, player, api, storage = null, sea
         return;
       }
       try {
-        const me = await api.me();
-        set({ status: 'online', me });
+        const { me, features } = await api.whoami();
+        set({ status: 'online', me, features: features ?? { eardle: false } });
         if (me) await ctrl.refreshMine();
+        // back from eardle: the server has already done the sign-in (or refused it); say which
+        const outcome = new URLSearchParams(search).get('eardle');
+        if (outcome === 'ok' && me) flash(`Signed in with eardle as ${me.displayName}.`);
+        else if (outcome) flash('Signing in with eardle did not work. Please try again.', 'error');
       } catch (err) { fail(err); }
       const shared = new URLSearchParams(search).get('track');
       if (shared) await ctrl.openShared(shared);
@@ -327,6 +332,17 @@ export function createTracksController({ store, player, api, storage = null, sea
         await ctrl.refreshMine();
         if (state().browse.loaded) await ctrl.search({});
         flash(`Signed in as ${me.displayName}.`);
+        return true;
+      } catch (err) { fail(err); return false; }
+    },
+
+    /** End this browser's eardle sign-in. The library stays with the eardle account; sign in again to open it. */
+    async signOut() {
+      try {
+        await api.signOut();
+        set({ me: null, mine: [], mineLoaded: false, active: null, recovery: null });
+        if (state().browse.loaded) await ctrl.search({});
+        flash('Signed out. Sign in with eardle again to open your library.');
         return true;
       } catch (err) { fail(err); return false; }
     },

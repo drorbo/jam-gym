@@ -6,10 +6,13 @@ import { createLimiter } from './limits.js';
 import { createPresets } from './presets.js';
 import { createStatic } from './static.js';
 import { createTracks } from './tracks.js';
+import { verifyToken } from './sso.js';
 import { createUsers, publicMe } from './users.js';
-import { HttpError, bad, isSecret } from './util.js';
+import { HttpError, bad, isSecret, randomId } from './util.js';
 
 const COOKIE = 'jg_session';
+const SSO_COOKIE = 'jg_sso'; // the state of a sign-in with eardle that is under way (10 minutes)
+const SSO_PATH = '/api/auth/eardle';
 const TWO_YEARS = 60 * 60 * 24 * 365 * 2;
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -31,6 +34,7 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
   const users = createUsers(db);
   const tracks = createTracks(db);
   const presets = createPresets(db);
+  const features = { eardle: Boolean(config.eardle.secret) };
   const serveStatic = createStatic(root, { watch: !config.production });
 
   // ---- request helpers -------------------------------------------------------------------
@@ -47,17 +51,16 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
 
   const isHttps = (req) => config.trustProxy && req.headers['x-forwarded-proto'] === 'https';
 
-  function setSessionCookie(res, req, secret) {
-    const attrs = [`${COOKIE}=${secret}`, 'Path=/', `Max-Age=${TWO_YEARS}`, 'HttpOnly', 'SameSite=Lax'];
+  /** Add a Set-Cookie without replacing one already set on this response (a sign-in sets two). */
+  function addCookie(res, req, name, value, { path = '/', maxAge }) {
+    const attrs = [`${name}=${value}`, `Path=${path}`, `Max-Age=${maxAge}`, 'HttpOnly', 'SameSite=Lax'];
     if (isHttps(req)) attrs.push('Secure');
-    res.setHeader('Set-Cookie', attrs.join('; '));
+    const earlier = res.getHeader('Set-Cookie');
+    res.setHeader('Set-Cookie', earlier ? [].concat(earlier, attrs.join('; ')) : attrs.join('; '));
   }
 
-  function clearSessionCookie(res, req) {
-    const attrs = [`${COOKIE}=`, 'Path=/', 'Max-Age=0', 'HttpOnly', 'SameSite=Lax'];
-    if (isHttps(req)) attrs.push('Secure');
-    res.setHeader('Set-Cookie', attrs.join('; '));
-  }
+  const setSessionCookie = (res, req, secret) => addCookie(res, req, COOKIE, secret, { maxAge: TWO_YEARS });
+  const clearSessionCookie = (res, req) => addCookie(res, req, COOKIE, '', { maxAge: 0 });
 
   /** Every request that changes something must say it is ours (custom header) and come from our own origin. */
   function checkCsrf(req) {
@@ -121,18 +124,18 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
     }],
 
     ['POST', '/api/session', { auth: 'none', limit: ['session', 60, MINUTE] }, ({ req, res, user, ip }) => {
-      if (user) return { me: publicMe(user, users.counts(user)) };
+      if (user) return { me: publicMe(user, users.counts(user)), features };
       const gate = limiter.hit(`newid:${ip}`, 10, HOUR);
       if (!gate.ok) throw new HttpError(429, 'rate_limited', 'Too many new sessions from here. Try again later.');
       const made = users.create();
       setSessionCookie(res, req, made.secret);
-      return { me: publicMe(made.user, users.counts(made.user)) };
+      return { me: publicMe(made.user, users.counts(made.user)), features };
     }],
 
     // Refreshing the cookie here keeps it alive for people who keep visiting.
     ['GET', '/api/me', { auth: 'optional', limit: ['read', 240, MINUTE] }, ({ req, res, user, secret }) => {
       if (user) setSessionCookie(res, req, secret);
-      return { me: user ? publicMe(user, users.counts(user)) : null };
+      return { me: user ? publicMe(user, users.counts(user)) : null, features };
     }],
 
     ['PATCH', '/api/me', { auth: 'user', limit: W }, ({ user, body }) => {
@@ -140,13 +143,58 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
       return { me: publicMe(updated, users.counts(updated)) };
     }],
 
-    ['GET', '/api/me/recovery', { auth: 'user', limit: ['recovery', 20, HOUR] }, ({ secret }) => ({ code: users.recoveryCode(secret) })],
+    ['GET', '/api/me/recovery', { auth: 'user', limit: ['recovery', 20, HOUR] }, ({ user, secret }) => {
+      // a device that signed in with eardle holds a session, not the person's own secret, so there is no code to show from it
+      if (!users.isOwnSecret(user, secret)) {
+        throw new HttpError(404, 'no_recovery_code', 'This browser signed in with eardle. To open this library somewhere else, sign in with eardle there.');
+      }
+      return { code: users.recoveryCode(secret) };
+    }],
 
     ['POST', '/api/me/recover', { auth: 'none', limit: ['recover', 20, HOUR] }, ({ req, res, body }) => {
       const found = users.findByRecoveryCode(body.code);
       if (!found) throw new HttpError(404, 'bad_code', 'That recovery code was not recognised.');
       setSessionCookie(res, req, found.secret);
       return { me: publicMe(found.user, users.counts(found.user)) };
+    }],
+
+    // ---- sign in with eardle (server/sso.js, docs/eardle-accounts.md) ----
+    // start: remember a random state in a cookie and send the person to eardle, which signs them in if needed and comes back
+    ['GET', `${SSO_PATH}/start`, { auth: 'none', limit: ['sso', 30, HOUR], redirect: true }, ({ req, res }) => {
+      if (!features.eardle) throw new HttpError(404, 'sso_off', 'Sign in with eardle is not switched on here.');
+      const state = randomId(32);
+      addCookie(res, req, SSO_COOKIE, state, { path: SSO_PATH, maxAge: 600 });
+      return `${config.eardle.url}/jam-gym/authorize?state=${state}`;
+    }],
+
+    // callback: eardle's signed token names an eardle user. Whatever goes wrong, the person lands on the home page with a
+    // message; nothing is changed unless the token checks out against the state cookie.
+    ['GET', `${SSO_PATH}/callback`, { auth: 'none', limit: ['sso', 30, HOUR], redirect: true }, ({ req, res, url, user, secret }) => {
+      const state = parseCookies(req.headers.cookie)[SSO_COOKIE];
+      addCookie(res, req, SSO_COOKIE, '', { path: SSO_PATH, maxAge: 0 }); // a state is good for one attempt
+      let who;
+      try { who = verifyToken(config.eardle.secret, url.searchParams.get('token'), state); } catch { return '/?eardle=failed'; }
+
+      const existing = users.findByEardle(who.sub);
+      if (existing) {
+        if (user?.id === existing.id) return '/?eardle=ok';
+        // whatever this browser had been building without an account joins the eardle account's library
+        if (user && !user.auth_provider && !user.banned) users.absorb(existing, user);
+        setSessionCookie(res, req, users.startSession(existing));
+      } else if (user && !user.auth_provider) {
+        users.linkEardle(user, who.sub, who.name); // the browser's own library becomes the eardle account's; its cookie stays
+      } else {
+        setSessionCookie(res, req, users.createLinked(who.sub, who.name).secret);
+      }
+      return '/?eardle=ok';
+    }],
+
+    // only for someone signed in with eardle: it ends this browser's session (their library stays with the eardle account)
+    ['POST', '/api/me/signout', { auth: 'user', limit: W }, ({ req, res, user, secret }) => {
+      if (!user.auth_provider) throw bad('This library is not linked to an eardle account. Keep its recovery code instead.', 'not_linked');
+      users.endSession(secret);
+      clearSessionCookie(res, req);
+      return { signedOut: true };
     }],
 
     ['DELETE', '/api/me', { auth: 'user', limit: ['delete-me', 5, HOUR] }, ({ req, res, user }) => {
@@ -237,6 +285,11 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
     }
 
     const result = await r.handler({ req, res, url, params, body, user, secret: activeSecret, ip });
+    if (r.opts.redirect) {
+      res.writeHead(302, { Location: result, 'Cache-Control': 'no-store' });
+      res.end();
+      return;
+    }
     send(res, r.status, result);
   }
 

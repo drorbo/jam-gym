@@ -191,6 +191,11 @@ check "server code is not exposed" "$(curl -s -o /dev/null -w '%{http_code}' "$S
 check "sample manifest" "$(curl -s -o /dev/null -w '%{http_code}' "$SITE/samples/manifest.json")" 200
 check "eardle home" "$(curl -s -o /dev/null -w '%{http_code}' "$EARDLE/")" 200
 check "eardle /learn" "$(curl -s -o /dev/null -w '%{http_code}' "$EARDLE/learn")" 200
+# "Sign in with eardle": if Jam Gym offers it, eardle must be answering its side (a redirect to sign in; 404 would mean eardle
+# is not configured or not deployed yet: deploy eardle first, see docs/eardle-accounts.md)
+if curl -s "$SITE/api/me" | grep -q '"features":{"eardle":true}'; then
+  check "sign in with eardle: eardle answers /jam-gym/authorize" "$(curl -s -o /dev/null -w '%{http_code}' "$EARDLE/jam-gym/authorize?state=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")" 307
+fi
 
 STATS_AFTER="$(ssh "$SSH_HOST" "docker exec jam-gym-web-1 node server/admin.js stats" | tr -d '\n ')"
 echo "    library after:  $STATS_AFTER"

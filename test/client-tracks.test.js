@@ -469,3 +469,58 @@ test('the tracks state starts out empty and the same every time', () => {
   assert.deepEqual([s.status, s.me, s.mine, s.active, s.tab], ['loading', null, [], null, 'mine']);
   assert.notEqual(initialTracksState().browse, s.browse, 'no shared mutable state between controllers');
 });
+
+// ---- sign in with eardle -----------------------------------------------------------------------
+
+const SSO = { EARDLE_SSO_SECRET: 'client-test-secret-0123456789abcdef', EARDLE_URL: 'https://eardle.example' };
+
+test('the controller learns from the server whether sign in with eardle is offered', withServer(async (server) => {
+  const on = person(server);
+  await on.tracks.init();
+  assert.equal(on.state().features.eardle, true);
+}, SSO));
+
+test('without the secret the server does not offer it', withServer(async (server) => {
+  const off = person(server);
+  await off.tracks.init();
+  assert.equal(off.state().features.eardle, false);
+}));
+
+test('coming back from eardle says who you are, or that it did not work; signing out forgets the account here', withServer(async (server) => {
+  const { signToken } = await import('../server/sso.js');
+  const a = person(server);
+  await a.tracks.init();
+  // a real round trip through the server, done with the browser's own cookie jar
+  const start = await fetch(`${server.base}/api/auth/eardle/start`, { redirect: 'manual' });
+  const state = new URL(start.headers.get('location')).searchParams.get('state');
+  a.jar.set('jg_sso', state);
+  const back = await a_fetch(a, `${server.base}/api/auth/eardle/callback?token=${encodeURIComponent(signToken(SSO.EARDLE_SSO_SECRET, { sub: 5, name: 'Miles', state }))}`);
+  assert.equal(back.headers.get('location'), '/?eardle=ok');
+
+  const returned = person(server, { search: '?eardle=ok' });
+  returned.jar.set('jg_session', a.jar.get('jg_session'));
+  await returned.tracks.init();
+  assert.equal(returned.state().me.eardle, true);
+  assert.equal(returned.state().flash.text, 'Signed in with eardle as Miles.');
+
+  const failed = person(server, { search: '?eardle=failed' });
+  await failed.tracks.init();
+  assert.equal(failed.state().flash.kind, 'error');
+  assert.match(failed.state().flash.text, /did not work/);
+
+  assert.equal(await returned.tracks.signOut(), true);
+  assert.equal(returned.state().me, null);
+  assert.match(returned.state().flash.text, /Signed out/);
+  assert.equal(await failed.tracks.signOut(), false, 'an anonymous browser has nothing to sign out of');
+}, SSO));
+
+/** fetch through a person's cookie jar (their api uses the same jar). */
+async function a_fetch(p, url) {
+  const res = await fetch(url, { redirect: 'manual', headers: { Cookie: [...p.jar].map(([k, v]) => `${k}=${v}`).join('; ') } });
+  for (const c of res.headers.getSetCookie?.() ?? []) {
+    const [pair] = c.split(';');
+    const i = pair.indexOf('=');
+    if (/Max-Age=0/i.test(c) || !pair.slice(i + 1)) p.jar.delete(pair.slice(0, i)); else p.jar.set(pair.slice(0, i), pair.slice(i + 1));
+  }
+  return res;
+}

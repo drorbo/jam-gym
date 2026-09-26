@@ -34,6 +34,11 @@ mountTracksUI({ store, player, tracks, sidebar });
 mountPresetsUI({ store, presets, tracks, sidebar });
 mountCollapsibles({ root: document.getElementById('sidebar'), storage, toggleAll: document.getElementById('sec-toggle-all') });
 tracks.init();
+// the sign-in with eardle result is announced once (by tracks.init from the address), then taken off the address bar
+try {
+  const url = new URL(location.href);
+  if (url.searchParams.has('eardle')) { url.searchParams.delete('eardle'); history.replaceState(null, '', url.pathname + url.search + url.hash); }
+} catch { /* an old browser: the parameter just stays */ }
 
 store.subscribe((state, patch) => {
   if (patch.song || patch.config || patch.mixer || patch.theme) saveState(state);

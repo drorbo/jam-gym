@@ -24,6 +24,14 @@ const button = (label, cls, attrs = {}) => {
   return b;
 };
 
+/** A plain link, not a fetch: signing in with eardle sends the whole page to eardle and back. */
+function eardleLink() {
+  const a = el('a', 'link', 'Sign in with eardle');
+  a.href = '/api/auth/eardle/start';
+  a.title = 'Keep your library under your eardle account, on every device';
+  return a;
+}
+
 const HEART = 'M12 20.3 4.6 13.1C2.6 11.1 2.6 8 4.5 6.3 6.400 4.700 9 5 10.700 6.700L12 8l1.300-1.300C15 5 17.600 4.700 19.500 6.300c1.900 1.700 1.900 4.800-.1 6.800z';
 function heartSvg() {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -175,16 +183,20 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
     if (t.me) {
       row.append('You are ', el('strong', '', t.me.displayName), ' ');
       const links = el('span', 'account-links');
+      if (t.me.eardle) row.append('(eardle account) ');
       links.append(
         button('Change name', 'link', { 'data-act': 'account', 'data-panel': 'rename' }),
         button('Recovery code', 'link', { 'data-act': 'account', 'data-panel': 'recovery' }),
         button('Use another code', 'link', { 'data-act': 'account', 'data-panel': 'recover' }),
-        button('Delete my data', 'link', { 'data-act': 'account', 'data-panel': 'delete' }),
       );
+      if (t.me.eardle) links.append(button('Sign out', 'link', { 'data-act': 'sign-out' }));
+      else if (t.features.eardle) links.append(eardleLink());
+      links.append(button('Delete my data', 'link', { 'data-act': 'account', 'data-panel': 'delete' }));
       row.append(links);
     } else {
       row.append('Your tracks stay in this browser once you save one. ');
       row.append(button('Use a recovery code', 'link', { 'data-act': 'account', 'data-panel': 'recover' }));
+      if (t.features.eardle) row.append(' ', eardleLink());
     }
     box.append(row);
 
@@ -379,7 +391,7 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
     const sigs = {
       messages: [t.flash?.id, t.status, sidebar?.isOpen],
       loaded: [t.active, edited, t.active && state.song.tempo],
-      account: [t.me, t.status, t.recovery, ui.accountPanel],
+      account: [t.me, t.features, t.status, t.recovery, ui.accountPanel],
       note: [t.cookieNote],
       mine: [t.mine, t.active, t.busy, t.mineLoaded, t.status, t.me?.displayName, ui.confirm],
       browse: [t.browse, t.busy, t.active, t.status, ui.confirm],
@@ -445,6 +457,7 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
       case 'show-code': tracks.showRecovery(); break;
       case 'copy-code': { const ok = await copyText(tracks.state.recovery ?? ''); tracks.notify(ok ? 'Recovery code copied.' : 'Select the code and copy it by hand.', ok ? 'ok' : 'error'); break; }
       case 'do-rename': { if (await tracks.rename($('rename-input').value)) { ui.accountPanel = null; poke(); } break; }
+      case 'sign-out': { if (await tracks.signOut()) { ui.accountPanel = null; poke(); } break; }
       case 'do-recover': { if (await tracks.recover($('recover-input').value)) { ui.accountPanel = null; poke(); } break; }
       case 'do-delete-account': { if (await tracks.deleteAccount()) { ui.accountPanel = null; poke(); } break; }
       case 'import-local': tracks.importLocal(); break;

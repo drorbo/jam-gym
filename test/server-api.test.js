@@ -100,7 +100,7 @@ test('browsing and reading set no cookie and need no identity', withServer(async
     assert.equal(r.status, 200, path);
     assert.deepEqual(r.setCookies, [], `${path} must not set a cookie`);
   }
-  assert.deepEqual((await b.get('/api/me')).json, { me: null });
+  assert.deepEqual((await b.get('/api/me')).json, { me: null, features: { eardle: false } });
   assert.deepEqual((await b.get('/api/tracks/mine')).json, { tracks: [] });
   assert.equal(b.jar.size, 0);
 }));
@@ -165,7 +165,7 @@ test('/api/me refreshes the cookie so regular visitors stay signed in', withServ
 test('a made-up or malformed cookie is simply "no identity"', withServer(async ({ browser }) => {
   for (const value of ['nonsense', 'A'.repeat(32), '', 'x'.repeat(500)]) {
     const b = browser({ Cookie: `jg_session=${value}` });
-    assert.deepEqual((await b.get('/api/me')).json, { me: null }, value);
+    assert.deepEqual((await b.get('/api/me')).json, { me: null, features: { eardle: false } }, value);
     assert.equal((await b.get('/api/tracks/mine')).status, 200);
   }
   const b = browser({ Cookie: 'jg_session=nonsense' });
