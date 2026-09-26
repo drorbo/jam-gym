@@ -24,7 +24,7 @@ export async function start() {
   const config = loadConfig();
   const { server, db } = buildServer({ config });
   let stopBackups = () => {};
-  if (config.backups) stopBackups = scheduleBackups(db, join(config.dataDir, 'backups'), { keep: config.backupKeep });
+  if (config.backups) stopBackups = scheduleBackups(db, join(config.dataDir, 'backups'), { keep: config.backupKeep, everyHours: config.backupEveryHours });
 
   await new Promise((resolve, reject) => {
     server.once('error', reject);

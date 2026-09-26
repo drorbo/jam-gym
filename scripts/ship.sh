@@ -17,7 +17,9 @@
 #   * Nothing is committed, pushed or deployed unless all tests pass.
 #   * It never runs a command that could touch eardle. Before and after, it records eardle's containers (id and start
 #     time) and nginx config, and it fails loudly if any of them changed.
-#   * The tracks data volume (jam-gym_data) is checked and kept.
+#   * The tracks data volume (jam-gym_data) is checked and kept. Before deploying it takes a backup and copies it to
+#     ~/jam-gym-backups on the server (outside the volume); afterwards it checks that every track that existed before
+#     still exists, not just that the count is the same.
 #
 # See docs/deployment.md. Needs: git, node, ssh access as `eardle-prod`, curl.
 
@@ -151,7 +153,18 @@ if [ "$DRY" = 1 ]; then
   exit 0
 fi
 
-# ---- 5. deploy -----------------------------------------------------------------------------------------------------------
+# ---- 5. back up the library, then deploy ---------------------------------------------------------------------------------
+# A snapshot taken by hand right before the deploy, plus a copy outside the Docker volume (so it survives even if the
+# volume itself is ever lost), and the id of every track, to compare against afterwards.
+step "Backing up the library first"
+IDS_PATTERN='^[0-9A-Za-z]{10}$'
+BACKUP="$(ssh "$SSH_HOST" "docker exec jam-gym-web-1 node --no-warnings server/admin.js backup" | sed 's#.*/##')"
+[ -n "$BACKUP" ] || fail "Could not take a backup, so nothing was deployed."
+ssh "$SSH_HOST" "mkdir -p ~/jam-gym-backups && docker cp jam-gym-web-1:/data/backups/$BACKUP ~/jam-gym-backups/$BACKUP && ls -1t ~/jam-gym-backups | tail -n +31 | while read -r f; do rm -f \"\$HOME/jam-gym-backups/\$f\"; done" \
+  || fail "Could not copy the backup off the volume, so nothing was deployed."
+echo "    $BACKUP (copied to ~/jam-gym-backups on the server, outside the Docker volume)"
+IDS_BEFORE="$(ssh "$SSH_HOST" "docker exec jam-gym-web-1 node --no-warnings server/admin.js ids" 2>/dev/null | grep -E "$IDS_PATTERN" || true)"
+
 EARDLE_BEFORE="$(eardle_snapshot)"
 step "Deploying $SHA"
 bash scripts/deploy-prod.sh
@@ -187,6 +200,20 @@ if [ "${tracks_after:-0}" -ge "${tracks_before:-0}" ]; then
   echo "    ok    no tracks lost (${tracks_before:-0} before, ${tracks_after:-0} after)"
 else
   echo "    FAIL  the track count dropped: ${tracks_before} -> ${tracks_after}"; PROBLEMS=$((PROBLEMS + 1))
+fi
+# the count alone could hide one track lost and another made, so compare the tracks themselves
+IDS_AFTER="$(ssh "$SSH_HOST" "docker exec jam-gym-web-1 node --no-warnings server/admin.js ids" 2>/dev/null | grep -E "$IDS_PATTERN" || true)"
+MISSING="$(comm -23 <(printf '%s\n' "$IDS_BEFORE" | grep -E "$IDS_PATTERN" | sort || true) <(printf '%s\n' "$IDS_AFTER" | grep -E "$IDS_PATTERN" | sort || true))"
+BEFORE_N="$(printf '%s\n' "$IDS_BEFORE" | grep -cE "$IDS_PATTERN" || true)"
+if [ "$BEFORE_N" != "${tracks_before:-0}" ]; then
+  # the server running before this deploy did not have the "ids" command yet (the first deploy that adds it), so only the count could be compared
+  echo "    note  the previous server could not list track ids (${BEFORE_N} listed, ${tracks_before:-0} tracks); the count check above is all that applies this time"
+elif [ -z "$MISSING" ]; then
+  echo "    ok    every one of the ${BEFORE_N} tracks that existed before the deploy still exists"
+else
+  echo "    FAIL  tracks that existed before the deploy are gone: $(echo "$MISSING" | tr '\n' ' ')"
+  echo "          (unless their owners deleted them meanwhile). The pre-deploy backup is ~/jam-gym-backups/$BACKUP on the server; see docs/deployment.md, \"Restoring a backup\"."
+  PROBLEMS=$((PROBLEMS + 1))
 fi
 
 EARDLE_AFTER="$(eardle_snapshot)"

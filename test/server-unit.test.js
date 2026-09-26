@@ -12,6 +12,9 @@ import { SCHEMA_VERSION, openDatabase, transaction } from '../server/db.js';
 import { buildCsp, fingerprints, versionedHtml } from '../server/static.js';
 import { listBackups, snapshot } from '../server/backup.js';
 import { loadConfig } from '../server/config.js';
+import { createTracks } from '../server/tracks.js';
+import { createUsers } from '../server/users.js';
+import { run as runAdmin } from '../server/admin.js';
 import { parseChord } from '../src/theory/chord.js';
 import { trackData } from './harness.js';
 
@@ -306,4 +309,23 @@ test('versionedHtml: stylesheet and entry script are versioned and an import map
 test('CSP: the import map is allowed by its hash too', () => {
   const html = versionedHtml('<script>var t = 1;</script><script type="module" src="src/app/main.js"></script>', new Map([['/src/app/main.js', 'bbbbbbbbbb']]));
   assert.equal((buildCsp(html).match(/sha256-/g) ?? []).length, 2, 'the theme script and the import map');
+});
+
+test('admin "ids" lists every track id, one per line, for comparing before and after a deploy', async () => {
+  const db = openDatabase(':memory:');
+  const users = createUsers(db);
+  const tracks = createTracks(db);
+  const me = users.create().user;
+  const made = [1, 2, 3].map((i) => tracks.create(me, { title: `T${i}`, data: trackData() }).id);
+  const lines = [];
+  await runAdmin(['ids'], { db, log: (v) => lines.push(v) });
+  assert.deepEqual(lines[0].split('\n'), [...made].sort());
+  db.close();
+});
+
+test('backups run often enough that a deploy day is always covered, and are kept long enough', () => {
+  const c = loadConfig({});
+  assert.equal(c.backupEveryHours, 6);
+  assert.ok(c.backupKeep >= 28);
+  assert.equal(loadConfig({ BACKUP_EVERY_HOURS: '2', BACKUP_KEEP: '50' }).backupEveryHours, 2);
 });

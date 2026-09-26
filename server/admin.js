@@ -20,6 +20,7 @@ const HELP = `Jam Gym moderation
   ban <user-id>          stop a user saving, publishing or liking, and hide their tracks (ids look like 4F2K9XQ7)
   unban <user-id>
   backup                 write a database snapshot to the backups folder now
+  ids                    every track id, one per line (the deploy script compares these before and after)
 `;
 
 const print = (v) => console.log(typeof v === 'string' ? v : JSON.stringify(v, (_, x) => (typeof x === 'bigint' ? Number(x) : x), 2));
@@ -45,6 +46,7 @@ export async function run(argv, { db, log = print } = {}) {
       case 'delete': { const t = mod.remove(need()); log(`Deleted: "${t.title}" by ${t.author}`); break; }
       case 'ban': { const u = mod.ban(need(), true); log(`Banned ${u.public_id} (${u.display_name})`); break; }
       case 'unban': { const u = mod.ban(need(), false); log(`Unbanned ${u.public_id} (${u.display_name})`); break; }
+      case 'ids': log(db.prepare('SELECT id FROM tracks ORDER BY id').all().map((r) => r.id).join('\n')); break;
       case 'backup': log(`Backup written: ${await snapshot(db, join(config.dataDir, 'backups'), config.backupKeep)}`); break;
       default: log(HELP);
     }

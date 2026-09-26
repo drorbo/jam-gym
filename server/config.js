@@ -18,7 +18,9 @@ export function loadConfig(env = process.env) {
     trustProxy: env.TRUST_PROXY === '1',
     // Set to '1' to also snapshot the database daily (production does).
     backups: env.BACKUPS === '1',
-    backupKeep: Number(env.BACKUP_KEEP) || 14,
+    backupKeep: Number(env.BACKUP_KEEP) || 28,
+    // every this many hours (checked at start-up and every six hours after); a deploy also takes one by hand first
+    backupEveryHours: Number(env.BACKUP_EVERY_HOURS) || 6,
   };
 }
 

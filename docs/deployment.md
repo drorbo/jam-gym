@@ -78,6 +78,57 @@ anything else revalidates. The CSP allows the import map by its hash. Nothing to
 file contents (`server/static.js`, tested in `test/server-unit.test.js`). If you add a script that is not under `src/`
 or a stylesheet not under `css/`, it will not be versioned.
 
+## Backups and restoring
+
+Users' tracks live in one SQLite file on the `jam-gym_data` volume. Three layers protect it:
+
+1. **Every deploy takes a backup first** (`scripts/ship.sh`), copies it to `~/jam-gym-backups/` on the server host (outside
+   the Docker volume, so it survives even if the volume is lost; the last 30 are kept), and afterwards checks that every
+   track that existed before still exists. It compares the tracks themselves, not just the count.
+2. **The server snapshots itself** at start-up and every six hours after (`BACKUP_EVERY_HOURS`), keeping the last 28 in
+   `/data/backups`.
+3. **A restart cannot lose committed data.** SQLite runs in WAL mode, and a manual check confirmed that saved tracks
+   survive a hard kill, a stop signal and repeated restarts.
+
+Nothing in the deploy touches the volume: it does `git pull`, `docker compose build web` and `docker compose up -d web`, never
+`down -v`, `volume rm` or a prune. The one thing that would delete it is someone running `docker volume prune` (or
+`docker system prune --volumes`) on the host, which is why the eardle heads-up file says never to.
+
+**Restoring a backup** (this replaces the live database with the snapshot, so use the newest one that has what you need):
+
+```bash
+ssh eardle-prod
+cd ~/drorbo/jam-gym
+ls -lt ~/jam-gym-backups | head                       # pick a file, e.g. jamgym-20260921-1949.sqlite
+docker compose -f docker-compose.yml stop web
+# remove the old database and its write-ahead files from the volume, then put the snapshot in place
+docker run --rm -v jam-gym_data:/data --entrypoint sh jam-gym-web -c 'rm -f /data/jamgym.sqlite /data/jamgym.sqlite-wal /data/jamgym.sqlite-shm'
+docker cp ~/jam-gym-backups/jamgym-20260921-1949.sqlite jam-gym-web-1:/data/jamgym.sqlite
+docker run --rm -v jam-gym_data:/data --entrypoint sh jam-gym-web -c 'chown node:node /data/jamgym.sqlite'
+docker compose -f docker-compose.yml up -d web
+docker exec jam-gym-web-1 node server/admin.js stats     # check the counts
+```
+
+The track-by-track check needs the `ids` admin command on the server that was running *before* the deploy. The first deploy that adds it prints a `note` and falls back to the count check; every deploy after that compares the tracks themselves.
+
+To take a backup by hand at any time: `docker exec jam-gym-web-1 node server/admin.js backup`, then `docker cp` it out.
+
+## Operating it
+
+```bash
+# health, and what is in the library
+ssh eardle-prod "curl -s http://127.0.0.1:3100/api/health"
+ssh eardle-prod "docker exec jam-gym-web-1 node server/admin.js stats"
+
+# moderation: the reports queue, look at a track, hide / restore / delete it, ban or unban its author
+ssh eardle-prod "docker exec jam-gym-web-1 node server/admin.js reports"
+ssh eardle-prod "docker exec jam-gym-web-1 node server/admin.js hide TRACK_ID"
+```
+
+Environment (set in `docker-compose.yml`): `TRUST_PROXY=1` (believe the host nginx's `X-Forwarded-Proto` and Cloudflare's
+client IP, which is safe only because the port is published on loopback), `BACKUPS=1`, `DATA_DIR=/data`.
+The server sends a Content-Security-Policy and refuses cross-site writes, so nginx needs no extra headers.
+
 ## First-time setup (already done once)
 
 ```bash
