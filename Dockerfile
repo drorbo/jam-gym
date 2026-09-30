@@ -1,6 +1,11 @@
 # Jam Gym: one small Node process serves the static site and the tracks API. No npm packages, no build step.
 # The database uses Node's built-in SQLite, so the Node version matters (22.13 or newer).
-FROM node:24-alpine
+#
+# Pinned by digest (the multi-arch index, so this still resolves correctly on an arm64 dev machine), not just the
+# "24-alpine" tag: a tag can be moved to point at a different image later, silently changing what gets built; a
+# digest cannot. To move to a newer 24-alpine build on purpose, look up the new digest (crane, `docker buildx
+# imagetools inspect node:24-alpine`, or the tag's page on hub.docker.com) and replace it here.
+FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1
 
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \

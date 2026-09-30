@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { startTestServer, makeTrack, publishTrack, trackData } from './harness.js';
 import { signToken, verifyToken } from '../server/sso.js';
-import { loadConfig } from '../server/config.js';
+import { loadConfig, LIMITS } from '../server/config.js';
 import { SCHEMA_VERSION } from '../server/db.js';
 
 const SECRET = 'a-shared-secret-for-tests-only-0123456789';
@@ -85,7 +85,14 @@ test('with the secret set the page is told, and start sends the person to eardle
 test('the production defaults point at eardle.com, and the secret is read from the environment', () => {
   assert.equal(loadConfig({}).eardle.url, 'https://eardle.com');
   assert.equal(loadConfig({}).eardle.secret, '');
-  assert.equal(loadConfig({ EARDLE_URL: 'http://localhost:3000/', EARDLE_SSO_SECRET: 's' }).eardle.url, 'http://localhost:3000');
+  assert.equal(loadConfig({ EARDLE_URL: 'http://localhost:3000/', EARDLE_SSO_SECRET: SECRET }).eardle.url, 'http://localhost:3000');
+});
+
+test('a secret too short to be a real one is treated as unset, not as a weak secret that is still trusted', () => {
+  assert.equal(loadConfig({ EARDLE_SSO_SECRET: 's' }).eardle.secret, '');
+  assert.equal(loadConfig({ EARDLE_SSO_SECRET: 'x'.repeat(31) }).eardle.secret, '');
+  assert.equal(loadConfig({ EARDLE_SSO_SECRET: 'x'.repeat(32) }).eardle.secret, 'x'.repeat(32));
+  assert.equal(loadConfig({ EARDLE_SSO_SECRET: SECRET }).eardle.secret, SECRET);
 });
 
 // ---- signing in --------------------------------------------------------------------------------
@@ -288,4 +295,80 @@ test('deleting an eardle-linked account removes its sessions and library and not
 test('the database has the sessions table', withServer(async ({ db }) => {
   assert.ok(SCHEMA_VERSION >= 3);
   assert.ok(db.prepare(`SELECT name FROM sqlite_master WHERE name = 'sessions'`).get());
+}));
+
+// ---- sessions: expiry, a cap on how many, and signing out everywhere ----------------------------
+
+test('a session goes stale after long disuse, and is rejected (and cleaned up) from then on', withServer(async ({ browser, db }) => {
+  const laptop = browser();
+  await makeTrack(laptop, { title: 'x' });
+  await signInAs(laptop, 42, { name: 'Miles' });
+  const phone = browser();
+  await signInAs(phone, 42, { name: 'Miles' });
+  assert.equal((await phone.get('/api/me')).json.me.eardle, true);
+
+  const stale = Date.now() - (LIMITS.sessionMaxAgeDays + 1) * 24 * 3600 * 1000;
+  db.prepare('UPDATE sessions SET last_used_at = ?, created_at = ?').run(stale, stale);
+  assert.equal((await phone.get('/api/me')).json.me, null, 'too old to trust any more');
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM sessions').get().n, 0, 'and it is removed, not just refused');
+  assert.equal((await laptop.get('/api/me')).json.me.eardle, true, 'the account itself is unaffected');
+}));
+
+test('using a session keeps it alive: its last-used time moves forward, not just its row surviving', withServer(async ({ browser, db }) => {
+  const laptop = browser();
+  await signInAs(laptop, 42, { name: 'Miles' }); // the account with a "real" secret on this device, as on any first sign-in
+  const phone = browser();
+  await signInAs(phone, 42, { name: 'Miles' }); // a genuine second device: this one gets a sessions-table row
+  const old = Date.now() - 2 * 24 * 3600 * 1000;
+  db.prepare('UPDATE sessions SET last_used_at = ?').run(old);
+  assert.equal((await phone.get('/api/me')).json.me.eardle, true);
+  assert.ok(db.prepare('SELECT last_used_at AS t FROM sessions').get().t > old, 'touched, not stuck in the past');
+}));
+
+test('only so many sessions at once per person: signing in on one more device drops the least recently used', withServer(async ({ browser, db }) => {
+  const laptop = browser();
+  await signInAs(laptop, 42, { name: 'Miles' });
+  const userId = db.prepare(`SELECT id FROM users WHERE auth_subject = '42'`).get().id;
+  // (LIMITS.sessionCap - 1) sessions already exist, seeded directly rather than through real sign-ins: the sso route's own
+  // rate limit (30/hour, shared between start and callback) is far too tight to sign in this many devices for real in one test.
+  const base = Date.now() - 1000 * LIMITS.sessionCap;
+  for (let i = 0; i < LIMITS.sessionCap - 1; i++) {
+    db.prepare('INSERT INTO sessions(token_hash, user_id, created_at, last_used_at) VALUES (?, ?, ?, ?)')
+      .run(`seed-${i}-hash-padding-to-look-like-a-real-sha256-hex-digest-aaaaaaaaaaaaaaaa`.slice(0, 64), userId, base + i, base + i);
+  }
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM sessions').get().n, LIMITS.sessionCap - 1);
+
+  const oneMore = browser();
+  await signInAs(oneMore, 42, { name: 'Miles' }); // the cap-th session: still fits, nothing evicted yet
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM sessions').get().n, LIMITS.sessionCap);
+  assert.equal((await oneMore.get('/api/me')).json.me.eardle, true);
+
+  const evenMore = browser();
+  await signInAs(evenMore, 42, { name: 'Miles' }); // one over the cap: the single oldest (seed-0) makes room
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM sessions').get().n, LIMITS.sessionCap, 'still capped, not one more');
+  assert.equal(db.prepare(`SELECT COUNT(*) AS n FROM sessions WHERE token_hash LIKE 'seed-0-%'`).get().n, 0, 'the oldest seeded one is gone');
+  assert.equal(db.prepare(`SELECT COUNT(*) AS n FROM sessions WHERE token_hash LIKE 'seed-1-%'`).get().n, 1, 'the next-oldest survives');
+  assert.equal((await evenMore.get('/api/me')).json.me.eardle, true);
+  assert.equal((await laptop.get('/api/me')).json.me.eardle, true, 'the account itself (its own secret, not a session) is unaffected either way');
+}));
+
+test('sign out everywhere ends every device\'s session, including the one asking; the account and its library are untouched', withServer(async ({ browser, db }) => {
+  const laptop = browser();
+  await makeTrack(laptop, { title: 'Keep' });
+  await signInAs(laptop, 42, { name: 'Miles' });
+  const phone = browser(); await signInAs(phone, 42, { name: 'Miles' });
+  const tablet = browser(); await signInAs(tablet, 42, { name: 'Miles' });
+
+  const r = await phone.post('/api/me/signout', { everywhere: true });
+  assert.equal(r.status, 200);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM sessions').get().n, 0);
+  assert.equal((await phone.get('/api/me')).json.me, null);
+  assert.equal((await tablet.get('/api/me')).json.me, null, 'a different device is ended too');
+  assert.equal((await laptop.get('/api/me')).json.me.eardle, true, 'the account itself (its own secret) is not a session, so it is untouched');
+  assert.deepEqual((await laptop.get('/api/tracks/mine')).json.tracks.map((t) => t.title), ['Keep'], 'and the library is intact');
+
+  // signing in again afterwards works as normal
+  const back = browser();
+  await signInAs(back, 42, { name: 'Miles' });
+  assert.equal((await back.get('/api/me')).json.me.eardle, true);
 }));

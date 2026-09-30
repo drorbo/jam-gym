@@ -147,3 +147,24 @@ test('deleting an account removes its presets, and old deletion markers are clea
   assert.equal((await one.del('/api/me')).status, 200);
   assert.equal(db.prepare('SELECT COUNT(*) AS c FROM presets').get().c, 0);
 }));
+
+test('a person cannot pile up unlimited deletion markers by syncing many times', withServer(async ({ browser, db }) => {
+  const { one } = await twoDevices(browser);
+  // more than one request's worth (LIMITS.presetDeletions), spread over several syncs, as a runaway or malicious
+  // client replaying the same sync many times would do
+  const perCall = LIMITS.presetDeletions;
+  const calls = Math.ceil((LIMITS.presetTombstonesPerUser * 2) / perCall);
+  const base = Date.now(); // real-looking timestamps: tiny fake ones would just be purged as 90-day-old on their own
+  let lastAt = base;
+  for (let c = 0; c < calls; c++) {
+    const batch = Array.from({ length: perCall }, (_, i) => ({ id: randomId(), at: base + c * perCall + i + 1 }));
+    lastAt = batch.at(-1).at;
+    const r = await sync(one, [], batch);
+    assert.equal(r.status, 200);
+  }
+  const rows = db.prepare('SELECT COUNT(*) AS c FROM presets WHERE deleted = 1').get().c;
+  assert.ok(rows <= LIMITS.presetTombstonesPerUser, `${rows} tombstone rows, wanted at most ${LIMITS.presetTombstonesPerUser}`);
+  // and the ones kept are the newest, not an arbitrary cut
+  const newest = db.prepare('SELECT MAX(updated_at) AS m FROM presets WHERE deleted = 1').get().m;
+  assert.equal(newest, lastAt);
+}));

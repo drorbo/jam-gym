@@ -6,6 +6,12 @@ import { reindex, unindex } from './search.js';
 import { HttpError, bad, cleanText, formatSecret, isSecret, newSecret, normalizeSecret, now, randomId, sha256 } from './util.js';
 
 const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
+// A session (LIMITS.sessionMaxAgeDays, LIMITS.sessionCap in config.js) is made by signing in with eardle on a device
+// that isn't the one holding a person's own secret. Unlike that secret (which lives only in a cookie, so the account
+// itself never "expires" on its own), a session is a server-side row that would otherwise accumulate forever and
+// stay valid forever — see the 2026-09 audit (L-3).
+const SESSION_MAX_AGE = LIMITS.sessionMaxAgeDays * DAY;
 const PUBLIC_ID_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
 /** @param {import('node:sqlite').DatabaseSync} db */
@@ -13,7 +19,10 @@ export function createUsers(db) {
   const byHash = db.prepare('SELECT * FROM users WHERE secret_hash = ?');
   const byId = db.prepare('SELECT * FROM users WHERE id = ?');
   const touch = db.prepare('UPDATE users SET last_seen_at = ? WHERE id = ?');
-  const bySession = db.prepare('SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?');
+  const bySession = db.prepare(`SELECT u.*, s.last_used_at AS session_last_used_at FROM sessions s
+                                JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`);
+  const touchSession = db.prepare('UPDATE sessions SET last_used_at = ? WHERE token_hash = ?');
+  const dropSession = db.prepare('DELETE FROM sessions WHERE token_hash = ?');
   const byEardle = db.prepare(`SELECT * FROM users WHERE auth_provider = 'eardle' AND auth_subject = ?`);
   const eardleName = (name) => {
     const clean = cleanText(name, LIMITS.displayName);
@@ -39,10 +48,17 @@ export function createUsers(db) {
     findBySecret(secret) {
       if (!isSecret(secret)) return null;
       const hash = sha256(secret);
-      const user = byHash.get(hash) ?? bySession.get(hash);
-      if (!user) return null;
-      if (now() - user.last_seen_at > HOUR) touch.run(now(), user.id);
-      return user;
+      const own = byHash.get(hash);
+      if (own) {
+        if (now() - own.last_seen_at > HOUR) touch.run(now(), own.id);
+        return own;
+      }
+      const session = bySession.get(hash);
+      if (!session) return null;
+      if (now() - session.session_last_used_at > SESSION_MAX_AGE) { dropSession.run(hash); return null; }
+      if (now() - session.session_last_used_at > HOUR) touchSession.run(now(), hash);
+      if (now() - session.last_seen_at > HOUR) touch.run(now(), session.id);
+      return session;
     },
 
     /** Look up by a recovery code as a person typed it. Only a person's own secret counts, not a sign-in session. */
@@ -75,13 +91,28 @@ export function createUsers(db) {
 
     /** A session for a person who already has an identity, on a device that does not hold its secret. Returns the token for the cookie. */
     startSession(user) {
+      transaction(db, () => {
+        // make room first, so this new one always succeeds: drop the least-recently-used session(s) over the cap
+        const over = db.prepare('SELECT COUNT(*) AS c FROM sessions WHERE user_id = ?').get(user.id).c - LIMITS.sessionCap + 1;
+        if (over > 0) {
+          for (const r of db.prepare('SELECT token_hash FROM sessions WHERE user_id = ? ORDER BY last_used_at ASC LIMIT ?').all(user.id, over)) {
+            dropSession.run(r.token_hash);
+          }
+        }
+      });
       const token = newSecret();
-      db.prepare('INSERT INTO sessions(token_hash, user_id, created_at) VALUES (?, ?, ?)').run(sha256(token), user.id, now());
+      const t = now();
+      db.prepare('INSERT INTO sessions(token_hash, user_id, created_at, last_used_at) VALUES (?, ?, ?, ?)').run(sha256(token), user.id, t, t);
       return token;
     },
 
     endSession(token) {
-      if (isSecret(token)) db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(sha256(token));
+      if (isSecret(token)) dropSession.run(sha256(token));
+    },
+
+    /** End every session of this person's, on every device that isn't holding their own secret (a "sign out everywhere"). */
+    endAllSessions(user) {
+      db.prepare('DELETE FROM sessions WHERE user_id = ?').run(user.id);
     },
 
     /**

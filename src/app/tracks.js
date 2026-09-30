@@ -347,6 +347,17 @@ export function createTracksController({ store, player, api, storage = null, sea
       } catch (err) { fail(err); return false; }
     },
 
+    /** End every device's eardle sign-in, not just this one — for a lost device, or just to be sure. */
+    async signOutEverywhere() {
+      try {
+        await api.signOutEverywhere();
+        set({ me: null, mine: [], mineLoaded: false, active: null, recovery: null });
+        if (state().browse.loaded) await ctrl.search({});
+        flash('Signed out everywhere. Sign in with eardle again to open your library.');
+        return true;
+      } catch (err) { fail(err); return false; }
+    },
+
     async deleteAccount() {
       try {
         await api.deleteMe();

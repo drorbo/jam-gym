@@ -189,7 +189,7 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
         button('Recovery code', 'link', { 'data-act': 'account', 'data-panel': 'recovery' }),
         button('Use another code', 'link', { 'data-act': 'account', 'data-panel': 'recover' }),
       );
-      if (t.me.eardle) links.append(button('Sign out', 'link', { 'data-act': 'sign-out' }));
+      if (t.me.eardle) links.append(button('Sign out', 'link', { 'data-act': 'sign-out' }), button('Sign out everywhere', 'link', { 'data-act': 'account', 'data-panel': 'signout-everywhere' }));
       else if (t.features.eardle) links.append(eardleLink());
       links.append(button('Delete my data', 'link', { 'data-act': 'account', 'data-panel': 'delete' }));
       row.append(links);
@@ -219,6 +219,9 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
       const input = el('input'); input.type = 'text'; input.id = 'recover-input'; input.name = 'recovery-code'; input.placeholder = 'XXXX-XXXX-XXXX-…'; input.autocomplete = 'off'; input.spellcheck = false; input.setAttribute('aria-label', 'Recovery code');
       inline.append(el('p', '', t.me ? 'Switch this browser to another library. Tracks in this one stay with its own recovery code.' : 'Enter the recovery code from your other browser.'), input,
         button('Use code', 'chip', { 'data-act': 'do-recover' }), button('Cancel', 'chip', { 'data-act': 'account-close' }));
+    } else if (panel === 'signout-everywhere' && t.me?.eardle) {
+      inline.append(el('p', '', 'Ends the eardle sign-in on every device, including this one — useful if one was lost or you just want to be sure. Your library stays with the eardle account.'),
+        button('Sign out everywhere', 'chip danger', { 'data-act': 'do-signout-everywhere' }), button('Cancel', 'chip', { 'data-act': 'account-close' }));
     } else if (panel === 'delete' && t.me) {
       inline.append(el('p', '', 'This deletes your name, all your tracks (including published ones) and your likes. It cannot be undone.'),
         button('Delete everything', 'chip danger', { 'data-act': 'do-delete-account' }), button('Cancel', 'chip', { 'data-act': 'account-close' }));
@@ -458,6 +461,7 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
       case 'copy-code': { const ok = await copyText(tracks.state.recovery ?? ''); tracks.notify(ok ? 'Recovery code copied.' : 'Select the code and copy it by hand.', ok ? 'ok' : 'error'); break; }
       case 'do-rename': { if (await tracks.rename($('rename-input').value)) { ui.accountPanel = null; poke(); } break; }
       case 'sign-out': { if (await tracks.signOut()) { ui.accountPanel = null; poke(); } break; }
+      case 'do-signout-everywhere': { if (await tracks.signOutEverywhere()) { ui.accountPanel = null; poke(); } break; }
       case 'do-recover': { if (await tracks.recover($('recover-input').value)) { ui.accountPanel = null; poke(); } break; }
       case 'do-delete-account': { if (await tracks.deleteAccount()) { ui.accountPanel = null; poke(); } break; }
       case 'import-local': tracks.importLocal(); break;

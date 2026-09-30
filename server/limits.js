@@ -1,6 +1,13 @@
 // In-memory rate limiting (fixed windows). Best effort: it resets when the server restarts, and per-IP limits can be
 // dodged by someone with many addresses. It exists to stop accidents and cheap abuse, not determined attackers.
 
+// A hard ceiling on how many distinct keys can be tracked at once, so a flood of one-off keys (forged IPs, junk
+// identities) cannot grow this map without bound and exhaust the container's memory. Each bucket is a short string
+// key plus two numbers — comfortably small even at this size. When full, the single oldest bucket is evicted to make
+// room (Map iteration order is insertion order); that bucket's own limit resets a little early, which only ever
+// relaxes a limit, never tightens one, so this cannot itself lock someone out.
+const MAX_BUCKETS = 200_000;
+
 export function createLimiter(clock = Date.now) {
   const buckets = new Map();
 
@@ -19,6 +26,7 @@ export function createLimiter(clock = Date.now) {
       const t = clock();
       let b = buckets.get(key);
       if (!b || b.resetAt <= t) {
+        if (!b && buckets.size >= MAX_BUCKETS) buckets.delete(buckets.keys().next().value);
         b = { count: 0, resetAt: t + windowMs };
         buckets.set(key, b);
       }

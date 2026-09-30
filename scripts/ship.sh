@@ -160,7 +160,7 @@ step "Backing up the library first"
 IDS_PATTERN='^[0-9A-Za-z]{10}$'
 BACKUP="$(ssh "$SSH_HOST" "docker exec jam-gym-web-1 node --no-warnings server/admin.js backup" | sed 's#.*/##')"
 [ -n "$BACKUP" ] || fail "Could not take a backup, so nothing was deployed."
-ssh "$SSH_HOST" "mkdir -p ~/jam-gym-backups && docker cp jam-gym-web-1:/data/backups/$BACKUP ~/jam-gym-backups/$BACKUP && ls -1t ~/jam-gym-backups | tail -n +31 | while read -r f; do rm -f \"\$HOME/jam-gym-backups/\$f\"; done" \
+ssh "$SSH_HOST" "mkdir -p ~/jam-gym-backups && chmod 700 ~/jam-gym-backups && docker cp jam-gym-web-1:/data/backups/$BACKUP ~/jam-gym-backups/$BACKUP && chmod 600 ~/jam-gym-backups/$BACKUP && ls -1t ~/jam-gym-backups | tail -n +31 | while read -r f; do rm -f \"\$HOME/jam-gym-backups/\$f\"; done" \
   || fail "Could not copy the backup off the volume, so nothing was deployed."
 echo "    $BACKUP (copied to ~/jam-gym-backups on the server, outside the Docker volume)"
 IDS_BEFORE="$(ssh "$SSH_HOST" "docker exec jam-gym-web-1 node --no-warnings server/admin.js ids" 2>/dev/null | grep -E "$IDS_PATTERN" || true)"

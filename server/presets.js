@@ -25,6 +25,11 @@ export function createPresets(db) {
                                 ON CONFLICT(owner_id, id) DO UPDATE SET name = '', data = '{}', updated_at = excluded.updated_at, deleted = 1
                                 WHERE excluded.updated_at >= presets.updated_at`);
   const purge = db.prepare('DELETE FROM presets WHERE owner_id = ? AND deleted = 1 AND updated_at < ?');
+  // Beyond the 90-day age purge above: however often a person's devices sync, keep at most this many deletion
+  // markers each — the ones dropped are the oldest, which is safe (an ancient marker exists only to guard against an
+  // even more ancient device coming back online, which is the least likely case to still matter).
+  const purgeExcess = db.prepare(`DELETE FROM presets WHERE owner_id = ? AND deleted = 1 AND id NOT IN
+                                  (SELECT id FROM presets WHERE owner_id = ? AND deleted = 1 ORDER BY updated_at DESC LIMIT ?)`);
   const all = db.prepare('SELECT id, name, data, updated_at, deleted FROM presets WHERE owner_id = ? ORDER BY name COLLATE NOCASE, id');
 
   function list(user, skipped = 0) {
@@ -71,6 +76,7 @@ export function createPresets(db) {
           tombstone.run(user.id, d.id, at);
         }
         purge.run(user.id, t - KEEP_DELETIONS);
+        purgeExcess.run(user.id, user.id, LIMITS.presetTombstonesPerUser);
       });
       return list(user, skipped);
     },

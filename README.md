@@ -11,7 +11,7 @@ synthesised in the browser. The band plays offline; saving and sharing tracks ne
 
 ```
 npm start        # serves http://localhost:5173 (the site and the tracks API), data in ./data
-npm test         # 542 tests, Node's built-in runner, no install needed
+npm test         # 549 tests, Node's built-in runner, no install needed
 npm run admin -- stats     # moderation and upkeep, see "Tracks" below
 ```
 
@@ -205,7 +205,9 @@ whether you had it open.
   Published tracks have a link (`/?track=ID`) that opens them straight into the player.
 - **Browse**: search titles, authors and chords together (`Dm7 G7` finds tracks that contain those chords, however they
   are spelled), filter by style, time signature, key and tempo, sort by best match, most liked or newest. Like a track
-  with the heart, or save a copy to your own library. Report sends it to moderation; three different reporters hide it.
+  with the heart, or save a copy to your own library. Report sends it to moderation; enough different reporters hide it
+  (`LIMITS.autoHideReports`, server/config.js) — the owner can then take it down themselves (Make private), which clears
+  the reports too, so republishing later starts clean rather than being hidden again by the same old ones.
 - Offline or with the server down, Save keeps the track on this device. Older browser-only saves are listed under
   "On this device" and can be moved into the library.
 

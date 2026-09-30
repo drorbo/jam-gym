@@ -29,6 +29,16 @@ services:
       - data:/data
     # Small Node process. Capped so it can never crowd out eardle on the shared host.
     mem_limit: 192m
+    # Runs as the unprivileged `node` user already (see Dockerfile); this closes the rest of what a container can
+    # usually do that this one never needs. Everything the process writes goes to the volume above or to /tmp — the
+    # root filesystem itself is never touched once the image is built, so it can be read-only.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/api/health"]
       interval: 30s

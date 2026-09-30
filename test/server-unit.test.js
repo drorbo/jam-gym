@@ -174,6 +174,13 @@ test('rate limiter: counts within a window, then resets', () => {
   l.stop();
 });
 
+test('rate limiter: the number of tracked keys is capped, so a flood of one-off keys cannot grow it without bound', () => {
+  const l = createLimiter(() => 1000);
+  for (let i = 0; i < 200_050; i++) l.hit(`k${i}`, 1, 60_000);
+  assert.ok(l.size() <= 200_000, `size is ${l.size()}, wanted at most 200000`);
+  l.stop();
+});
+
 test('database: migrations run once and are safe to repeat', () => {
   const dir = mkdtempSync(join(tmpdir(), 'jg-db-'));
   try {

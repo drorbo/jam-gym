@@ -2,6 +2,18 @@
 
 import { resolve } from 'node:path';
 
+const MIN_SSO_SECRET_LENGTH = 32;
+
+function eardleSecret(raw) {
+  const secret = raw || '';
+  if (secret && secret.length < MIN_SSO_SECRET_LENGTH) {
+    console.warn(`EARDLE_SSO_SECRET is only ${secret.length} characters (want at least ${MIN_SSO_SECRET_LENGTH}); ` +
+      'treating "sign in with eardle" as switched off rather than run with a weak secret.');
+    return '';
+  }
+  return secret;
+}
+
 /**
  * @param {Record<string,string|undefined>} env
  */
@@ -19,7 +31,10 @@ export function loadConfig(env = process.env) {
     // Set to '1' to also snapshot the database daily (production does).
     backups: env.BACKUPS === '1',
     // "Sign in with eardle" (see server/sso.js and docs/eardle-accounts.md). Off unless the shared secret is set.
-    eardle: { url: (env.EARDLE_URL || 'https://eardle.com').replace(/\/+$/, ''), secret: env.EARDLE_SSO_SECRET || '' },
+    // A short secret is easier to guess than the signature it is meant to protect is to forge, so one that looks
+    // misconfigured (set, but not long enough to be a real generated secret) is treated the same as unset: the
+    // feature turns itself off rather than run with a weak secret. scripts/setup-eardle-sso.sh generates 64 characters.
+    eardle: { url: (env.EARDLE_URL || 'https://eardle.com').replace(/\/+$/, ''), secret: eardleSecret(env.EARDLE_SSO_SECRET) },
     backupKeep:Number(env.BACKUP_KEEP) || 28,
     // every this many hours (checked at start-up and every six hours after); a deploy also takes one by hand first
     backupEveryHours: Number(env.BACKUP_EVERY_HOURS) || 6,
@@ -39,9 +54,21 @@ export const LIMITS = Object.freeze({
   maxBars: 200,
   presetBodyBytes: 192 * 1024,
   presetDeletions: 300,
+  // deletion markers are kept for 90 days (see server/presets.js) so a device that was offline doesn't resurrect a
+  // deleted preset, but nothing stopped that from growing without bound: a sync can be replayed any number of times
+  // (each within the 300-per-request presetDeletions limit) at up to 60 calls/minute. This caps it per person.
+  presetTombstonesPerUser: 1000,
   tracksPerUser: 200,
   publishedPerUser: 50,
   browsePageMax: 50,
   browsePageDefault: 20,
-  autoHideReports: 3,
+  // The owner can withdraw a hidden track themselves (POST .../unpublish), which also clears its reports, so this
+  // no longer needs to be low to give people a way out. Kept well under tracksPerUser's abuse cost: an attacker
+  // needs this many distinct accounts (each one rate-limited to create, see server/limits.js and clientIp in
+  // app.js) to hide a track that isn't theirs.
+  autoHideReports: 5,
+  // A "sign in with eardle" session (server/users.js), for a device that isn't holding the person's own secret: it
+  // expires after this long unused, and at most this many exist per person at once (oldest dropped to make room).
+  sessionMaxAgeDays: 180,
+  sessionCap: 20,
 });

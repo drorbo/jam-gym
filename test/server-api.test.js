@@ -130,10 +130,15 @@ test('a session is created on request, with a safe cookie, and the secret is nev
   assert.equal(db.prepare('SELECT COUNT(*) c FROM users').get().c, 1);
 }));
 
-test('behind the proxy the cookie is Secure, and the real client address is used for limits', withServer(async ({ browser }) => {
+test('behind the proxy the cookie is Secure and __Host- prefixed, and round-trips; locally it is the plain name', withServer(async ({ browser }) => {
   const b = browser({ 'X-Forwarded-Proto': 'https' });
   const r = await b.post('/api/session');
   assert.match(r.setCookies[0], /; Secure/);
+  assert.match(r.setCookies[0], /^__Host-jg_session=/, '__Host- requires Secure, Path=/ and no Domain; only used once those hold');
+  assert.ok(b.jar.has('__Host-jg_session') && !b.jar.has('jg_session'));
+  const me = await b.get('/api/me'); // the cookie is read back under the same name: still the same identity, not a fresh one
+  assert.equal(me.status, 200);
+  assert.ok(me.json.me);
   // a different client IP (as Cloudflare reports it) gets its own allowance
   const a = browser({ 'CF-Connecting-IP': '203.0.113.1' });
   const c = browser({ 'CF-Connecting-IP': '203.0.113.2' });
@@ -144,7 +149,9 @@ test('behind the proxy the cookie is Secure, and the real client address is used
 
 test('without the proxy setting, forwarded headers are ignored (they can be forged)', withServer(async ({ browser }) => {
   const b = browser({ 'X-Forwarded-Proto': 'https', 'CF-Connecting-IP': '1.2.3.4' });
-  assert.doesNotMatch((await b.post('/api/session')).setCookies[0], /Secure/);
+  const r = await b.post('/api/session');
+  assert.doesNotMatch(r.setCookies[0], /Secure/);
+  assert.match(r.setCookies[0], /^jg_session=/, 'plain name: __Host- would be a lie without Secure, and local dev is plain http');
 }));
 
 test('saving something creates the identity automatically; reading a private track does not', withServer(async ({ browser }) => {
@@ -683,26 +690,38 @@ test('liking is rate limited per person', withServer(async ({ browser }) => {
 
 // ---- reports and moderation ----------------------------------------------------------------
 
-test('reports: distinct reporters count, three hide the track, the owner is told', withServer(async ({ browser, db }) => {
-  const a = browser(); const r1 = browser(); const r2 = browser(); const r3 = browser();
+test('reports: distinct reporters count, enough of them hide the track, and the owner can take it down and try again', withServer(async ({ browser, db }) => {
+  const a = browser();
+  const reporters = Array.from({ length: LIMITS.autoHideReports }, () => browser());
   const t = await publishTrack(a, { title: 'Questionable' });
   const rep = (b, reason) => b.post(`/api/tracks/${t.id}/report`, { reason });
-  assert.deepEqual((await rep(r1, 'spam')).json, { reported: true, hidden: false });
-  assert.deepEqual((await rep(r1, 'spam again')).json, { reported: true, hidden: false }, 'the same person counts once');
+  assert.deepEqual((await rep(reporters[0], 'spam')).json, { reported: true, hidden: false });
+  assert.deepEqual((await rep(reporters[0], 'spam again')).json, { reported: true, hidden: false }, 'the same person counts once');
   assert.equal(db.prepare('SELECT COUNT(*) c FROM reports').get().c, 1);
-  assert.equal((await rep(r2, 'rude')).json.hidden, false);
-  assert.equal((await browser().get('/api/browse')).json.total, 1, 'two reports are not enough');
-  assert.equal((await rep(r3, 'rude')).json.hidden, true);
+  for (const r of reporters.slice(1, -1)) assert.equal((await rep(r, 'rude')).json.hidden, false);
+  assert.equal((await browser().get('/api/browse')).json.total, 1, 'one short is not enough');
+  assert.equal((await rep(reporters.at(-1), 'rude')).json.hidden, true);
   assert.equal((await browser().get('/api/browse')).json.total, 0, 'hidden from browse');
   assert.equal((await browser().get(`/api/tracks/${t.id}`)).status, 404, 'and from direct links');
   assert.equal((await browser().get('/api/browse?q=questionable')).json.total, 0, 'and from search');
   const mine = (await a.get('/api/tracks/mine')).json.tracks[0];
   assert.equal(mine.visibility, 'hidden', 'the owner can see that it was removed');
-  assert.equal((await a.post(`/api/tracks/${t.id}/publish`)).status, 403);
-  assert.equal((await a.post(`/api/tracks/${t.id}/unpublish`)).json.error.code, 'removed');
+  assert.equal((await a.post(`/api/tracks/${t.id}/publish`)).status, 403, 'cannot publish straight over a hidden track');
   assert.equal((await a.put(`/api/tracks/${t.id}`, { title: 'Edited' })).status, 200, 'the owner can still edit');
-  assert.equal((await a.get('/api/browse?q=edited')).json.total, 0, 'edits do not sneak it back into search');
-  assert.equal((await a.del(`/api/tracks/${t.id}`)).status, 200, 'or delete');
+
+  // the owner's own way out: withdraw it themselves, which also clears the reports that hid it
+  const withdrawn = await a.post(`/api/tracks/${t.id}/unpublish`);
+  assert.equal(withdrawn.status, 200);
+  assert.equal(withdrawn.json.track.visibility, 'private');
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM reports WHERE track_id = ?').get(t.id).c, 0, 'a clean slate');
+  assert.equal((await a.get('/api/browse?q=edited')).json.total, 0, 'still not public');
+
+  // publishing it again starts fresh: the old reports do not carry over and hide it again on their own
+  const republished = await a.post(`/api/tracks/${t.id}/publish`);
+  assert.equal(republished.status, 200);
+  assert.equal(republished.json.track.visibility, 'published');
+  assert.equal((await rep(reporters[0], 'still not keen')).json.hidden, false, 'one old reporter reporting again is not instantly enough');
+  assert.equal((await a.del(`/api/tracks/${t.id}`)).status, 200, 'and the owner can delete it outright');
 }));
 
 test('reports: not your own, not private ones; reasons are capped', withServer(async ({ browser, db }) => {

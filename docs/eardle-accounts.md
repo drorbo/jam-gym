@@ -12,7 +12,10 @@ Jam Gym never sees a password, an email or a Google id. It keeps its own databas
 - Optional. Jam Gym still works with no account: each browser gets an anonymous identity and a recovery code.
 - **Sidebar, Tracks, "Sign in with eardle"** links the browser's library to the eardle account. From then on the library
   follows the person to every device, and survives cleared cookies.
-- Signing in on a second device opens the same library. "Sign out" (shown only for eardle accounts) ends that device only.
+- Signing in on a second device opens the same library, through a session of its own (up to 20 at once; signing in on a
+  21st drops the one used least recently). "Sign out" ends that device only; "Sign out everywhere" ends all of them,
+  including the one asking. An unused session expires after 180 days (`LIMITS.sessionCap`, `sessionMaxAgeDays`,
+  server/config.js).
 - If a browser had been used without an account and then signs in to an eardle account that already has a library, the two are **merged**: tracks, likes, reports and saved presets all move, nothing is lost, a track both liked counts once.
 
 ## How it works
@@ -74,7 +77,13 @@ Rolling back: delete `EARDLE_SSO_SECRET` from `~/drorbo/jam-gym/.env` and run `d
 - A session token is **not** accepted as a recovery code (only a person's own secret is).
 - Bans are per Jam Gym identity. A browser whose anonymous identity is banned that signs in to a clean eardle account does not carry its ban to that account, and its library is not merged into it.
 - eardle's numeric user id is the only identifier stored. It is never reused (Postgres `serial`).
-- Cookies: `jg_session` (a person's own secret, or a sign-in session token) and `jg_sso` (a sign-in in progress). Nothing is shared with eardle's cookies.
+- Cookies: `jg_session` (a person's own secret, or a sign-in session token) and `jg_sso` (a sign-in in progress). Nothing is
+  shared with eardle's cookies. In production `jg_session` is `__Host-jg_session`: the browser refuses it unless it also
+  carries `Secure`, `Path=/` and no `Domain`, which rules out it ever being set by another origin (`jg_sso` keeps its plain
+  name — a narrow `Path` already scopes it to the two sign-in routes, and `__Host-` requires `Path=/`). Locally, over plain
+  `http://localhost`, both stay the plain name, since `__Host-` would refuse to be set at all without HTTPS.
+- `EARDLE_SSO_SECRET` shorter than 32 characters is treated as not set (a warning is logged): a weak secret should not
+  quietly leave the feature "on", it should switch it off the same as leaving it blank.
 
 ## Local development
 

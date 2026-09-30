@@ -6,6 +6,7 @@ import { buildTrackData, dataFromLocalSave, setupSignature } from '../src/app/tr
 import { createStore, defaultState } from '../src/app/state.js';
 import { prepareTrackData } from '../server/trackdata.js';
 import { startTestServer } from './harness.js';
+import { LIMITS } from '../server/config.js';
 
 // ---- helpers -------------------------------------------------------------------------------
 
@@ -371,17 +372,18 @@ test('reports remove a track from the reporter\'s results once it is hidden', wi
   await a.tracks.init();
   const t = await a.tracks.save('Bad one');
   await a.tracks.setPublished(t.id, true);
-  const reporters = [person(server), person(server), person(server)];
+  const reporters = Array.from({ length: LIMITS.autoHideReports }, () => person(server));
   for (const r of reporters) await r.tracks.init();
   await reporters[0].tracks.search({});
   await reporters[0].tracks.report(t.id, 'spam');
   assert.equal(reporters[0].state().browse.items.length, 1, 'one report is not enough');
   assert.match(reporters[0].state().flash.text, /Thanks/);
-  await reporters[1].tracks.report(t.id, 'spam');
-  await reporters[2].tracks.search({});
-  await reporters[2].tracks.report(t.id, 'spam');
-  assert.equal(reporters[2].state().browse.items.length, 0);
-  assert.equal(reporters[2].state().browse.total, 0);
+  for (const r of reporters.slice(1, -1)) await r.tracks.report(t.id, 'spam');
+  const last = reporters.at(-1);
+  await last.tracks.search({});
+  await last.tracks.report(t.id, 'spam');
+  assert.equal(last.state().browse.items.length, 0);
+  assert.equal(last.state().browse.total, 0);
 }));
 
 test('account: rename, recovery code shown and hidden, recovering on another device, deleting everything', withServer(async (server) => {

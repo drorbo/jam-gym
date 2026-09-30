@@ -19,6 +19,10 @@ browser ─► Cloudflare ─► host nginx (TLS, hostname) ─► 127.0.0.1:310
   backups (`backups/`, last 14). It survives rebuilds and `up -d`. **Never run `docker volume prune` or
   `docker system prune --volumes` on this host**: they can delete it, and with it every user's tracks and likes.
 - **Limits**: the container is capped at 192 MB of RAM so it can never crowd out eardle.
+- **Container hardening**: runs as the non-root `node` user (Dockerfile), with a read-only root filesystem, no Linux
+  capabilities and `no-new-privileges` (docker-compose.yml) — everything it writes goes to the `jam-gym_data` volume or a
+  small `/tmp` tmpfs. The base image is pinned by digest, not just the `24-alpine` tag, so a rebuild always gets the exact
+  same image until that digest is deliberately changed (see the comment in the Dockerfile for how to update it).
 - **Host nginx**: `/etc/nginx/sites-available/jam-gym.eardle.com.conf` (symlinked into `sites-enabled`), a separate
   file from eardle's. The source of truth is `deploy/host-nginx/jam-gym.eardle.com.conf` in this repo.
 - **TLS**: reuses eardle's Cloudflare Origin certificate at `/etc/nginx/ssl/eardle.com/`, which is a wildcard
@@ -91,8 +95,9 @@ start-up migration, after the usual pre-deploy backup.
 Users' tracks live in one SQLite file on the `jam-gym_data` volume. Three layers protect it:
 
 1. **Every deploy takes a backup first** (`scripts/ship.sh`), copies it to `~/jam-gym-backups/` on the server host (outside
-   the Docker volume, so it survives even if the volume is lost; the last 30 are kept), and afterwards checks that every
-   track that existed before still exists. It compares the tracks themselves, not just the count.
+   the Docker volume, so it survives even if the volume is lost; the last 30 are kept, mode 600 in a mode 700 directory —
+   it holds every user's tracks and identity hashes, so only the `ubuntu` account on the host can read it), and afterwards
+   checks that every track that existed before still exists. It compares the tracks themselves, not just the count.
 2. **The server snapshots itself** at start-up and every six hours after (`BACKUP_EVERY_HOURS`), keeping the last 28 in
    `/data/backups`.
 3. **A restart cannot lose committed data.** SQLite runs in WAL mode, and a manual check confirmed that saved tracks
@@ -158,6 +163,12 @@ Then add the DNS record for `jam-gym.eardle.com`.
 
 Edit `deploy/host-nginx/jam-gym.eardle.com.conf`, push, pull on the server, copy it over
 `/etc/nginx/sites-available/jam-gym.eardle.com.conf`, then `sudo nginx -t && sudo systemctl reload nginx`.
+
+`deploy/host-nginx/cloudflare-ips.conf` is the one canonical copy (this repo is the only one that tracks its nginx config
+in git — eardle's is server-only) of `/etc/nginx/cloudflare-ips.conf`, included from **both** sites' `:443` blocks: it
+restricts direct HTTPS access to Cloudflare's own ranges, so nothing can bypass Cloudflare's rate limits and protections
+by talking to the origin's IP directly (2026-09 audit, finding M-1). Update the same way, and copy it to the server too
+when it changes.
 
 ## Recorded sounds and licences
 

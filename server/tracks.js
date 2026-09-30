@@ -159,12 +159,17 @@ export function createTracks(db) {
       return present(rowById(row.id), user);
     },
 
+    /**
+     * Take a track off the public site: also the owner's own way to withdraw one a moderator hid (enough reports
+     * auto-hide a track; see `report` below). Withdrawing one clears its reports, so if they publish it again later
+     * it starts clean and needs a fresh set of reports to be hidden again, rather than the old ones carrying over.
+     */
     unpublish(user, id) {
       const row = owned(id, user);
-      if (row.visibility === 'hidden') throw forbidden('A moderator removed this track.', 'removed');
       transaction(db, () => {
         db.prepare("UPDATE tracks SET visibility = 'private', updated_at = ? WHERE id = ?").run(now(), row.id);
         unindex(db, row.rowid);
+        if (row.visibility === 'hidden') db.prepare('DELETE FROM reports WHERE track_id = ?').run(row.id);
       });
       return present(rowById(row.id), user);
     },

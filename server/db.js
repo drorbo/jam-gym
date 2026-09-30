@@ -94,6 +94,12 @@ const MIGRATIONS = [
     );
     CREATE INDEX sessions_user ON sessions(user_id);
   `),
+
+  // 4: sessions expire after a stretch of disuse, and there can only be so many at once per person (see server/users.js).
+  (db) => db.exec(`
+    ALTER TABLE sessions ADD COLUMN last_used_at INTEGER NOT NULL DEFAULT 0;
+    UPDATE sessions SET last_used_at = created_at WHERE last_used_at = 0;
+  `),
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

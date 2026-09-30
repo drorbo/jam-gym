@@ -10,8 +10,9 @@ import { verifyToken } from './sso.js';
 import { createUsers, publicMe } from './users.js';
 import { HttpError, bad, isSecret, randomId } from './util.js';
 
-const COOKIE = 'jg_session';
-const SSO_COOKIE = 'jg_sso'; // the state of a sign-in with eardle that is under way (10 minutes)
+const SSO_COOKIE = 'jg_sso'; // the state of a sign-in with eardle that is under way (10 minutes); scoped to SSO_PATH,
+// so it cannot itself take the __Host- prefix below (that prefix requires Path=/), but that narrow path is its own
+// protection: nothing other than the two sign-in routes ever sees it.
 const SSO_PATH = '/api/auth/eardle';
 const TWO_YEARS = 60 * 60 * 24 * 365 * 2;
 const MINUTE = 60_000;
@@ -36,7 +37,6 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
   const presets = createPresets(db);
   const features = { eardle: Boolean(config.eardle.secret) };
   const serveStatic = createStatic(root, { watch: !config.production });
-
   // ---- request helpers -------------------------------------------------------------------
 
   const clientIp = (req) => {
@@ -51,6 +51,14 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
 
   const isHttps = (req) => config.trustProxy && req.headers['x-forwarded-proto'] === 'https';
 
+  // The __Host- prefix tells the browser to refuse the cookie unless it also carries Secure, Path=/ and no Domain —
+  // sent here only, never settable by a script or by another origin. Decided per request (by isHttps, the same check
+  // that decides Secure) rather than once for the whole process: the two must always agree, or a browser would
+  // refuse the cookie outright (a __Host- name demands Secure). In production every request is already HTTPS by the
+  // time it reaches here, so this is always the hardened name there; plain local development over http://localhost
+  // keeps the plain name, so `npm start` needs no special-casing.
+  const cookieName = (req) => (isHttps(req) ? '__Host-jg_session' : 'jg_session');
+
   /** Add a Set-Cookie without replacing one already set on this response (a sign-in sets two). */
   function addCookie(res, req, name, value, { path = '/', maxAge }) {
     const attrs = [`${name}=${value}`, `Path=${path}`, `Max-Age=${maxAge}`, 'HttpOnly', 'SameSite=Lax'];
@@ -59,8 +67,8 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
     res.setHeader('Set-Cookie', earlier ? [].concat(earlier, attrs.join('; ')) : attrs.join('; '));
   }
 
-  const setSessionCookie = (res, req, secret) => addCookie(res, req, COOKIE, secret, { maxAge: TWO_YEARS });
-  const clearSessionCookie = (res, req) => addCookie(res, req, COOKIE, '', { maxAge: 0 });
+  const setSessionCookie = (res, req, secret) => addCookie(res, req, cookieName(req), secret, { maxAge: TWO_YEARS });
+  const clearSessionCookie = (res, req) => addCookie(res, req, cookieName(req), '', { maxAge: 0 });
 
   /** Every request that changes something must say it is ours (custom header) and come from our own origin. */
   function checkCsrf(req) {
@@ -189,10 +197,13 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
       return '/?eardle=ok';
     }],
 
-    // only for someone signed in with eardle: it ends this browser's session (their library stays with the eardle account)
-    ['POST', '/api/me/signout', { auth: 'user', limit: W }, ({ req, res, user, secret }) => {
+    // only for someone signed in with eardle: it ends this browser's session (their library stays with the eardle account).
+    // With { everywhere: true } it also ends every other device's session — a stolen or forgotten session can be cut off
+    // without needing to know which one it is.
+    ['POST', '/api/me/signout', { auth: 'user', limit: W }, ({ req, res, user, secret, body }) => {
       if (!user.auth_provider) throw bad('This library is not linked to an eardle account. Keep its recovery code instead.', 'not_linked');
-      users.endSession(secret);
+      if (body?.everywhere) users.endAllSessions(user);
+      else users.endSession(secret);
       clearSessionCookie(res, req);
       return { signedOut: true };
     }],
@@ -261,7 +272,7 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
     if (writes) checkCsrf(req);
     const body = writes ? await readJson(req, r.opts.bodyBytes) : {};
 
-    const secret = parseCookies(req.headers.cookie)[COOKIE];
+    const secret = parseCookies(req.headers.cookie)[cookieName(req)];
     let user = isSecret(secret) ? users.findBySecret(secret) : null;
     let activeSecret = user ? secret : null;
     if (r.opts.auth === 'user' && !user) throw new HttpError(401, 'no_session', 'You have not saved anything yet.');
