@@ -34,10 +34,10 @@ const sidebar = mountSidebar({ storage });
 mountTracksUI({ store, player, tracks, sidebar });
 mountPresetsUI({ store, presets, tracks, sidebar });
 mountCollapsibles({ root: document.getElementById('sidebar'), storage, toggleAll: document.getElementById('sec-toggle-all') });
-// Quick progressions, Tempo and Key change/Tempo ramp: each a collapsible <details> (css/app.css's .sec), same as the
-// sidebar above and the drum mixer inside the Band module (mountBandUI). Three scoped calls, not one covering <main>,
-// so none of them doubles up on another's <details> (the drum mixer's in particular, which mountBandUI already covers).
-mountCollapsibles({ root: document.querySelector('.board'), storage });
+// Tempo and Key change/Tempo ramp: each a collapsible <details> (css/app.css's .sec), same as the sidebar above and
+// the drum mixer inside the Band module (mountBandUI). Two scoped calls, not one covering <main>, so neither doubles
+// up on another's <details> (the drum mixer's in particular, which mountBandUI already covers). Quick progressions
+// is its own popup now (mountQuickProgressions, src/app/quick-ui.js), not a collapsible section.
 mountCollapsibles({ root: document.querySelector('.tempowrap'), storage });
 mountCollapsibles({ root: document.querySelector('.mod'), storage });
 // The Band module: Style, Bass line, Keys, Drums and Mix, one tab at a time.

@@ -28,6 +28,26 @@ export function mountQuickProgressions({ store, player }) {
   let lastStyle = null;
   let last = '';
 
+  // A button that pops this open, the same interaction as the starting-key picker next to it (src/app/ui.js):
+  // click to open, click elsewhere or Escape to close — and, since picking a progression is a one-shot action
+  // rather than something to keep adjusting, picking one closes it too.
+  const pick = document.getElementById('quickpick');
+  const btn = document.getElementById('quickbtn');
+  const pop = document.getElementById('quickpop');
+  if (pick && btn && pop) {
+    const setOpen = (open) => {
+      pop.hidden = !open;
+      btn.setAttribute('aria-expanded', String(open));
+      pick.classList.toggle('open', open);
+    };
+    btn.addEventListener('click', () => setOpen(pop.hidden));
+    document.addEventListener('pointerdown', (e) => { if (!pop.hidden && !pick.contains(e.target)) setOpen(false); });
+    pick.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !pop.hidden) { setOpen(false); btn.focus(); e.stopPropagation(); }
+    });
+    listEl.addEventListener('click', (e) => { if (e.target.closest('.chip')) setOpen(false); });
+  }
+
   for (const g of PROGRESSION_GROUPS) {
     const b = el('button', '', g.name);
     b.type = 'button';

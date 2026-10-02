@@ -27,14 +27,15 @@ To ship a change (tests, commit, push, deploy, verify, in one go): `bash scripts
   (the page is long), a small floating copy of the same three appears top left, so playback is never out of reach.
 - **The band is one tabbed module**: Style, Bass line, Keys, Drums and Mix (levels) sit behind a tab strip, one
   shown at a time, instead of five long panels stacked on top of each other. Which tab you were on is kept on this device.
-- **Everything else collapses**: Quick progressions, Tempo, Key change and Tempo ramp each have a clickable title
-  that folds them away (as does the drum mixer inside Drums); which ones you left open is kept on this device too.
+- **Everything else collapses**: Tempo, Key change and Tempo ramp each have a clickable title that folds them away
+  (as does the drum mixer inside Drums); which ones you left open is kept on this device too.
 - **Progression**: `Cmaj7 | Am7 | Dm7 G7 | %`. Bars are separated by `|` or a new line, chords in one bar by
   spaces (they share the bar), `%` repeats the previous bar, `NC` is a bar of silence for the harmony.
   Extensions work: `maj7 m7 7 m7b5 dim dim7 sus2 sus4 add9 6 6/9 9 13 7#9 7b13 7alt m(maj7) C/E` and more.
-- **Quick progressions**: under the progression box, in kinds (Jazz, Blues, Rock, Odd meters). The tabs start on your style. Choosing
-  one changes only the chords, moved into your starting key: never your style, settings or tempo. The odd-meter ones also set the
-  time (their tooltip says so), because they only make sense in their meter.
+- **Quick progressions**: a button beside Starting key, the same kind of popup. Pick a kind (Jazz, Blues, Rock, Odd meters,
+  starting on your style) and a progression closes the popup and changes only the chords, moved into your starting key: never
+  your style, settings or tempo. The odd-meter ones also set the time (their tooltip says so), because they only make sense
+  in their meter.
 - **Presets**: in the Style panel, three ways to play each style (jazz: Medium swing, Ballad, Bossa nova, Afro-Cuban, Latin ballad; blues: Shuffle, Slow
   blues, Half-time shuffle; rock: Classic rock, Half-time heavy, Funk rock). Each one also sets the tempo it sounds best at
   (from the next beat if you are playing), and never touches your chords, key or meter. Your own presets are in the sidebar's
