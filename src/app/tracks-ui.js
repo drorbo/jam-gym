@@ -99,6 +99,25 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
   for (const sel of [fStyle, fMeter, fKey, fSort]) sel.addEventListener('change', runSearch);
   $('browse-more').addEventListener('click', () => tracks.loadMore());
 
+  // the Style/Time/Key/Tempo/Sort fields live behind a "Filters" button, the same popup interaction as the
+  // starting-key and quick-progressions pickers (src/app/ui.js, src/app/quick-ui.js): most visits to Browse are
+  // just a search, so the fields people reach for occasionally stay out of the way until asked for.
+  const filterpick = $('filterpick'); const filterbtn = $('filterbtn'); const filterpop = $('filterpop');
+  const setFilterPop = (open) => {
+    filterpop.hidden = !open;
+    filterbtn.setAttribute('aria-expanded', String(open));
+    filterpick.classList.toggle('open', open);
+  };
+  filterbtn.addEventListener('click', () => setFilterPop(filterpop.hidden));
+  document.addEventListener('pointerdown', (e) => { if (!filterpop.hidden && !filterpick.contains(e.target)) setFilterPop(false); });
+  filterpick.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !filterpop.hidden) { setFilterPop(false); filterbtn.focus(); e.stopPropagation(); }
+  });
+  $('filters-clear').addEventListener('click', () => {
+    fStyle.value = ''; fMeter.value = ''; fKey.value = ''; fSort.value = ''; $('f-bpm-min').value = ''; $('f-bpm-max').value = '';
+    runSearch();
+  });
+
   // ---- shared row pieces -----------------------------------------------------------------
 
   function stateChip(t) {
@@ -345,8 +364,8 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
     const list = $('browse-list');
     list.replaceChildren();
     const active = Object.entries(b.params).filter(([k, v]) => k !== 'sort' && v !== '' && v != null).length;
-    $('sum-filters').textContent = active ? `${active} active` : '';
-    $('sum-results').textContent = b.loaded && !b.error ? String(b.total) : '';
+    $('filter-count').textContent = String(active);
+    $('filter-count').hidden = !active;
     const count = $('browse-count');
     count.className = 'msg';
     if (state.tracks.status === 'offline') { count.textContent = 'Browsing needs a connection to the server.'; $('browse-more').hidden = true; return; }
@@ -379,6 +398,7 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
     $('panel-mine').hidden = tab !== 'mine';
     $('panel-presets').hidden = tab !== 'presets';
     $('panel-browse').hidden = tab !== 'browse';
+    $('sec-toggle-all').hidden = tab === 'browse'; // Browse has no collapsible sections of its own any more
 
     // only rebuild a region when something it shows has changed
     const edited = t.active ? setupSignature(buildTrackData(state)) !== t.active.signature : false;

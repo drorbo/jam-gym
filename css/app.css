@@ -240,12 +240,12 @@ h2 { margin: 0 0 0.85rem; font-size: 0.875rem; font-weight: 600; color: var(--mu
 .entry-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
 /* quick-progressions and starting-key pickers: a button that pops a small panel open below it, closed by clicking
    elsewhere, Escape, or (quick progressions only) by picking one. See src/app/quick-ui.js and src/app/ui.js. */
-.quickpick, .keypick { position: relative; }
+.quickpick, .keypick, .filterpick { position: relative; }
 .keybtn {
   display: inline-flex; align-items: center; gap: 0.7rem; min-height: 40px; padding: 0 0.5rem 0 1rem;
   background: var(--field); border: 1px solid var(--fret-strong); border-radius: 999px; color: var(--muted); font-size: 0.875rem;
 }
-.keybtn:hover, .keypick.open .keybtn, .quickpick.open .keybtn { border-color: var(--brass); color: var(--text); }
+.keybtn:hover, .keypick.open .keybtn, .quickpick.open .keybtn, .filterpick.open .keybtn { border-color: var(--brass); color: var(--text); }
 .keybtn-val {
   min-width: 2.6rem; padding: 0.2rem 0.7rem; border-radius: 999px; background: var(--brass); color: var(--brass-ink);
   font-size: 1.05rem; font-weight: 800; text-align: center;
@@ -260,6 +260,13 @@ h2 { margin: 0 0 0.85rem; font-size: 0.875rem; font-weight: 600; color: var(--mu
    viewport and reading the popup's own bounding box, since the browser-resize tool in this environment does not
    actually resize the page (see git log for the Band-module commit, which hit the same tool limitation). */
 .quickpop { width: min(32rem, calc(100vw - 2 * var(--gutter))); }
+/* the browse filters: same popup box, but it lives in the narrow sidebar rather than the main column. Anchored
+   right:0 like .keypop/.quickpop (the Filters button sits at the search row's own right edge, for the same reason
+   those two are right-anchored), and a fixed width rather than a share of its button's own shrink-to-fit box. */
+.filterpop { right: 0; left: auto; width: min(18rem, calc(100vw - 2 * var(--gutter))); }
+.filterpop .filters { margin-top: 0; flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+.filterpop .field { justify-content: space-between; }
+.filterpop .field select { flex: 1 1 auto; min-width: 0; }
 .keytip { padding: 0.9rem 1rem; font-size: 0.875rem; color: var(--muted); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.15s; }
 .keytip strong { color: var(--text); }
 .keytip p { margin: 0.3rem 0; }
@@ -385,12 +392,20 @@ a.link { text-decoration: none; }
 .local-box { padding-top: 0.2rem; }
 .local-box .msg { margin-bottom: 0.6rem; }
 
+/* Browse used to nest its search box, filters and results each under their own collapsible header, all open by
+   default: three sections, six filter fields always on screen, before a single result ever showed. Now it is just
+   a search box with a Filters button next to it (the fields are the same ones, just tucked into that button's
+   popup, the same move already made for quick progressions) and the results straight below. */
+#panel-browse { border-top: 1px solid var(--fret); padding-top: 0.75rem; }
+.browse-form { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
 .browse-form input[type='search'] {
-  display: block; width: 100%; min-height: 44px; padding: 0 1rem; font-size: 1rem;
+  flex: 1 1 12rem; display: block; min-height: 44px; padding: 0 1rem; font-size: 1rem;
   background: var(--field); border: 1px solid var(--fret-strong); border-radius: 8px; color: var(--text);
 }
 .filters { display: flex; flex-wrap: wrap; gap: 0.6rem 1.25rem; margin-top: 0.8rem; }
 .filters .field input[type='number'] { width: 4.25rem; }
+#filters-clear { margin-top: 0.2rem; }
+#browse-count { margin-top: 0.8rem; }
 #browse-more { margin-top: 1rem; }
 .msg { min-height: 1.5rem; margin: 0.4rem 0 0; font-size: 0.875rem; color: var(--muted); }
 .msg.bad { color: var(--danger); }

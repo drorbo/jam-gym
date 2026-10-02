@@ -329,12 +329,14 @@
         </section>
 
         <section id="panel-browse" role="tabpanel" aria-labelledby="tab-browse" hidden>
-          <details class="sec" data-section="filters" open>
-            <summary><span class="sec-title">Search and filters</span><span class="sec-sum" id="sum-filters"></span></summary>
-            <div class="sec-body">
-              <form class="browse-form" id="browse-form" role="search" autocomplete="off">
-                <label class="sr-only" for="browse-q">Search published tracks</label>
-                <input id="browse-q" type="search" maxlength="200" placeholder="Search titles, names or chords, e.g. Dm7 G7" spellcheck="false">
+          <form class="browse-form" id="browse-form" role="search" autocomplete="off">
+            <label class="sr-only" for="browse-q">Search published tracks</label>
+            <input id="browse-q" type="search" maxlength="200" placeholder="Search titles, names or chords, e.g. Dm7 G7" spellcheck="false">
+            <div class="keypick filterpick" id="filterpick">
+              <button class="keybtn" type="button" id="filterbtn" aria-haspopup="true" aria-expanded="false">
+                Filters<span class="keybtn-val" id="filter-count" hidden></span>
+              </button>
+              <div class="keypop filterpop" id="filterpop" hidden>
                 <div class="filters">
                   <label class="field">Style <select id="f-style"></select></label>
                   <label class="field">Time <select id="f-meter"></select></label>
@@ -346,17 +348,13 @@
                   </label>
                   <label class="field">Sort <select id="f-sort"></select></label>
                 </div>
-              </form>
+                <button class="link" id="filters-clear" type="button">Clear filters</button>
+              </div>
             </div>
-          </details>
-          <details class="sec" data-section="results" open>
-            <summary><span class="sec-title">Results</span><span class="sec-sum" id="sum-results"></span></summary>
-            <div class="sec-body">
-              <p class="msg" id="browse-count" role="status"></p>
-              <ul class="track-list" id="browse-list"></ul>
-              <button class="chip" id="browse-more" type="button" hidden>Show more</button>
-            </div>
-          </details>
+          </form>
+          <p class="msg" id="browse-count" role="status"></p>
+          <ul class="track-list" id="browse-list"></ul>
+          <button class="chip" id="browse-more" type="button" hidden>Show more</button>
         </section>
       </div>
     </div>
