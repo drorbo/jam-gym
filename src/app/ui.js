@@ -426,6 +426,7 @@ export function mountUI({ store, player }) {
     const tm = getMeter(song.timeSignature);
     const hint = tm.describeTempo(bpm);
     $('tempo-hint').textContent = hint ? `${hint}. ${tm.tapHint}.` : '';
+    $('sum-tempo').textContent = `${bpm} BPM · ${song.timeSignature}`;
 
     $$('#styles button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.v === config.style)));
     const style = getStyle(config.style);

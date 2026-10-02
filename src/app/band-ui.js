@@ -1,6 +1,7 @@
-// The Bass line, Keys and Drums panels. One component draws all three from the schema in styles/settings.js: a select
-// for each choice, a slider with a word for where it sits for each amount, a one-line summary in the header, and a
-// button that puts the panel back to the style's own settings. Changes apply from the next bar.
+// The Bass line, Keys and Drums tabs of the Band module (src/app/tabs.js switches between them, and the Style tab
+// next to them; see index.html's #band-tabs). One component draws all three from the schema in styles/settings.js: a
+// select for each choice, a slider with a word for where it sits for each amount, a one-line summary, and a button
+// that puts the panel back to the style's own settings. Changes apply from the next bar.
 
 import { defaultBass, defaultComp, defaultKit, defaultSwing, getStyle } from '../styles/index.js';
 import { DRUM_PARTS, levelDb } from '../styles/drumparts.js';
@@ -11,6 +12,7 @@ import {
 import { mountCollapsibles } from './collapsible.js';
 
 const DEFAULTS = { bass: defaultBass, comp: defaultComp, kit: defaultKit };
+const PANEL_ID = { bass: 'bp-bass', comp: 'bp-keys', kit: 'bp-drums' };
 const el = (tag, cls, text) => {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -55,7 +57,6 @@ function notes(group, v, style, song, bpm) {
 }
 
 export function mountBandUI({ store, storage = null }) {
-  const root = $('band-panels');
   const panels = {};
   let builtFor = null;
 
@@ -156,17 +157,10 @@ export function mountBandUI({ store, storage = null }) {
     }
   }
 
-  // ---- static shell: one collapsible panel per group -----------------------------------------
+  // ---- static shell: Bass line / Keys / Drums fill the tab panel index.html already has for each -----------------
   for (const group of GROUP_IDS) {
-    const section = el('section', 'bassline');
-    section.setAttribute('aria-label', GROUPS[group].title);
-    const details = el('details');
-    details.dataset.section = `panel-${group}`;
-    const summary = el('summary');
-    const title = el('span', 'bl-title', GROUPS[group].title);
-    const sum = el('span', 'bl-sum');
-    summary.append(title, sum);
-    const body = el('div', 'bl-body');
+    const panelEl = $(PANEL_ID[group]);
+    const sum = el('p', 'bl-sum');
     const grid = el('div', 'bl-grid');
     const hint = el('p', 'hint');
     const reset = el('button', 'chip');
@@ -177,7 +171,8 @@ export function mountBandUI({ store, storage = null }) {
     });
     let mixer = null;
     if (group === 'kit') {
-      // the mini mixer: one small fader per drum, folded away until wanted (drawn per style in build())
+      // the mini mixer: one small fader per drum, folded away until wanted (drawn per style in build()) — the Drums
+      // tab's own visibility already hides/shows the rest, so this is the one thing here still worth its own fold
       const md = el('details', 'minimix');
       md.dataset.section = 'panel-kit-mixer';
       const ms = el('summary');
@@ -187,13 +182,10 @@ export function mountBandUI({ store, storage = null }) {
       md.append(ms, mg);
       mixer = { details: md, sum: msum, grid: mg, rows: {} };
     }
-    body.append(grid, ...(mixer ? [mixer.details] : []), hint, reset);
-    details.append(summary, body);
-    section.append(details);
-    root.append(section);
-    panels[group] = { section, details, sum, grid, hint, reset, mixer, inputs: {} };
+    panelEl.append(sum, grid, ...(mixer ? [mixer.details] : []), hint, reset);
+    panels[group] = { sum, grid, hint, reset, mixer, inputs: {} };
   }
-  mountCollapsibles({ root, storage });
+  mountCollapsibles({ root: $('bp-drums'), storage }); // only the drum mixer's own <details> is left to track
 
   let last = '';
   function render(state) {

@@ -25,8 +25,10 @@ To ship a change (tests, commit, push, deploy, verify, in one go): `bash scripts
 
 - **Playback controls**: Play/pause, Stop and Restart sit under the chord display. Once that scrolls out of view
   (the page is long), a small floating copy of the same three appears top left, so playback is never out of reach.
-- **Every panel collapses**: Quick progressions, Tempo, Style, Levels, Bass line, Keys, Drums, Key change and
-  Tempo ramp each have a clickable title that folds them away; which ones you left open is kept on this device.
+- **The band is one tabbed module**: Style, Bass line, Keys, Drums and Mix (levels) sit behind a tab strip, one
+  shown at a time, instead of five long panels stacked on top of each other. Which tab you were on is kept on this device.
+- **Everything else collapses**: Quick progressions, Tempo, Key change and Tempo ramp each have a clickable title
+  that folds them away (as does the drum mixer inside Drums); which ones you left open is kept on this device too.
 - **Progression**: `Cmaj7 | Am7 | Dm7 G7 | %`. Bars are separated by `|` or a new line, chords in one bar by
   spaces (they share the bar), `%` repeats the previous bar, `NC` is a bar of silence for the harmony.
   Extensions work: `maj7 m7 7 m7b5 dim dim7 sus2 sus4 add9 6 6/9 9 13 7#9 7b13 7alt m(maj7) C/E` and more.
@@ -57,7 +59,7 @@ To ship a change (tests, commit, push, deploy, verify, in one go): `bash scripts
   Choosing a style sets it to that style's default (jazz 65% at its default tempo, blues 67%, rock 50%; jazz eases toward
   straighter as the default tempo rises); a small button restores the default after you've moved it. It applies from
   the next bar, is saved with saved progressions, and is disabled in 6/8, 7/8 and 10/8, whose feel comes from their groupings.
-- **Bass line, Keys and Drums**: three panels under the controls that shape how each part of the band plays. See below.
+- **Bass line, Keys and Drums**: three tabs, alongside Style and Mix, that shape how each part of the band plays. See below.
 - **Tracks**: the button in the header opens the tracks sidebar, described below. Every section of it folds away, and
   remembers whether it was open. A track is the whole setup, not just the chords.
 - **Key change**: *Step* moves by an interval (−11…+11 semitones, named) every N loops.
@@ -72,8 +74,9 @@ To ship a change (tests, commit, push, deploy, verify, in one go): `bash scripts
 
 ## Shaping the band: Bass line, Keys and Drums
 
-Under the controls are three collapsible panels, one for each part of the band. Every slider has a word for where it
-sits, "Style default" restores the panel, choosing a style resets all three, and the settings are saved with a track. They
+Style, Bass line, Keys, Drums and Mix share one tabbed module (`src/app/tabs.js`), one part of the band showing at a time
+instead of several long panels stacked on top of each other. Every slider has a word for where it sits, "Style default"
+restores a tab, choosing a style resets Bass line, Keys and Drums together, and the settings are saved with a track. They
 apply from the next bar, in every time signature. At the middle a slider plays what the style always played; less is
 sparser or simpler, more is busier or richer.
 

@@ -196,7 +196,7 @@ h2 { margin: 0 0 0.85rem; font-size: 0.875rem; font-weight: 600; color: var(--mu
 .presets-style { font-weight: 400; }
 .presets-style::before { content: '· '; }
 .preset-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
-.ctl .presets .chip { margin-top: 0; min-height: 36px; font-size: 0.875rem; }
+.style-detail .presets .chip { margin-top: 0; min-height: 36px; font-size: 0.875rem; }
 .linkbtn { background: none; border: 0; padding: 0; color: var(--brass); text-decoration: underline; cursor: pointer; font: inherit; }
 
 /* ---- progression: the fretboard ---------------------------------------------------- */
@@ -291,9 +291,9 @@ input[type='number'] { width: 4.5rem; min-height: 40px; padding: 0 0.5rem; text-
 .sec-tools { display: flex; justify-content: flex-end; margin: 0.4rem 0 0; }
 
 /* collapsible sections: the same summary style as the bass line panel */
-/* .ctl and .mod-col do not get this: they are columns in a grid whose own left/top divider rules (and the
-   responsive breakpoints further down) already decide when a border is needed and on which side. */
-.sec:not(.ctl):not(.mod-col) { border-top: 1px solid var(--fret); }
+/* .mod-col does not get this: it is a column in a grid whose own left/top divider rules (and the responsive
+   breakpoint further down) already decide when a border is needed and on which side. */
+.sec:not(.mod-col) { border-top: 1px solid var(--fret); }
 .sec > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem 0.9rem; padding: 0.75rem 0; cursor: pointer; list-style: none; }
 .sec > summary::-webkit-details-marker { display: none; }
 .sec > summary::before {
@@ -392,18 +392,8 @@ a.link { display: inline-flex; align-items: center; text-decoration: none; }
 .examples { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
 .examples .chip { min-height: 36px; font-size: 0.875rem; }
 
-/* ---- tempo / style / levels ---------------------------------------------------------- */
-.controls {
-  display: grid; grid-template-columns: 1.1fr 1fr 1.2fr; margin-top: 2.5rem;
-  border-top: 1px solid var(--fret);
-}
-.ctl { padding: 1.5rem clamp(1rem, 3vw, 2rem) 1.5rem 0; }
-.ctl + .ctl { padding-left: clamp(1rem, 3vw, 2rem); border-left: 2px solid var(--fret-strong); }
-/* Tempo / Style / Levels are collapsible (.sec; the top border itself is skipped for them, see .sec:not(.ctl) above,
-   since the grid's own left/top divider rules already handle it) — only the summary/body's own padding would still
-   duplicate the .ctl padding that used to be the only padding here, so that part is zeroed. */
-.ctl.sec > summary { padding-top: 0; }
-.ctl.sec > .sec-body { padding-bottom: 0; }
+/* ---- tempo -------------------------------------------------------------------------- */
+.tempowrap { margin-top: 2.5rem; }
 
 .bpm-row { display: flex; align-items: center; gap: 0.6rem; }
 .bpm-row input {
@@ -419,7 +409,6 @@ a.link { display: inline-flex; align-items: center; text-decoration: none; }
 }
 .step:hover { border-color: var(--text); }
 .step:active { background: var(--raised); }
-.ctl .chip { margin-top: 1rem; }
 .tempo-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; margin-top: 1rem; }
 .tempo-tools .chip { margin-top: 0; }
 
@@ -474,7 +463,7 @@ a.link { display: inline-flex; align-items: center; text-decoration: none; }
 }
 .mod-col { padding: 1.5rem clamp(1rem, 3vw, 2rem) 1rem 0; }
 .mod-col + .mod-col { padding-left: clamp(1rem, 3vw, 2rem); border-left: 2px solid var(--fret-strong); }
-/* same reasoning as .ctl.sec above */
+/* .mod-col's own padding above already does this grid's spacing; the summary/body's own padding would only add to it */
 .mod-col.sec > summary { padding-top: 0; }
 .mod-col.sec > .sec-body { padding-bottom: 0; }
 .fields { display: flex; flex-wrap: wrap; gap: 0.6rem 1.25rem; margin-top: 1rem; min-height: 40px; }
@@ -499,10 +488,6 @@ a.link { display: inline-flex; align-items: center; text-decoration: none; }
 .foot { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--fret); font-size: 0.875rem; color: var(--muted); }
 
 /* ---- tablet / phone ----------------------------------------------------------------- */
-@container (max-width: 828px) {
-  .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .controls .ctl:nth-child(3) { grid-column: 1 / -1; border-left: 0; padding-left: 0; border-top: 1px solid var(--fret); }
-}
 @container (max-width: 660px) {
   .stage { grid-template-columns: 1fr; }
   .transport { grid-auto-flow: column; justify-content: start; justify-items: start; align-items: center; gap: 1.25rem; grid-template-columns: auto 1fr; }
@@ -517,10 +502,6 @@ a.link { display: inline-flex; align-items: center; text-decoration: none; }
   .bars { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bar:nth-child(n + 3) { border-top: 1px solid var(--fret); }
   .bar { min-height: 6rem; }
-  .controls { grid-template-columns: minmax(0, 1fr); }
-  .ctl, .ctl + .ctl { padding-left: 0; padding-right: 0; border-left: 0; }
-  .ctl + .ctl { border-top: 1px solid var(--fret); }
-  .controls .ctl:nth-child(3) { border-top: 1px solid var(--fret); }
   .bar .bss { font-size: 1.75rem; }
 }
 
@@ -557,21 +538,19 @@ body.sidebar-lock { overflow: hidden; }
 .loaded-now.flash { color: var(--brass); }
 .loaded-now.flash.bad { color: var(--danger); }
 
-/* ---- bass line panel ------------------------------------------------------------------ */
-.bassline { border-top: 1px solid var(--fret); }
-.bassline summary {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 1.25rem; padding: 1rem 0; cursor: pointer; list-style: none;
+/* ---- the band: Style, Bass line, Keys, Drums and Mix, a tab at a time (src/app/band-ui.js, src/app/tabs.js) ------ */
+.bandmod { margin-top: 2.5rem; border-top: 1px solid var(--fret); padding-top: 1.3rem; }
+.bandtabs {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(5rem, 1fr)); width: 100%;
+  border: 1px solid var(--fret-strong); border-radius: 999px; padding: 2px; margin-bottom: 1.3rem;
 }
-.bassline summary::-webkit-details-marker { display: none; }
-.bassline summary::before {
-  content: ''; flex: none; align-self: center; width: 0.5rem; height: 0.5rem; margin-right: -0.5rem;
-  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-45deg); transition: transform 0.15s;
-}
-.bassline details[open] summary::before { transform: rotate(45deg); }
-.bassline summary:hover .bl-title { color: var(--brass); }
-.bl-title { padding-left: 1.1rem; font-size: 0.875rem; font-weight: 600; color: var(--muted); }
+.bandtabs button { min-height: 40px; padding: 0 0.5rem; background: none; border: 0; border-radius: 999px; color: var(--muted); font-size: 0.9375rem; }
+.bandtabs button:hover { color: var(--text); }
+.bandtabs button[aria-selected='true'] { background: var(--brass); color: var(--brass-ink); font-weight: 600; }
+.bandpanel { padding-bottom: 0.5rem; }
+.bl-title { font-size: 0.875rem; font-weight: 600; color: var(--muted); }
 .bl-sum { font-size: 0.9375rem; color: var(--text); min-width: 0; overflow-wrap: anywhere; }
-.bl-body { padding: 0.4rem 0 1.6rem 1.1rem; }
+.bandpanel > .bl-sum { display: block; margin: 0 0 1.1rem; }
 .bl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 1.4rem 2.25rem; align-items: start; }
 .bl-field { display: grid; grid-template-columns: 5.2rem minmax(0, 1fr); align-items: center; gap: 0.6rem; }
 .bl-field select { width: 100%; min-width: 0; }
@@ -589,8 +568,15 @@ body.sidebar-lock { overflow: hidden; }
 .mixbtn:hover { color: var(--text); border-color: var(--text); }
 .mixbtn[aria-pressed='true'] { color: var(--brass); border-color: var(--brass); }
 .bl-range.is-mixed .slider { accent-color: var(--muted); }
-.bl-body .hint { max-width: 70ch; }
-.bl-body .chip { margin-top: 0.8rem; min-height: 34px; font-size: 0.875rem; }
+.bandpanel .hint { max-width: 70ch; }
+.bandpanel > .chip { margin-top: 0.8rem; min-height: 34px; font-size: 0.875rem; }
+
+/* the Style tab: the style picker narrower, on its own, beside presets/swing/sounds */
+.style-grid { display: grid; grid-template-columns: minmax(10rem, 15rem) minmax(0, 1fr); gap: 0.5rem 2.5rem; align-items: start; }
+.style-detail > :first-child { margin-top: 0; }
+@container (max-width: 700px) {
+  .style-grid { grid-template-columns: minmax(0, 1fr); }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

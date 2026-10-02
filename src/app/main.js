@@ -9,6 +9,7 @@ import { mountCollapsibles } from './collapsible.js';
 import { mountSidebar } from './sidebar.js';
 import { mountPresetsUI } from './presets-ui.js';
 import { mountQuickProgressions } from './quick-ui.js';
+import { mountTabs } from './tabs.js';
 import { mountTracksUI } from './tracks-ui.js';
 import { mountUI } from './ui.js';
 
@@ -33,12 +34,14 @@ const sidebar = mountSidebar({ storage });
 mountTracksUI({ store, player, tracks, sidebar });
 mountPresetsUI({ store, presets, tracks, sidebar });
 mountCollapsibles({ root: document.getElementById('sidebar'), storage, toggleAll: document.getElementById('sec-toggle-all') });
-// Quick progressions, Tempo/Style/Levels and Key change/Tempo ramp: each a collapsible <details> (css/app.css's .sec),
-// same as the sidebar above and the Bass line/Keys/Drums panels (mountBandUI). Three calls, not one covering <main>,
-// so this never doubles up on the band panels' own details, which mountBandUI already covers.
+// Quick progressions, Tempo and Key change/Tempo ramp: each a collapsible <details> (css/app.css's .sec), same as the
+// sidebar above and the drum mixer inside the Band module (mountBandUI). Three scoped calls, not one covering <main>,
+// so none of them doubles up on another's <details> (the drum mixer's in particular, which mountBandUI already covers).
 mountCollapsibles({ root: document.querySelector('.board'), storage });
-mountCollapsibles({ root: document.querySelector('.controls'), storage });
+mountCollapsibles({ root: document.querySelector('.tempowrap'), storage });
 mountCollapsibles({ root: document.querySelector('.mod'), storage });
+// The Band module: Style, Bass line, Keys, Drums and Mix, one tab at a time.
+mountTabs(document.getElementById('band-tabs'), { storage, default: 'bt-style' });
 tracks.init();
 // the sign-in with eardle result is announced once (by tracks.init from the address), then taken off the address bar
 try {
