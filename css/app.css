@@ -70,6 +70,7 @@ button { cursor: pointer; }
   background: none; border: 1px solid transparent; border-radius: 50%; color: var(--muted);
 }
 .icon-btn:hover { color: var(--text); border-color: var(--fret); }
+.icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 h2 { margin: 0 0 0.85rem; font-size: 0.875rem; font-weight: 600; color: var(--muted); letter-spacing: 0.01em; }
 
@@ -159,6 +160,26 @@ h2 { margin: 0 0 0.85rem; font-size: 0.875rem; font-weight: 600; color: var(--mu
 .ghost:disabled:hover { border-color: var(--fret-strong); }
 .app[data-transport='paused'] .chord { opacity: 0.55; }
 .toggles { display: flex; gap: 0.5rem; }
+
+/* floating transport: a shrunk copy of the play/stop/restart controls, shown once the real ones scroll out of view
+   (see the IntersectionObserver in ui.js) so playback is never more than a scroll away from being reachable.
+   A fixed child of body, not of .app: .app is a query container (container-type), which would otherwise make it the
+   containing block for position: fixed and have this scroll away with the page instead of staying put. */
+.fab-transport {
+  position: fixed; top: calc(1rem + env(safe-area-inset-top, 0px)); left: calc(1rem + env(safe-area-inset-left, 0px));
+  z-index: 25; display: flex; align-items: center; gap: 0.35rem;
+  padding: 0.35rem; border-radius: 999px;
+  background: var(--raised); border: 1px solid var(--fret-strong); box-shadow: 0 8px 24px rgb(0 0 0 / 0.3);
+  opacity: 0; transform: translateY(-10px) scale(0.96); pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.fab-transport.visible { opacity: 1; transform: none; pointer-events: auto; }
+.fab-play { width: 48px; }
+.fab-play svg { width: 44%; height: 44%; }
+.fab-transport[data-transport='playing'] .fab-play .i-play,
+.fab-transport[data-transport='countin'] .fab-play .i-play { display: none; }
+.fab-transport[data-transport='playing'] .fab-play .i-pause,
+.fab-transport[data-transport='countin'] .fab-play .i-pause { display: block; }
 
 .chip {
   min-height: 40px; padding: 0 1rem; background: none; border: 1px solid var(--fret-strong);

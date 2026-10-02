@@ -23,6 +23,8 @@ To ship a change (tests, commit, push, deploy, verify, in one go): `bash scripts
 
 ## Using it
 
+- **Playback controls**: Play/pause, Stop and Restart sit under the chord display. Once that scrolls out of view
+  (the page is long), a small floating copy of the same three appears top left, so playback is never out of reach.
 - **Progression**: `Cmaj7 | Am7 | Dm7 G7 | %`. Bars are separated by `|` or a new line, chords in one bar by
   spaces (they share the bar), `%` repeats the previous bar, `NC` is a bar of silence for the harmony.
   Extensions work: `maj7 m7 7 m7b5 dim dim7 sus2 sus4 add9 6 6/9 9 13 7#9 7b13 7alt m(maj7) C/E` and more.

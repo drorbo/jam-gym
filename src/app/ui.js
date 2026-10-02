@@ -187,6 +187,13 @@ export function mountUI({ store, player }) {
   $('play').addEventListener('click', () => player.togglePlay());
   $('stop').addEventListener('click', () => player.stop());
   $('restart').addEventListener('click', () => player.restart());
+
+  // Floating transport: the same three actions, shown once the real play button scrolls out of view.
+  $('fab-play').addEventListener('click', () => player.togglePlay());
+  $('fab-stop').addEventListener('click', () => player.stop());
+  $('fab-restart').addEventListener('click', () => player.restart());
+  const fab = $('fab-transport');
+  new IntersectionObserver(([entry]) => fab.classList.toggle('visible', !entry.isIntersecting), { threshold: 0 }).observe($('play'));
   $('countin').addEventListener('click', () => patchConfig({ countIn: !store.get().config.countIn }));
   $('loop').addEventListener('click', () => patchConfig({ loop: !store.get().config.loop }));
 
@@ -316,6 +323,7 @@ export function mountUI({ store, player }) {
     const { transport, view, song } = state;
     const stopped = transport === 'stopped';
     app.dataset.transport = transport;
+    fab.dataset.transport = transport;
 
     const key = stopped ? song.key : (view.key ?? song.key);
     $('key').textContent = prettyKey(key);
@@ -396,6 +404,11 @@ export function mountUI({ store, player }) {
     play.title = `${label} (Space)`;
     play.setAttribute('aria-disabled', String(stopped && !canPlay));
     $('stop').disabled = stopped;
+    const fabPlay = $('fab-play');
+    fabPlay.setAttribute('aria-label', label);
+    fabPlay.title = play.title;
+    fabPlay.setAttribute('aria-disabled', play.getAttribute('aria-disabled'));
+    $('fab-stop').disabled = stopped;
     $('countin').setAttribute('aria-pressed', String(state.config.countIn));
     $('loop').setAttribute('aria-pressed', String(state.config.loop));
 
