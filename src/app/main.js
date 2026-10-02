@@ -33,6 +33,12 @@ const sidebar = mountSidebar({ storage });
 mountTracksUI({ store, player, tracks, sidebar });
 mountPresetsUI({ store, presets, tracks, sidebar });
 mountCollapsibles({ root: document.getElementById('sidebar'), storage, toggleAll: document.getElementById('sec-toggle-all') });
+// Quick progressions, Tempo/Style/Levels and Key change/Tempo ramp: each a collapsible <details> (css/app.css's .sec),
+// same as the sidebar above and the Bass line/Keys/Drums panels (mountBandUI). Three calls, not one covering <main>,
+// so this never doubles up on the band panels' own details, which mountBandUI already covers.
+mountCollapsibles({ root: document.querySelector('.board'), storage });
+mountCollapsibles({ root: document.querySelector('.controls'), storage });
+mountCollapsibles({ root: document.querySelector('.mod'), storage });
 tracks.init();
 // the sign-in with eardle result is announced once (by tracks.init from the address), then taken off the address bar
 try {

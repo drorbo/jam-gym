@@ -291,7 +291,9 @@ input[type='number'] { width: 4.5rem; min-height: 40px; padding: 0 0.5rem; text-
 .sec-tools { display: flex; justify-content: flex-end; margin: 0.4rem 0 0; }
 
 /* collapsible sections: the same summary style as the bass line panel */
-.sec { border-top: 1px solid var(--fret); }
+/* .ctl and .mod-col do not get this: they are columns in a grid whose own left/top divider rules (and the
+   responsive breakpoints further down) already decide when a border is needed and on which side. */
+.sec:not(.ctl):not(.mod-col) { border-top: 1px solid var(--fret); }
 .sec > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem 0.9rem; padding: 0.75rem 0; cursor: pointer; list-style: none; }
 .sec > summary::-webkit-details-marker { display: none; }
 .sec > summary::before {
@@ -385,8 +387,6 @@ a.link { display: inline-flex; align-items: center; text-decoration: none; }
 .msg { min-height: 1.5rem; margin: 0.4rem 0 0; font-size: 0.875rem; color: var(--muted); }
 .msg.bad { color: var(--danger); }
 .quick { margin-top: 0.6rem; }
-.quick-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 1rem; }
-.quick-title { font-size: 0.875rem; font-weight: 600; color: var(--muted); }
 .quick .seg { padding: 2px; }
 .quick .seg button { min-height: 32px; padding: 0 0.85rem; font-size: 0.875rem; }
 .examples { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
@@ -399,6 +399,11 @@ a.link { display: inline-flex; align-items: center; text-decoration: none; }
 }
 .ctl { padding: 1.5rem clamp(1rem, 3vw, 2rem) 1.5rem 0; }
 .ctl + .ctl { padding-left: clamp(1rem, 3vw, 2rem); border-left: 2px solid var(--fret-strong); }
+/* Tempo / Style / Levels are collapsible (.sec; the top border itself is skipped for them, see .sec:not(.ctl) above,
+   since the grid's own left/top divider rules already handle it) — only the summary/body's own padding would still
+   duplicate the .ctl padding that used to be the only padding here, so that part is zeroed. */
+.ctl.sec > summary { padding-top: 0; }
+.ctl.sec > .sec-body { padding-bottom: 0; }
 
 .bpm-row { display: flex; align-items: center; gap: 0.6rem; }
 .bpm-row input {
@@ -469,6 +474,9 @@ a.link { display: inline-flex; align-items: center; text-decoration: none; }
 }
 .mod-col { padding: 1.5rem clamp(1rem, 3vw, 2rem) 1rem 0; }
 .mod-col + .mod-col { padding-left: clamp(1rem, 3vw, 2rem); border-left: 2px solid var(--fret-strong); }
+/* same reasoning as .ctl.sec above */
+.mod-col.sec > summary { padding-top: 0; }
+.mod-col.sec > .sec-body { padding-bottom: 0; }
 .fields { display: flex; flex-wrap: wrap; gap: 0.6rem 1.25rem; margin-top: 1rem; min-height: 40px; }
 .field { display: inline-flex; align-items: center; max-width: 100%; gap: 0.5rem; color: var(--muted); font-size: 0.9375rem; }
 .field[hidden] { display: none; }

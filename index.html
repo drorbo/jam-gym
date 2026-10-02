@@ -102,77 +102,81 @@
           </div>
           <textarea id="prog" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-describedby="progmsg"></textarea>
           <p class="msg" id="progmsg" role="status"></p>
-          <div class="quick">
-            <div class="quick-head">
-              <span class="quick-title" id="quick-title">Quick progressions</span>
+          <details class="sec quick" data-section="quick" open>
+            <summary><span class="sec-title" id="quick-title">Quick progressions</span></summary>
+            <div class="sec-body">
               <div class="seg" id="quick-tabs" role="radiogroup" aria-labelledby="quick-title"></div>
+              <div class="examples" id="examples" role="group" aria-labelledby="quick-title"></div>
             </div>
-            <div class="examples" id="examples" role="group" aria-labelledby="quick-title"></div>
-          </div>
+          </details>
         </div>
       </section>
 
       <!-- Tempo / style / levels -->
       <section class="controls">
-        <div class="ctl">
-          <h2>Tempo</h2>
-          <div class="bpm-row">
-            <button class="step" id="bpm-down" type="button" aria-label="Slower">−</button>
-            <input id="bpm" type="number" min="40" max="220" step="1" inputmode="numeric" aria-label="Beats per minute">
-            <button class="step" id="bpm-up" type="button" aria-label="Faster">+</button>
-          </div>
-          <input class="slider" id="bpm-slider" type="range" min="40" max="220" step="1" aria-label="Tempo slider">
-          <p class="hint" id="tempo-hint"></p>
-          <div class="tempo-tools">
-            <button class="chip" id="tap" type="button">Tap tempo</button>
-            <label class="field">Time
-              <select id="meter"></select>
-            </label>
-          </div>
-        </div>
-
-        <div class="ctl">
-          <h2>Style</h2>
-          <div class="seg seg-col" id="styles" role="radiogroup" aria-label="Style"></div>
-          <p class="hint" id="style-desc"></p>
-          <!-- Presets: three ways to play the chosen style. Your own are in the sidebar (drawn by src/app/presets-ui.js) -->
-          <div class="presets" id="presets">
-            <div class="presets-head">
-              <h3>Presets <span class="presets-style" id="preset-style"></span></h3>
-              <button class="chip" id="preset-open" type="button" title="The band settings you saved: open them in the sidebar">My presets</button>
+        <details class="sec ctl" data-section="tempo" open>
+          <summary><span class="sec-title">Tempo</span></summary>
+          <div class="sec-body">
+            <div class="bpm-row">
+              <button class="step" id="bpm-down" type="button" aria-label="Slower">−</button>
+              <input id="bpm" type="number" min="40" max="220" step="1" inputmode="numeric" aria-label="Beats per minute">
+              <button class="step" id="bpm-up" type="button" aria-label="Faster">+</button>
             </div>
-            <div class="preset-chips" id="preset-builtin" role="group" aria-label="Presets for this style"></div>
-            <p class="hint" id="preset-note" role="status" aria-live="polite"></p>
-          </div>
-          <div class="swing" id="swing-box">
-            <div class="swing-head">
-              <label for="swing">Swing</label>
-              <output id="swing-val" for="swing"></output>
+            <input class="slider" id="bpm-slider" type="range" min="40" max="220" step="1" aria-label="Tempo slider">
+            <p class="hint" id="tempo-hint"></p>
+            <div class="tempo-tools">
+              <button class="chip" id="tap" type="button">Tap tempo</button>
+              <label class="field">Time
+                <select id="meter"></select>
+              </label>
             </div>
-            <input class="slider" id="swing" type="range" min="50" max="75" step="1" list="swing-marks" aria-describedby="swing-hint">
-            <datalist id="swing-marks"><option value="50"></option><option value="67"></option><option value="75"></option></datalist>
-            <div class="swing-ends" aria-hidden="true"><span>Straight</span><span>Triplet</span><span>Hard</span></div>
-            <p class="hint" id="swing-hint"></p>
-            <button class="chip" id="swing-reset" type="button" hidden></button>
           </div>
-          <div class="sounds">
-            <label class="field">Drums
-              <select id="snd-drums"></select>
-            </label>
-            <label class="field">Bass
-              <select id="snd-bass"></select>
-            </label>
-            <label class="field">Keys
-              <select id="snd-keys"></select>
-            </label>
-            <p class="hint" id="snd-status" role="status"></p>
-          </div>
-        </div>
+        </details>
 
-        <div class="ctl">
-          <h2>Levels</h2>
-          <div class="levels" id="levels"></div>
-        </div>
+        <details class="sec ctl" data-section="style" open>
+          <summary><span class="sec-title">Style</span></summary>
+          <div class="sec-body">
+            <div class="seg seg-col" id="styles" role="radiogroup" aria-label="Style"></div>
+            <p class="hint" id="style-desc"></p>
+            <!-- Presets: three ways to play the chosen style. Your own are in the sidebar (drawn by src/app/presets-ui.js) -->
+            <div class="presets" id="presets">
+              <div class="presets-head">
+                <h3>Presets <span class="presets-style" id="preset-style"></span></h3>
+                <button class="chip" id="preset-open" type="button" title="The band settings you saved: open them in the sidebar">My presets</button>
+              </div>
+              <div class="preset-chips" id="preset-builtin" role="group" aria-label="Presets for this style"></div>
+              <p class="hint" id="preset-note" role="status" aria-live="polite"></p>
+            </div>
+            <div class="swing" id="swing-box">
+              <div class="swing-head">
+                <label for="swing">Swing</label>
+                <output id="swing-val" for="swing"></output>
+              </div>
+              <input class="slider" id="swing" type="range" min="50" max="75" step="1" list="swing-marks" aria-describedby="swing-hint">
+              <datalist id="swing-marks"><option value="50"></option><option value="67"></option><option value="75"></option></datalist>
+              <div class="swing-ends" aria-hidden="true"><span>Straight</span><span>Triplet</span><span>Hard</span></div>
+              <p class="hint" id="swing-hint"></p>
+              <button class="chip" id="swing-reset" type="button" hidden></button>
+            </div>
+            <div class="sounds">
+              <label class="field">Drums
+                <select id="snd-drums"></select>
+              </label>
+              <label class="field">Bass
+                <select id="snd-bass"></select>
+              </label>
+              <label class="field">Keys
+                <select id="snd-keys"></select>
+              </label>
+              <p class="hint" id="snd-status" role="status"></p>
+            </div>
+          </div>
+        </details>
+
+        <details class="sec ctl" data-section="levels" open>
+          <summary><span class="sec-title">Levels</span></summary>
+          <div class="sec-body"><div class="levels" id="levels"></div></div>
+        </details>
       </section>
 
       <!-- Bass line, Keys and Drums: how each part of the band plays (drawn by src/app/band-ui.js) -->
@@ -180,45 +184,49 @@
 
       <!-- Key change + tempo ramp -->
       <section class="mod" aria-label="Practice automation">
-        <div class="mod-col">
-          <h2>Key change</h2>
-          <div class="seg" id="mod-type" role="radiogroup" aria-label="Key change mode">
-            <button type="button" role="radio" data-v="off">Off</button>
-            <button type="button" role="radio" data-v="interval">Step</button>
-            <button type="button" role="radio" data-v="random">Random</button>
+        <details class="sec mod-col" data-section="keychange" open>
+          <summary><span class="sec-title">Key change</span></summary>
+          <div class="sec-body">
+            <div class="seg" id="mod-type" role="radiogroup" aria-label="Key change mode">
+              <button type="button" role="radio" data-v="off">Off</button>
+              <button type="button" role="radio" data-v="interval">Step</button>
+              <button type="button" role="radio" data-v="random">Random</button>
+            </div>
+            <div class="fields" id="mod-fields">
+              <label class="field" data-show="interval">Move
+                <select id="mod-interval"></select>
+              </label>
+              <label class="field" data-show="random">Choose
+                <select id="mod-random"></select>
+              </label>
+              <label class="field" data-show="interval random">Every
+                <input id="mod-every" type="number" min="1" max="64" inputmode="numeric">
+                <span id="mod-every-unit">loop</span>
+              </label>
+            </div>
           </div>
-          <div class="fields" id="mod-fields">
-            <label class="field" data-show="interval">Move
-              <select id="mod-interval"></select>
-            </label>
-            <label class="field" data-show="random">Choose
-              <select id="mod-random"></select>
-            </label>
-            <label class="field" data-show="interval random">Every
-              <input id="mod-every" type="number" min="1" max="64" inputmode="numeric">
-              <span id="mod-every-unit">loop</span>
-            </label>
-          </div>
-        </div>
+        </details>
 
-        <div class="mod-col">
-          <h2>Tempo ramp</h2>
-          <button class="switch" id="ramp-on" type="button" role="switch" aria-checked="false"><span class="knob"></span><span id="ramp-label">Off</span></button>
-          <div class="fields" id="ramp-fields">
-            <label class="field">Add
-              <input id="ramp-inc" type="number" min="1" max="40" inputmode="numeric">
-              <span>BPM</span>
-            </label>
-            <label class="field">Every
-              <input id="ramp-every" type="number" min="1" max="64" inputmode="numeric">
-              <span id="ramp-every-unit">loops</span>
-            </label>
-            <label class="field">Up to
-              <input id="ramp-max" type="number" min="40" max="220" inputmode="numeric">
-              <span>BPM</span>
-            </label>
+        <details class="sec mod-col" data-section="ramp" open>
+          <summary><span class="sec-title">Tempo ramp</span></summary>
+          <div class="sec-body">
+            <button class="switch" id="ramp-on" type="button" role="switch" aria-checked="false"><span class="knob"></span><span id="ramp-label">Off</span></button>
+            <div class="fields" id="ramp-fields">
+              <label class="field">Add
+                <input id="ramp-inc" type="number" min="1" max="40" inputmode="numeric">
+                <span>BPM</span>
+              </label>
+              <label class="field">Every
+                <input id="ramp-every" type="number" min="1" max="64" inputmode="numeric">
+                <span id="ramp-every-unit">loops</span>
+              </label>
+              <label class="field">Up to
+                <input id="ramp-max" type="number" min="40" max="220" inputmode="numeric">
+                <span>BPM</span>
+              </label>
+            </div>
           </div>
-        </div>
+        </details>
 
         <p class="summary" id="summary"></p>
       </section>
