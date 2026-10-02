@@ -116,7 +116,7 @@ export function createUsers(db) {
     },
 
     /**
-     * Move everything `from` owns (tracks, likes, reports, presets) to `to` and delete `from`. Used when someone who has been
+     * Move everything `from` owns (tracks, likes, presets) to `to` and delete `from`. Used when someone who has been
      * using Jam Gym without an account signs in with an eardle account that already has a library: nothing is lost.
      */
     absorb(to, from) {
@@ -127,7 +127,6 @@ export function createUsers(db) {
         db.prepare('DELETE FROM likes WHERE user_id = ? AND track_id IN (SELECT track_id FROM likes WHERE user_id = ?)').run(from.id, to.id);
         db.prepare('UPDATE likes SET user_id = ? WHERE user_id = ?').run(to.id, from.id);
         db.prepare('UPDATE tracks SET owner_id = ? WHERE owner_id = ?').run(to.id, from.id);
-        db.prepare('UPDATE OR IGNORE reports SET reporter_id = ? WHERE reporter_id = ?').run(to.id, from.id);
         db.prepare('UPDATE OR IGNORE presets SET owner_id = ? WHERE owner_id = ?').run(to.id, from.id);
         // published tracks carry the author's name in the search index
         const rows = db.prepare(`SELECT rowid, title, description, chord_tokens, visibility FROM tracks
@@ -158,7 +157,7 @@ export function createUsers(db) {
         for (const r of db.prepare('SELECT rowid FROM tracks WHERE owner_id = ?').all(user.id)) unindex(db, r.rowid);
         db.prepare(`UPDATE tracks SET like_count = like_count - 1
                     WHERE id IN (SELECT track_id FROM likes WHERE user_id = ?)`).run(user.id);
-        db.prepare('DELETE FROM users WHERE id = ?').run(user.id); // cascades to tracks, likes, reports
+        db.prepare('DELETE FROM users WHERE id = ?').run(user.id); // cascades to tracks, likes
       });
     },
 

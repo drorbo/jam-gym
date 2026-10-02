@@ -236,8 +236,6 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
 
     ['DELETE', '/api/tracks/:id/like', { auth: 'user', limit: ['like', 120, MINUTE, true] }, ({ user, params }) => tracks.unlike(user, params.id)],
 
-    ['POST', '/api/tracks/:id/report', { auth: 'create', limit: ['report', 20, HOUR, true] }, ({ user, params, body }) => tracks.report(user, params.id, body.reason)],
-
     // a person's saved band settings: send what this device has, get the merged list back
     ['POST', '/api/presets/sync', { auth: 'user', limit: ['presets', 60, MINUTE], bodyBytes: LIMITS.presetBodyBytes }, ({ user, body }) => presets.sync(user, body)],
 

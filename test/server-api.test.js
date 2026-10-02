@@ -688,51 +688,7 @@ test('liking is rate limited per person', withServer(async ({ browser }) => {
   assert.equal(last.status, 429);
 }));
 
-// ---- reports and moderation ----------------------------------------------------------------
-
-test('reports: distinct reporters count, enough of them hide the track, and the owner can take it down and try again', withServer(async ({ browser, db }) => {
-  const a = browser();
-  const reporters = Array.from({ length: LIMITS.autoHideReports }, () => browser());
-  const t = await publishTrack(a, { title: 'Questionable' });
-  const rep = (b, reason) => b.post(`/api/tracks/${t.id}/report`, { reason });
-  assert.deepEqual((await rep(reporters[0], 'spam')).json, { reported: true, hidden: false });
-  assert.deepEqual((await rep(reporters[0], 'spam again')).json, { reported: true, hidden: false }, 'the same person counts once');
-  assert.equal(db.prepare('SELECT COUNT(*) c FROM reports').get().c, 1);
-  for (const r of reporters.slice(1, -1)) assert.equal((await rep(r, 'rude')).json.hidden, false);
-  assert.equal((await browser().get('/api/browse')).json.total, 1, 'one short is not enough');
-  assert.equal((await rep(reporters.at(-1), 'rude')).json.hidden, true);
-  assert.equal((await browser().get('/api/browse')).json.total, 0, 'hidden from browse');
-  assert.equal((await browser().get(`/api/tracks/${t.id}`)).status, 404, 'and from direct links');
-  assert.equal((await browser().get('/api/browse?q=questionable')).json.total, 0, 'and from search');
-  const mine = (await a.get('/api/tracks/mine')).json.tracks[0];
-  assert.equal(mine.visibility, 'hidden', 'the owner can see that it was removed');
-  assert.equal((await a.post(`/api/tracks/${t.id}/publish`)).status, 403, 'cannot publish straight over a hidden track');
-  assert.equal((await a.put(`/api/tracks/${t.id}`, { title: 'Edited' })).status, 200, 'the owner can still edit');
-
-  // the owner's own way out: withdraw it themselves, which also clears the reports that hid it
-  const withdrawn = await a.post(`/api/tracks/${t.id}/unpublish`);
-  assert.equal(withdrawn.status, 200);
-  assert.equal(withdrawn.json.track.visibility, 'private');
-  assert.equal(db.prepare('SELECT COUNT(*) c FROM reports WHERE track_id = ?').get(t.id).c, 0, 'a clean slate');
-  assert.equal((await a.get('/api/browse?q=edited')).json.total, 0, 'still not public');
-
-  // publishing it again starts fresh: the old reports do not carry over and hide it again on their own
-  const republished = await a.post(`/api/tracks/${t.id}/publish`);
-  assert.equal(republished.status, 200);
-  assert.equal(republished.json.track.visibility, 'published');
-  assert.equal((await rep(reporters[0], 'still not keen')).json.hidden, false, 'one old reporter reporting again is not instantly enough');
-  assert.equal((await a.del(`/api/tracks/${t.id}`)).status, 200, 'and the owner can delete it outright');
-}));
-
-test('reports: not your own, not private ones; reasons are capped', withServer(async ({ browser, db }) => {
-  const a = browser(); const b = browser();
-  const pub = await publishTrack(a); const priv = await makeTrack(a);
-  assert.equal((await a.post(`/api/tracks/${pub.id}/report`, {})).status, 403);
-  assert.equal((await b.post(`/api/tracks/${priv.id}/report`, {})).status, 404);
-  assert.equal((await b.post('/api/tracks/nope/report', {})).status, 404);
-  await b.post(`/api/tracks/${pub.id}/report`, { reason: 'x'.repeat(2000) });
-  assert.equal(db.prepare('SELECT length(reason) l FROM reports').get().l, LIMITS.reason);
-}));
+// ---- moderation -------------------------------------------------------------------------------
 
 test('moderation: hide, restore, delete and ban, through the same code the CLI uses', withServer(async ({ browser, db }) => {
   const a = browser(); const b = browser();
@@ -745,9 +701,6 @@ test('moderation: hide, restore, delete and ban, through the same code the CLI u
   assert.deepEqual(await searchIds(b, ''), ['Delete me', 'Keep me'], 'hidden tracks are gone from browse (newest first)');
   assert.equal((await b.get(`/api/tracks/${t2.id}`)).status, 404);
   assert.equal((await a.get('/api/tracks/mine')).json.tracks.find((t) => t.id === t2.id).visibility, 'hidden');
-  await b.post(`/api/tracks/${t1.id}/report`, { reason: 'test' });
-  assert.equal(mod.reports().length, 1);
-  assert.equal(mod.reports()[0].title, 'Keep me');
   mod.restore(t2.id);
   assert.equal((await b.get(`/api/tracks/${t2.id}`)).status, 200);
   assert.equal((await b.get('/api/browse?q=hide')).json.total, 1, 'searchable again');
@@ -772,22 +725,18 @@ test('moderation: hide, restore, delete and ban, through the same code the CLI u
 }));
 
 test('the admin command line works end to end', withServer(async ({ browser, db }) => {
-  const a = browser(); const b = browser();
-  const t = await publishTrack(a, { title: 'Reported one' });
-  await b.post(`/api/tracks/${t.id}/report`, { reason: 'because' });
+  const a = browser();
+  const t = await publishTrack(a, { title: 'Questionable one' });
   const out = [];
   const log = (v) => out.push(v);
   await runAdmin(['stats'], { db, log });
   assert.equal(out.at(-1).published, 1);
-  await runAdmin(['reports'], { db, log });
-  assert.equal(out.at(-1)[0].title, 'Reported one');
-  assert.match(out.at(-1)[0].reasons, /because/);
   await runAdmin(['hide', t.id], { db, log });
-  assert.match(out.at(-1), /Hidden: "Reported one"/);
+  assert.match(out.at(-1), /Hidden: "Questionable one"/);
   await runAdmin(['restore', t.id], { db, log });
   assert.match(out.at(-1), /Restored/);
   await runAdmin(['show', t.id], { db, log });
-  assert.equal(out.at(-1).title, 'Reported one');
+  assert.equal(out.at(-1).title, 'Questionable one');
   assert.ok(!('data' in out.at(-1)) || out.at(-1).data === undefined);
   await runAdmin(['delete', t.id], { db, log });
   assert.match(out.at(-1), /Deleted/);

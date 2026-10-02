@@ -133,8 +133,8 @@ To take a backup by hand at any time: `docker exec jam-gym-web-1 node server/adm
 ssh eardle-prod "curl -s http://127.0.0.1:3100/api/health"
 ssh eardle-prod "docker exec jam-gym-web-1 node server/admin.js stats"
 
-# moderation: the reports queue, look at a track, hide / restore / delete it, ban or unban its author
-ssh eardle-prod "docker exec jam-gym-web-1 node server/admin.js reports"
+# moderation: look at a track, hide / restore / delete it, ban or unban its author
+ssh eardle-prod "docker exec jam-gym-web-1 node server/admin.js show TRACK_ID"
 ssh eardle-prod "docker exec jam-gym-web-1 node server/admin.js hide TRACK_ID"
 ```
 

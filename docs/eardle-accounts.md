@@ -16,7 +16,7 @@ Jam Gym never sees a password, an email or a Google id. It keeps its own databas
   21st drops the one used least recently). "Sign out" ends that device only; "Sign out everywhere" ends all of them,
   including the one asking. An unused session expires after 180 days (`LIMITS.sessionCap`, `sessionMaxAgeDays`,
   server/config.js).
-- If a browser had been used without an account and then signs in to an eardle account that already has a library, the two are **merged**: tracks, likes, reports and saved presets all move, nothing is lost, a track both liked counts once.
+- If a browser had been used without an account and then signs in to an eardle account that already has a library, the two are **merged**: tracks, likes and saved presets all move, nothing is lost, a track both liked counts once.
 
 ## How it works
 

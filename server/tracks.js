@@ -1,4 +1,4 @@
-// Tracks: create, edit, publish, copy, like, report, browse. Pure logic over the database; no HTTP in here.
+// Tracks: create, edit, publish, copy, like, browse. Pure logic over the database; no HTTP in here.
 //
 // `user` arguments are rows from the users table. Anything that would reveal someone else's private track
 // answers "not found", never "forbidden", so ids can't be probed.
@@ -141,7 +141,7 @@ export function createTracks(db) {
       const row = owned(id, user);
       transaction(db, () => {
         unindex(db, row.rowid);
-        db.prepare('DELETE FROM tracks WHERE id = ?').run(row.id); // cascades to likes and reports
+        db.prepare('DELETE FROM tracks WHERE id = ?').run(row.id); // cascades to likes
       });
     },
 
@@ -159,17 +159,12 @@ export function createTracks(db) {
       return present(rowById(row.id), user);
     },
 
-    /**
-     * Take a track off the public site: also the owner's own way to withdraw one a moderator hid (enough reports
-     * auto-hide a track; see `report` below). Withdrawing one clears its reports, so if they publish it again later
-     * it starts clean and needs a fresh set of reports to be hidden again, rather than the old ones carrying over.
-     */
+    /** Take a track off the public site: also the owner's own way to withdraw one a moderator hid. */
     unpublish(user, id) {
       const row = owned(id, user);
       transaction(db, () => {
         db.prepare("UPDATE tracks SET visibility = 'private', updated_at = ? WHERE id = ?").run(now(), row.id);
         unindex(db, row.rowid);
-        if (row.visibility === 'hidden') db.prepare('DELETE FROM reports WHERE track_id = ?').run(row.id);
       });
       return present(rowById(row.id), user);
     },
@@ -204,25 +199,6 @@ export function createTracks(db) {
       });
       const fresh = rowById(row.id);
       return { likes: fresh.like_count, likedByMe: false };
-    },
-
-    /** Report a published track. Enough distinct reporters hide it until a moderator looks. */
-    report(user, id, reason) {
-      requireActive(user);
-      const row = visible(id, user);
-      if (row.owner_id === user.id) throw forbidden('You cannot report your own track.', 'own_track');
-      let hidden = false;
-      transaction(db, () => {
-        db.prepare('INSERT OR IGNORE INTO reports(track_id, reporter_id, reason, created_at) VALUES (?, ?, ?, ?)')
-          .run(row.id, user.id, String(reason ?? '').slice(0, LIMITS.reason), now());
-        const n = db.prepare('SELECT COUNT(*) AS c FROM reports WHERE track_id = ?').get(row.id).c;
-        if (n >= LIMITS.autoHideReports && row.visibility === 'published') {
-          db.prepare("UPDATE tracks SET visibility = 'hidden' WHERE id = ?").run(row.id);
-          unindex(db, row.rowid);
-          hidden = true;
-        }
-      });
-      return { reported: true, hidden };
     },
 
     /** Search and list published tracks. */

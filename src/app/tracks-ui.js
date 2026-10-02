@@ -128,14 +128,13 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
   function confirmBox(id, kind, t) {
     const box = el('div', 'confirm');
     const text = {
-      publish: `Everyone will be able to see and play this track: its title, chords, tempo and style, and your name (${tracks.state.me?.displayName ?? 'your name'}). You can make it private again at any time.`,
       delete: `Delete "${t.title}" for good? Its likes go with it.`,
       overwrite: `Replace the saved setup in "${t.title}" with what is loaded now?`,
     }[kind];
     box.append(el('p', '', text));
     const row = el('div', 'confirm-actions');
     row.append(
-      button({ publish: 'Publish', delete: 'Delete', overwrite: 'Replace' }[kind], `chip confirm-yes${kind === 'delete' ? ' danger' : ''}`, { 'data-act': `confirm-${kind}`, 'data-id': id }),
+      button({ delete: 'Delete', overwrite: 'Replace' }[kind], `chip confirm-yes${kind === 'delete' ? ' danger' : ''}`, { 'data-act': `confirm-${kind}`, 'data-id': id }),
       button('Cancel', 'chip', { 'data-act': 'cancel', 'data-id': id }),
     );
     box.append(row);
@@ -263,12 +262,12 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
       actions.append(button('Replace with current setup', 'link', { 'data-act': 'ask-overwrite', 'data-id': t.id }));
       if (t.visibility === 'published') {
         actions.append(button('Make private', 'link', { 'data-act': 'unpublish', 'data-id': t.id }), button('Copy link', 'link', { 'data-act': 'share', 'data-id': t.id }));
-      } else actions.append(button('Publish…', 'link', { 'data-act': 'ask-publish', 'data-id': t.id }));
+      } else actions.append(button('Publish', 'link', { 'data-act': 'publish', 'data-id': t.id }));
     }
     actions.append(button('Delete', 'link danger', { 'data-act': 'ask-delete', 'data-id': t.id }));
     for (const b of actions.querySelectorAll('button')) b.disabled = busy;
     li.append(actions);
-    if (ui.confirm?.id === t.id && ['publish', 'delete', 'overwrite'].includes(ui.confirm.kind)) li.append(confirmBox(t.id, ui.confirm.kind, t));
+    if (ui.confirm?.id === t.id && ['delete', 'overwrite'].includes(ui.confirm.kind)) li.append(confirmBox(t.id, ui.confirm.kind, t));
     return li;
   }
 
@@ -336,16 +335,8 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
     li.append(main);
     const actions = el('div', 'track-actions');
     actions.append(button('Save a copy', 'link', { 'data-act': 'copy', 'data-id': t.id }), button('Copy link', 'link', { 'data-act': 'share', 'data-id': t.id }));
-    if (!t.isMine) actions.append(button('Report', 'link', { 'data-act': 'ask-report', 'data-id': t.id }));
     for (const b of actions.querySelectorAll('button')) b.disabled = busy;
     li.append(actions);
-    if (ui.confirm?.id === t.id && ui.confirm.kind === 'report') {
-      const box = el('div', 'confirm');
-      const input = el('input'); input.type = 'text'; input.className = 'report-reason'; input.name = 'report-reason'; input.maxLength = 300; input.placeholder = 'What is wrong? (optional)'; input.setAttribute('aria-label', 'Reason for the report');
-      box.append(el('p', '', 'Report this track to the moderators?'), input,
-        button('Send report', 'chip confirm-yes', { 'data-act': 'confirm-report', 'data-id': t.id }), button('Cancel', 'chip', { 'data-act': 'cancel', 'data-id': t.id }));
-      li.append(box);
-    }
     return li;
   }
 
@@ -438,21 +429,17 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
       case 'like': tracks.toggleLike(id); break;
       case 'copy': tracks.copy(id); break;
       case 'unpublish': tracks.setPublished(id, false); break;
+      case 'publish': tracks.setPublished(id, true); break;
       case 'share': {
         const ok = await copyText(tracks.shareUrl(id, location.origin));
         tracks.notify(ok ? 'Link copied. Anyone with it can open this track.' : `Copy this link: ${tracks.shareUrl(id, location.origin)}`, ok ? 'ok' : 'error');
         break;
       }
-      case 'ask-publish': case 'ask-delete': case 'ask-overwrite': case 'ask-report':
+      case 'ask-delete': case 'ask-overwrite':
         ui.confirm = { id, kind: act.slice(4) }; poke(); break;
       case 'cancel': ui.confirm = null; poke(); break;
-      case 'confirm-publish': ui.confirm = null; poke(); tracks.setPublished(id, true); break;
       case 'confirm-delete': ui.confirm = null; poke(); tracks.remove(id); break;
       case 'confirm-overwrite': ui.confirm = null; poke(); tracks.updateFromCurrent(id); break;
-      case 'confirm-report': {
-        const reason = target.closest('li')?.querySelector('.report-reason')?.value ?? '';
-        ui.confirm = null; poke(); tracks.report(id, reason); break;
-      }
       case 'retry-search': tracks.search({}); break;
       case 'dismiss-note': tracks.dismissCookieNote(); break;
       case 'account': ui.accountPanel = ui.accountPanel === panel ? null : panel; if (panel !== 'recovery') tracks.hideRecovery(); poke(); $('rename-input')?.focus(); $('recover-input')?.focus(); break;

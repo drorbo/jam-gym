@@ -6,7 +6,6 @@ import { buildTrackData, dataFromLocalSave, setupSignature } from '../src/app/tr
 import { createStore, defaultState } from '../src/app/state.js';
 import { prepareTrackData } from '../server/trackdata.js';
 import { startTestServer } from './harness.js';
-import { LIMITS } from '../server/config.js';
 
 // ---- helpers -------------------------------------------------------------------------------
 
@@ -95,7 +94,7 @@ test('the API client sends what the server requires and builds correct URLs', as
     [() => api.like('id1'), 'PUT', '/api/tracks/id1/like'], [() => api.unlike('id1'), 'DELETE', '/api/tracks/id1/like'],
     [() => api.publish('id1'), 'POST', '/api/tracks/id1/publish'], [() => api.unpublish('id1'), 'POST', '/api/tracks/id1/unpublish'],
     [() => api.copy('id1'), 'POST', '/api/tracks/id1/copy'], [() => api.deleteTrack('id1'), 'DELETE', '/api/tracks/id1'],
-    [() => api.report('id1', 'why'), 'POST', '/api/tracks/id1/report'], [() => api.recoveryCode(), 'GET', '/api/me/recovery'],
+    [() => api.recoveryCode(), 'GET', '/api/me/recovery'],
     [() => api.deleteMe(), 'DELETE', '/api/me'], [() => api.session(), 'POST', '/api/session'], [() => api.myTracks(), 'GET', '/api/tracks/mine'],
   ]) {
     await fn();
@@ -367,24 +366,6 @@ test('searching by words, chords and filters through the real server, with pagin
   assert.equal(b.state().browse.error, null);
 }));
 
-test('reports remove a track from the reporter\'s results once it is hidden', withServer(async (server) => {
-  const a = person(server);
-  await a.tracks.init();
-  const t = await a.tracks.save('Bad one');
-  await a.tracks.setPublished(t.id, true);
-  const reporters = Array.from({ length: LIMITS.autoHideReports }, () => person(server));
-  for (const r of reporters) await r.tracks.init();
-  await reporters[0].tracks.search({});
-  await reporters[0].tracks.report(t.id, 'spam');
-  assert.equal(reporters[0].state().browse.items.length, 1, 'one report is not enough');
-  assert.match(reporters[0].state().flash.text, /Thanks/);
-  for (const r of reporters.slice(1, -1)) await r.tracks.report(t.id, 'spam');
-  const last = reporters.at(-1);
-  await last.tracks.search({});
-  await last.tracks.report(t.id, 'spam');
-  assert.equal(last.state().browse.items.length, 0);
-  assert.equal(last.state().browse.total, 0);
-}));
 
 test('account: rename, recovery code shown and hidden, recovering on another device, deleting everything', withServer(async (server) => {
   const a = person(server);

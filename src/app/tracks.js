@@ -241,7 +241,7 @@ export function createTracksController({ store, player, api, storage = null, sea
 
     shareUrl: (id, origin) => `${origin}/?track=${encodeURIComponent(id)}`,
 
-    // ---- likes and reports -----------------------------------------------------------------
+    // ---- likes -------------------------------------------------------------------------------
 
     /** Like or unlike straight away, and undo the change if the server says no. */
     async toggleLike(id) {
@@ -268,17 +268,6 @@ export function createTracksController({ store, player, api, storage = null, sea
         apply(before);
         fail(err);
       }
-    },
-
-    async report(id, reason = '') {
-      try {
-        const r = await api.report(id, reason);
-        if (r.hidden) {
-          const s = state();
-          set({ browse: { ...s.browse, items: s.browse.items.filter((t) => t.id !== id), total: Math.max(0, s.browse.total - 1) } });
-        }
-        flash('Thanks for the report. We will take a look.');
-      } catch (err) { fail(err); }
     },
 
     // ---- browsing --------------------------------------------------------------------------

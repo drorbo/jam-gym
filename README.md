@@ -209,18 +209,16 @@ whether you had it open.
 - **A track keeps the whole setup**: progression, key, meter, tempo (set again when you open it, even while playing), style, swing, all three panels (grooves, patterns and the drum mixer
   included), sounds, key change, tempo ramp and the mixer. Saved, published, opened by someone else or copied, it comes back the same
   (`test/track-band.test.js`); a track saved before a setting existed opens with that setting at the style's own value.
-- **Publish** makes a track public under your name (with a confirmation that says so); **Make private** takes it back.
+- **Publish** makes a track public under your name right away; **Make private** takes it back.
   Published tracks have a link (`/?track=ID`) that opens them straight into the player.
 - **Browse**: search titles, authors and chords together (`Dm7 G7` finds tracks that contain those chords, however they
   are spelled), filter by style, time signature, key and tempo, sort by best match, most liked or newest. Like a track
-  with the heart, or save a copy to your own library. Report sends it to moderation; enough different reporters hide it
-  (`LIMITS.autoHideReports`, server/config.js) — the owner can then take it down themselves (Make private), which clears
-  the reports too, so republishing later starts clean rather than being hidden again by the same old ones.
+  with the heart, or save a copy to your own library.
 - Offline or with the server down, Save keeps the track on this device. Older browser-only saves are listed under
   "On this device" and can be moved into the library.
 
 Design and decisions: [docs/tracks-design.md](docs/tracks-design.md). Moderation is a command on the server:
-`docker exec jam-gym-web-1 node server/admin.js reports` (also `stats show hide restore delete ban unban backup`).
+`docker exec jam-gym-web-1 node server/admin.js show <id>` (also `stats hide restore delete ban unban backup`).
 
 ## Accounts: Jam Gym is part of eardle
 

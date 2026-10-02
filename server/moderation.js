@@ -25,21 +25,12 @@ export function createModeration(db) {
         published: c("SELECT COUNT(*) AS c FROM tracks WHERE visibility = 'published'"),
         hidden: c("SELECT COUNT(*) AS c FROM tracks WHERE visibility = 'hidden'"),
         likes: c('SELECT COUNT(*) AS c FROM likes'),
-        reports: c('SELECT COUNT(*) AS c FROM reports'),
       };
-    },
-
-    /** Tracks that have been reported, most reports first. */
-    reports() {
-      return db.prepare(`SELECT t.id, t.title, t.visibility, u.display_name AS author, u.public_id AS author_id,
-                                COUNT(r.id) AS reports, GROUP_CONCAT(NULLIF(r.reason, ''), ' | ') AS reasons
-                         FROM reports r JOIN tracks t ON t.id = r.track_id JOIN users u ON u.id = t.owner_id
-                         GROUP BY t.id ORDER BY reports DESC, MAX(r.created_at) DESC`).all();
     },
 
     show(id) {
       const t = row(id);
-      return { ...t, data: undefined, chord_tokens: undefined, reports: db.prepare('SELECT reason, created_at FROM reports WHERE track_id = ?').all(t.id) };
+      return { ...t, data: undefined, chord_tokens: undefined };
     },
 
     /** Take a track off the public site (the owner sees it as removed). */
@@ -52,13 +43,12 @@ export function createModeration(db) {
       return row(id);
     },
 
-    /** Undo a hide: back to published, and forget the reports that triggered it. */
+    /** Undo a hide: back to published. */
     restore(id) {
       const t = row(id);
       if (t.visibility !== 'hidden') throw new HttpError(409, 'conflict', `Track ${id} is ${t.visibility}, not hidden.`);
       transaction(db, () => {
         db.prepare("UPDATE tracks SET visibility = 'published' WHERE id = ?").run(t.id);
-        db.prepare('DELETE FROM reports WHERE track_id = ?').run(t.id);
         reindex(db, row(id));
       });
       return row(id);

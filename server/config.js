@@ -47,7 +47,6 @@ export const LIMITS = Object.freeze({
   description: 500,
   displayName: 24,
   displayNameMin: 2,
-  reason: 300,
   dataBytes: 16 * 1024,
   bodyBytes: 32 * 1024,
   progressionChars: 4000,
@@ -62,11 +61,6 @@ export const LIMITS = Object.freeze({
   publishedPerUser: 50,
   browsePageMax: 50,
   browsePageDefault: 20,
-  // The owner can withdraw a hidden track themselves (POST .../unpublish), which also clears its reports, so this
-  // no longer needs to be low to give people a way out. Kept well under tracksPerUser's abuse cost: an attacker
-  // needs this many distinct accounts (each one rate-limited to create, see server/limits.js and clientIp in
-  // app.js) to hide a track that isn't theirs.
-  autoHideReports: 5,
   // A "sign in with eardle" session (server/users.js), for a device that isn't holding the person's own secret: it
   // expires after this long unused, and at most this many exist per person at once (oldest dropped to make room).
   sessionMaxAgeDays: 180,

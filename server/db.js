@@ -100,6 +100,10 @@ const MIGRATIONS = [
     ALTER TABLE sessions ADD COLUMN last_used_at INTEGER NOT NULL DEFAULT 0;
     UPDATE sessions SET last_used_at = created_at WHERE last_used_at = 0;
   `),
+
+  // 5: the community "Report" feature is gone (a track can still be taken down, just by a moderator directly —
+  // server/moderation.js's hide/restore — not by a count of reports). Production has 0 rows in this table.
+  (db) => db.exec(`DROP TABLE reports;`),
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

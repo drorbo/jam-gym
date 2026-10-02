@@ -11,11 +11,10 @@ import { snapshot } from './backup.js';
 
 const HELP = `Jam Gym moderation
 
-  stats                  counts of users, tracks, likes and reports
-  reports                reported tracks, most reported first
-  show <track-id>        one track's details and its reports
+  stats                  counts of users, tracks and likes
+  show <track-id>        one track's details
   hide <track-id>        take a track off the public site
-  restore <track-id>     put a hidden track back and clear its reports
+  restore <track-id>     put a hidden track back
   delete <track-id>      delete a track for good
   ban <user-id>          stop a user saving, publishing or liking, and hide their tracks (ids look like 4F2K9XQ7)
   unban <user-id>
@@ -35,11 +34,6 @@ export async function run(argv, { db, log = print } = {}) {
   try {
     switch (cmd) {
       case 'stats': log(mod.stats()); break;
-      case 'reports': {
-        const rows = mod.reports();
-        log(rows.length ? rows : 'No reported tracks.');
-        break;
-      }
       case 'show': log(mod.show(need())); break;
       case 'hide': { const t = mod.hide(need()); log(`Hidden: "${t.title}" by ${t.author}`); break; }
       case 'restore': { const t = mod.restore(need()); log(`Restored: "${t.title}" by ${t.author}`); break; }

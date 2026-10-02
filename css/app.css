@@ -317,15 +317,16 @@ input[type='number'] { width: 4.5rem; min-height: 40px; padding: 0 0.5rem; text-
 .account { margin: 0 0 0.6rem; font-size: 0.9375rem; color: var(--muted); }
 .account-line { margin: 0; }
 .account-line strong { color: var(--text); font-weight: 600; }
-.account-links { display: flex; flex-wrap: wrap; gap: 0 1.1rem; margin-top: 0.3rem; }
+.account-links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.3rem; }
 .link {
-  padding: 0; min-height: 32px; background: none; border: 0; border-bottom: 1px solid var(--fret-strong);
-  border-radius: 0; color: var(--muted); font-size: 0.875rem;
+  display: inline-flex; align-items: center; min-height: 34px; padding: 0 0.85rem;
+  background: none; border: 1px solid var(--fret-strong); border-radius: 999px; color: var(--muted); font-size: 0.8125rem;
 }
-a.link { display: inline-flex; align-items: center; text-decoration: none; }
-.link:hover:not(:disabled) { color: var(--text); border-bottom-color: var(--text); }
+a.link { text-decoration: none; }
+.link:hover:not(:disabled) { color: var(--text); border-color: var(--text); }
 .link:disabled { opacity: 0.45; cursor: default; }
-.link.danger:hover:not(:disabled) { color: var(--danger); border-bottom-color: var(--danger); }
+.link.danger { color: var(--danger); border-color: var(--danger); opacity: 0.85; }
+.link.danger:hover:not(:disabled) { opacity: 1; }
 .chip.danger { color: var(--danger); border-color: var(--danger); }
 .chip.danger:hover { color: var(--danger); }
 .inline-panel { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 0.7rem; padding: 0.8rem 0 0.2rem; border-top: 1px solid var(--fret); }
@@ -359,7 +360,7 @@ a.link { display: inline-flex; align-items: center; text-decoration: none; }
 .track-chords { font-size: 0.9375rem; font-weight: 600; letter-spacing: -0.01em; color: var(--text); opacity: 0.85; overflow-wrap: anywhere; }
 .track-desc { font-size: 0.875rem; color: var(--muted); overflow-wrap: anywhere; }
 .track-open:hover .track-title, .track.is-active .track-title { color: var(--brass); }
-.track-actions { display: flex; flex-wrap: wrap; gap: 0 1.1rem; margin-top: 0.35rem; }
+.track-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem; }
 .track-empty { padding: 0.9rem 0; color: var(--muted); font-size: 0.9375rem; border-bottom: 1px solid var(--fret); max-width: 60ch; }
 .state { font-size: 0.8125rem; color: var(--muted); }
 .state-pub { color: var(--brass); }
@@ -379,7 +380,6 @@ a.link { display: inline-flex; align-items: center; text-decoration: none; }
 .confirm p { margin: 0 0 0.6rem; font-size: 0.875rem; max-width: 62ch; }
 .confirm-actions { display: flex; gap: 0.5rem; }
 .confirm .chip { min-height: 36px; font-size: 0.875rem; }
-.confirm .report-reason { display: block; width: 100%; max-width: 32rem; min-height: 40px; margin-bottom: 0.6rem; padding: 0 0.8rem; background: var(--field); border: 1px solid var(--fret-strong); border-radius: 8px; color: var(--text); }
 .confirm-yes { color: var(--brass); border-color: var(--brass); }
 
 .local-box { padding-top: 0.2rem; }

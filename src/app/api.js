@@ -81,6 +81,5 @@ export function createApi({ fetch: fetchImpl = globalThis.fetch?.bind(globalThis
     browse: (params) => call('GET', `/api/browse${qs(params)}`),
     like: (trackId) => call('PUT', `/api/tracks/${id(trackId)}/like`),
     unlike: (trackId) => call('DELETE', `/api/tracks/${id(trackId)}/like`),
-    report: (trackId, reason) => call('POST', `/api/tracks/${id(trackId)}/report`, { reason }),
   };
 }
