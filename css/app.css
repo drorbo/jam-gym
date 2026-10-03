@@ -456,6 +456,19 @@ a.link { text-decoration: none; }
 .swing { margin-top: 1.3rem; }
 .swing-head { display: flex; align-items: baseline; justify-content: space-between; }
 .swing-head label { font-weight: 600; }
+
+/* a slider's label explains itself: hover the word for over a second and a bubble with what it does fades in. The
+   1s wait is the transition-delay on the :hover rule only — leaving before it elapses cancels the fade before it
+   starts, same trick as a native tooltip but styled to match the app and not tied to the browser's own timing. */
+.tiplabel.has-tip { position: relative; cursor: help; border-bottom: 1px dotted var(--muted); }
+.tipbubble {
+  position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); z-index: 25;
+  width: max-content; max-width: min(16rem, calc(100vw - 2 * var(--gutter))); padding: 0.55rem 0.75rem;
+  background: var(--raised); border: 1px solid var(--fret-strong); border-radius: 8px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  color: var(--text); font-size: 0.8125rem; font-weight: 400; line-height: 1.4; text-align: left;
+  opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.15s ease, visibility 0s linear 0.15s;
+}
+.tiplabel.has-tip:hover .tipbubble { transition: opacity 0.15s ease 1s, visibility 0s linear 1s; opacity: 1; visibility: visible; }
 .swing-head output { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; min-width: 3.2ch; text-align: right; }
 .swing .slider { margin-top: 0.35rem; }
 .swing-ends { position: relative; height: 1.1rem; margin: 0 0.4rem; font-size: 0.75rem; color: var(--muted); }

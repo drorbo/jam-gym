@@ -186,6 +186,12 @@ const TIMING = ['Ahead', 'A little ahead', 'In the pocket', 'A little behind', '
 const FEEL = ['Machine tight', 'Tight', 'Natural', 'Loose', 'Sloppy'];
 const OFTEN = ['None', 'Rare', 'Sometimes', 'Often', 'Constantly'];
 
+// Shared between bass, keys and drums: the same slider, the same meaning, wherever it shows up.
+const LENGTH_HINT = 'How long each note rings: short and detached, or long and sustained';
+const TIMING_HINT = 'Where notes land against the beat: ahead of it, right on it, or behind';
+const FEEL_HINT = 'How strict the timing is: machine-tight, or loose and human';
+const DYNAMICS_HINT = 'How hard the notes are hit, from soft to loud';
+
 
 const nameOf = (list, id, styleId) => (list.find((o) => o.id === id && (!o.styles || o.styles.includes(styleId))) ?? {}).name ?? id;
 const grooveName = (v, styleId) => nameOf(GROOVES, v.groove, styleId);
@@ -203,12 +209,14 @@ export const GROUPS = {
       select('pattern', 'Pattern', PATTERNS, { styles: ['jazz', 'blues', 'rock'] }),
       slider('line', 'Line', ['Scales', 'Mostly scales', 'Scales and arpeggios', 'Mostly arpeggios', 'Arpeggios'], {
         wordsByStyle: { rock: ['Root notes', 'Mostly roots', 'Some movement', 'Melodic', 'Very melodic'] },
+        hint: 'How much the line moves: close to the roots, or more melodic and arpeggiated',
         inactive: (v, style, meter) => figureWhy(v, style)
           ?? (style === 'rock' && v.pattern === 'boogie' && !isOddMeter(meter) ? 'Rock and roll boogie is a fixed figure, so this does nothing.' : null)
           ?? (style === 'blues' && v.pattern === 'mixed' && shortBar(v, meter) ? 'This blues only walks to turn the chorus around, and a 6/8 bar walked this way is just two notes, so this does nothing.' : null),
       }),
       slider('tension', 'Tensions', ['Chord tones', 'A few colour tones', 'Some colour', 'Colourful', 'Lots of colour'], {
         wordsByStyle: { rock: ['Plain', 'A little colour', 'Some colour', 'Colourful', 'Lots of colour'] },
+        hint: 'How many colour tones beyond the plain chord: 9ths, 13ths and other extensions',
         inactive: (v, style, meter) => figureWhy(v, style)
           ?? (style !== 'rock' && v.rhythm === 'two' ? 'Two-feel plays only roots and fifths, so this does nothing.' : null)
           ?? (style !== 'rock' && shortBar(v, meter) ? 'A 6/8 bar walked this way is only two notes, so this does nothing.' : null),
@@ -216,11 +224,12 @@ export const GROUPS = {
       select('approach', 'Approach', APPROACHES, { inactive: (v, style) => figureWhy(v, style) }),
       slider('fills', 'Bass fills', OFTEN, {
         styles: ['rock'],
+        hint: 'How often the bass breaks its pattern for a short fill',
         inactive: (v, style, meter) => (isOddMeter(meter) ? `${ODD_TEXT}, so there are no fills.` : v.pattern === 'melodic' ? 'The melodic line plays no fill runs, so this does nothing.' : null),
       }),
-      slider('length', 'Note length', ['Staccato', 'Short', 'Natural', 'Long', 'Legato']),
-      slider('pocket', 'Timing', TIMING),
-      slider('loose', 'Feel', FEEL),
+      slider('length', 'Note length', ['Staccato', 'Short', 'Natural', 'Long', 'Legato'], { hint: LENGTH_HINT }),
+      slider('pocket', 'Timing', TIMING, { hint: TIMING_HINT }),
+      slider('loose', 'Feel', FEEL, { hint: FEEL_HINT }),
     ],
   },
   comp: {
@@ -246,10 +255,10 @@ export const GROUPS = {
       }),
       slider('range', 'Register', ['Low', 'Lowish', 'Middle', 'Highish', 'High'], { hint: 'Where on the keyboard' }),
       slider('spread', 'Voicing', ['Close', 'Compact', 'Medium', 'Open', 'Wide'], { hint: 'Notes packed together, or spread out' }),
-      slider('length', 'Note length', ['Staccato', 'Short', 'Natural', 'Long', 'Sustained']),
-      slider('power', 'Dynamics', DYNAMICS),
-      slider('pocket', 'Timing', TIMING),
-      slider('loose', 'Feel', FEEL),
+      slider('length', 'Note length', ['Staccato', 'Short', 'Natural', 'Long', 'Sustained'], { hint: LENGTH_HINT }),
+      slider('power', 'Dynamics', DYNAMICS, { hint: DYNAMICS_HINT }),
+      slider('pocket', 'Timing', TIMING, { hint: TIMING_HINT }),
+      slider('loose', 'Feel', FEEL, { hint: FEEL_HINT }),
     ],
   },
   kit: {
@@ -278,15 +287,16 @@ export const GROUPS = {
           : style === 'rock' && v.groove === 'funk' ? 'Funk rock has its own snare pattern, so this does nothing.' : null),
       }),
       slider('ghosts', 'Ghost notes', ['None', 'A few', 'Some', 'Many', 'Lots'], {
+        hint: 'Quiet extra hits between the main ones, filling out the groove without standing out',
         inactive: (v, style, meter) => (isOddMeter(meter) ? null
           : (style === 'blues' && v.groove === 'train') || (style === 'rock' && ['fourfloor', 'stomp', 'ride', 'diddley'].includes(v.groove)) ? `${grooveName(v, style)} has no ghost notes, so this does nothing.` : null),
       }),
       slider('fills', 'Fills', OFTEN, { hint: 'How often a fill leads into the next phrase' }),
       slider('wild', 'Fill style', ['Simple', 'Tidy', 'Standard', 'Busy', 'Wild'], { hint: 'A single snare pickup, or sixteenth-note tom runs' }),
-      slider('crash', 'Crashes', ['None', 'Rare', 'Standard', 'Often', 'Always']),
-      slider('power', 'Dynamics', DYNAMICS),
-      slider('pocket', 'Timing', TIMING),
-      slider('loose', 'Feel', FEEL),
+      slider('crash', 'Crashes', ['None', 'Rare', 'Standard', 'Often', 'Always'], { hint: 'How often a crash cymbal marks a big moment' }),
+      slider('power', 'Dynamics', DYNAMICS, { hint: DYNAMICS_HINT }),
+      slider('pocket', 'Timing', TIMING, { hint: TIMING_HINT }),
+      slider('loose', 'Feel', FEEL, { hint: FEEL_HINT }),
     ],
   },
 };

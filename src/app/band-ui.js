@@ -106,9 +106,15 @@ export function mountBandUI({ store, storage = null }) {
       } else {
         const wrap = el('div', 'bl-range');
         const head = el('div', 'swing-head');
-        const label = el('label', '', f.name);
+        const label = el('label', 'tiplabel');
         label.htmlFor = id;
-        if (f.hint) label.title = f.hint;
+        label.append(f.name);
+        if (f.hint) {
+          label.classList.add('has-tip');
+          const tip = el('span', 'tipbubble', f.hint);
+          tip.setAttribute('role', 'tooltip');
+          label.append(tip);
+        }
         const out = el('output');
         out.htmlFor = id;
         // Mix: let this slider wander around where it is left instead of staying put
