@@ -296,7 +296,8 @@ input[type='number'] { width: 4.5rem; min-height: 40px; padding: 0 0.5rem; text-
 .tracks-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; }
 .tracks-head h2 { margin: 0; font-size: 1.125rem; color: var(--text); }
 .tabs { order: 3; display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; border: 1px solid var(--fret-strong); border-radius: 999px; padding: 2px; }
-.tabs button { min-height: 38px; padding: 0 0.4rem; background: none; border: 0; border-radius: 999px; color: var(--muted); font-size: 0.9375rem; }
+.tabs button { display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; min-height: 38px; padding: 0 0.3rem; background: none; border: 0; border-radius: 999px; color: var(--muted); font-size: 0.875rem; white-space: nowrap; }
+.tabs .ticon { width: 14px; height: 14px; }
 .tabs button:hover { color: var(--text); }
 .tabs button[aria-selected='true'] { background: var(--brass); color: var(--brass-ink); font-weight: 600; }
 .loaded-line { margin: 0.8rem 0 0; font-size: 0.9375rem; color: var(--brass); overflow-wrap: anywhere; }
@@ -317,7 +318,11 @@ input[type='number'] { width: 4.5rem; min-height: 40px; padding: 0 0.5rem; text-
 }
 .sec[open] > summary::before { transform: rotate(45deg); }
 .sec > summary:hover .sec-title { color: var(--brass); }
-.sec-title { font-size: 0.9375rem; font-weight: 600; color: var(--text); }
+.sec-title { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.9375rem; font-weight: 600; color: var(--text); }
+/* little symbols next to instrument/section names: Style, Bass line, Keys, Drums, Mix, Tempo, Key change, Tempo
+   ramp, My tracks, My presets, Browse. Always currentColor, so they pick up each place's own hover/selected tint
+   for free instead of needing their own rules. */
+.ticon { flex: none; width: 16px; height: 16px; }
 .sec-sum { min-width: 0; font-size: 0.875rem; color: var(--muted); overflow-wrap: anywhere; }
 .sec-body { padding: 0 0 1.1rem; }
 
@@ -566,7 +571,7 @@ body.sidebar-lock { overflow: hidden; }
   display: grid; grid-template-columns: repeat(auto-fit, minmax(5rem, 1fr)); width: 100%;
   border: 1px solid var(--fret-strong); border-radius: 999px; padding: 2px; margin-bottom: 1.3rem;
 }
-.bandtabs button { min-height: 40px; padding: 0 0.5rem; background: none; border: 0; border-radius: 999px; color: var(--muted); font-size: 0.9375rem; }
+.bandtabs button { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-height: 40px; padding: 0 0.5rem; background: none; border: 0; border-radius: 999px; color: var(--muted); font-size: 0.9375rem; }
 .bandtabs button:hover { color: var(--text); }
 .bandtabs button[aria-selected='true'] { background: var(--brass); color: var(--brass-ink); font-weight: 600; }
 .bandpanel { padding-bottom: 0.5rem; }
