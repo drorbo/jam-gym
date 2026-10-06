@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sound Lab — Jam Gym</title>
+<link rel="stylesheet" href="../css/app.css">
+<style>
+  /* Not part of the app proper: a throwaway page for comparing candidate synth sounds by ear before any of
+     them goes into src/audio/voices.js for real. Reuses app.css only for the fonts and colour variables. */
+  body { max-width: 860px; margin: 0 auto; padding: 0 var(--gutter) 4rem; }
+  h1 { font-size: 1.4rem; margin: 1.4rem 0 0.2rem; }
+  .lede { color: var(--muted); font-size: 0.9375rem; max-width: 60ch; }
+  .master { display: flex; align-items: center; gap: 0.8rem; margin: 1rem 0 2rem; padding: 0.8rem 1rem; background: var(--raised); border: 1px solid var(--fret-strong); border-radius: 10px; }
+  .master label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--muted); }
+  .master input[type=range] { width: 10rem; }
+  h2 { font-size: 1.125rem; border-top: 1px solid var(--fret); padding-top: 1.2rem; margin-top: 2rem; }
+  .sub { color: var(--muted); font-size: 0.875rem; margin-top: -0.3rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 0.8rem; margin-top: 0.9rem; }
+  .card { background: var(--raised); border: 1px solid var(--fret-strong); border-radius: 10px; padding: 0.9rem 1rem; }
+  .card.current { border-color: var(--brass); }
+  .card h3 { margin: 0 0 0.2rem; font-size: 1rem; }
+  .card .tag { display: inline-block; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; color: var(--brass); margin-bottom: 0.3rem; }
+  .card p { margin: 0.3rem 0 0.7rem; font-size: 0.8125rem; color: var(--muted); line-height: 1.4; }
+  .card .row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+  button.go { min-height: 38px; padding: 0 0.9rem; background: var(--field); border: 1px solid var(--fret-strong); border-radius: 999px; color: var(--text); font-size: 0.875rem; cursor: pointer; }
+  button.go:hover { border-color: var(--brass); color: var(--brass); }
+  button.go:active { transform: translateY(1px); }
+  label.amp { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8125rem; color: var(--muted); margin-left: auto; }
+  footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--fret); color: var(--muted); font-size: 0.8125rem; }
+</style>
+</head>
+<body>
+  <h1>Sound Lab</h1>
+  <p class="lede">
+    Candidate sounds for the Keys panel's Guitar and Organ timbres (the two synthesised ones rock and blues lean on).
+    Nothing here is wired into the app yet — click around, then say which ones you like by name and they'll go in.
+  </p>
+
+  <div class="master">
+    <label>Volume <input id="vol" type="range" min="0" max="100" value="70"></label>
+    <label><input id="strum" type="checkbox" checked> Strum chords (a few ms between notes) instead of a stab</label>
+  </div>
+
+  <h2>Guitar</h2>
+  <p class="sub">What rock's Keys panel plays by default today, and three alternatives. Each has a clean and an amped (overdriven, cabinet-filtered) version — flip the switch and replay.</p>
+  <div class="cards" id="guitar-cards"></div>
+
+  <h2>Organ</h2>
+  <p class="sub">What blues and rock can both switch to today, and one richer alternative (more drawbars, a touch of Leslie wobble).</p>
+  <div class="cards" id="organ-cards"></div>
+
+  <footer>
+    <p>"Play chord" plays a G7 comping voicing (G3 B3 D4 F4). Guitar cards also have "Play muted chug" — four quick palm-muted
+      eighth notes on the root, the rock rhythm-guitar move. The Wurlitzer and Grand piano choices aren't here: they're real
+      recordings already (<a href="../samples/CREDITS.md">credits</a>), not synthesised, so there's nothing to improve by ear.</p>
+  </footer>
+
+<script>
+// ---- shared audio plumbing --------------------------------------------------------------
+
+let ctx = null;
+let master = null;
+function audio() {
+  if (ctx) return ctx;
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  master = ctx.createGain();
+  master.gain.value = 0.49; // 70 on the 0-100 slider, squared
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -16; comp.knee.value = 12; comp.ratio.value = 4;
+  master.connect(comp).connect(ctx.destination);
+  return ctx;
+}
+document.getElementById('vol').addEventListener('input', (e) => {
+  if (master) master.gain.setTargetAtTime((e.target.value / 100) ** 2, ctx.currentTime, 0.02);
+});
+
+const midiToFreq = (midi) => 440 * 2 ** ((midi - 69) / 12);
+
+const noiseBuffers = new WeakMap();
+function noiseBuffer(c) {
+  let buf = noiseBuffers.get(c);
+  if (!buf) {
+    buf = c.createBuffer(1, Math.floor(c.sampleRate * 2), c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    noiseBuffers.set(c, buf);
+  }
+  return buf;
+}
+function noiseSource(c, t, dur) {
+  const src = c.createBufferSource();
+  src.buffer = noiseBuffer(c);
+  src.start(t, Math.random() * 1.2);
+  src.stop(t + dur);
+  return src;
+}
+function envelope(c, t, { peak, attack = 0.002, tc }) {
+  const g = c.createGain();
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(peak, t + attack);
+  g.gain.setTargetAtTime(0, t + attack, tc);
+  return g;
+}
+function osc(c, type, freq, t, stop, detune = 0) {
+  const o = c.createOscillator();
+  o.type = type; o.frequency.value = freq; o.detune.value = detune;
+  o.start(t); o.stop(stop);
+  return o;
+}
+function filt(c, type, freq, q = 0.7) {
+  const f = c.createBiquadFilter();
+  f.type = type; f.frequency.value = freq; f.Q.value = q;
+  return f;
+}
+function distortionCurve(amount = 3.5, samples = 1024) {
+  const curve = new Float32Array(samples);
+  for (let i = 0; i < samples; i++) {
+    const x = (i / (samples - 1)) * 2 - 1;
+    curve[i] = Math.tanh(x * amount) / Math.tanh(amount);
+  }
+  return curve;
+}
+/** A little "cab + light crunch" bus, shared by every candidate's amped mode. */
+function ampBus(c, out) {
+  const shaper = c.createWaveShaper();
+  shaper.curve = distortionCurve(3.5);
+  shaper.oversample = '2x';
+  const cab = filt(c, 'lowpass', 3600);
+  const level = c.createGain();
+  level.gain.value = 0.8;
+  shaper.connect(cab).connect(level).connect(out);
+  return shaper; // candidates connect into here
+}
+
+// ---- the test chord ---------------------------------------------------------------------
+
+const G7 = [55, 59, 62, 65]; // G3 B3 D4 F4
+const strummed = () => document.getElementById('strum').checked;
+
+/** Plays `fn(c, out, t, dur, midi, vel, art)` once per note, staggered like a strum if the box is checked. */
+function playChord(fn, { amped = false, mute = false } = {}) {
+  const c = audio();
+  c.resume();
+  const out = amped ? ampBus(c, master) : master;
+  const t0 = c.currentTime + 0.05;
+  const stagger = strummed() ? 0.009 : 0;
+  G7.forEach((midi, i) => fn(c, out, t0 + i * stagger, mute ? 0.12 : 1.1, midi, mute ? 0.85 : 0.72, mute ? 'mute' : undefined));
+}
+
+/** Four quick palm-muted eighth notes on the root — the rock rhythm-guitar chug. */
+function playChug(fn, { amped = false } = {}) {
+  const c = audio();
+  c.resume();
+  const out = amped ? ampBus(c, master) : master;
+  const t0 = c.currentTime + 0.05;
+  for (let i = 0; i < 4; i++) fn(c, out, t0 + i * 0.22, 0.09, 43, i === 0 ? 0.95 : 0.8, 'mute'); // G2, muted
+}
+
+// ---- candidate guitar voices --------------------------------------------------------------
+
+/** Today's rock default: one raw sawtooth. This is the "very bad" one. */
+function guitarCurrent(c, out, t, dur, midi, vel, art) {
+  const f = midiToFreq(midi);
+  const muted = art === 'mute';
+  const length = muted ? Math.min(dur, 0.14) : dur;
+  const end = t + length + 0.4;
+  const lp = filt(c, 'lowpass', muted ? 1000 : 2400 * (0.7 + 0.5 * vel), 1);
+  const g = c.createGain();
+  const peak = vel * 0.6;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(peak, t + 0.002);
+  g.gain.setTargetAtTime(peak * 0.35, t + 0.002, muted ? 0.05 : 0.5);
+  g.gain.setTargetAtTime(0, t + length, muted ? 0.02 : 0.06);
+  osc(c, 'sawtooth', f, t, end).connect(lp);
+  lp.connect(g).connect(out);
+}
+
+/**
+ * Karplus-Strong: a burst of noise rung through a short feedback delay loop tuned to the note's
+ * period, damped by a lowpass in the loop (that's what makes a plucked string brighten on the
+ * attack and darken as it rings — a sawtooth can't do that, which is the main reason it sounds synthetic).
+ */
+function guitarPluck(c, out, t, dur, midi, vel, art, { bright = 6, tau } = {}) {
+  const f = Math.max(55, midiToFreq(midi)); // keep the loop delay sane at very low notes
+  const period = 1 / f;
+  const muted = art === 'mute';
+  const decay = tau ?? (muted ? 0.1 : 1.1);
+  const feedback = Math.exp(-period / decay);
+  const end = t + dur + decay * 4 + 0.1;
+
+  const delay = c.createDelay(0.05);
+  delay.delayTime.value = period;
+  const damp = filt(c, 'lowpass', f * (muted ? 2.5 : bright), 0.8);
+  const fb = c.createGain();
+  fb.gain.value = feedback;
+  delay.connect(damp).connect(fb).connect(delay);
+
+  const exciteGain = envelope(c, t, { peak: vel, attack: 0.0004, tc: period * 1.2 });
+  const exciter = noiseSource(c, t, period * 2.5);
+  exciter.connect(exciteGain).connect(delay);
+
+  const outGain = c.createGain();
+  outGain.gain.value = vel * (muted ? 1.1 : 0.85);
+  damp.connect(outGain).connect(out);
+
+  setTimeout(() => { try { delay.disconnect(); damp.disconnect(); fb.disconnect(); outGain.disconnect(); } catch {} }, (end - t + 0.5) * 1000);
+}
+
+/** Three slightly detuned saws (a cheap chorus/unison) plus a short pick-noise transient. */
+function guitarUnison(c, out, t, dur, midi, vel, art) {
+  const f = midiToFreq(midi);
+  const muted = art === 'mute';
+  const length = muted ? Math.min(dur, 0.13) : dur;
+  const end = t + length + 0.35;
+  const sum = c.createGain();
+  sum.gain.value = 0.3;
+  for (const detune of [-8, 0, 8]) osc(c, 'sawtooth', f, t, end, detune).connect(sum);
+  const lp = filt(c, 'lowpass', muted ? 1100 : 2600 * (0.7 + 0.5 * vel), 0.9);
+  const g = c.createGain();
+  const peak = vel * 0.7;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(peak, t + 0.002);
+  g.gain.setTargetAtTime(peak * 0.4, t + 0.002, muted ? 0.045 : 0.55);
+  g.gain.setTargetAtTime(0, t + length, muted ? 0.02 : 0.08);
+  sum.connect(lp).connect(g).connect(out);
+  const n = noiseSource(c, t, 0.02);
+  n.connect(filt(c, 'highpass', 2800)).connect(envelope(c, t, { peak: vel * 0.18, attack: 0.0004, tc: 0.012 })).connect(out);
+}
+
+/** A fast two-operator FM pluck: percussive and a little metallic, a different flavour again. */
+function guitarFM(c, out, t, dur, midi, vel, art) {
+  const f = midiToFreq(midi);
+  const muted = art === 'mute';
+  const length = muted ? Math.min(dur, 0.1) : dur;
+  const end = t + length + 0.4;
+  const car = osc(c, 'sine', f, t, end);
+  const mod = osc(c, 'sine', f * 1.5, t, end);
+  const modGain = c.createGain();
+  modGain.gain.setValueAtTime(f * (muted ? 2.2 : 3.2) * vel, t);
+  modGain.gain.setTargetAtTime(f * 0.15, t, 0.05);
+  mod.connect(modGain).connect(car.frequency);
+  const g = c.createGain();
+  const peak = vel * 0.6;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(peak, t + 0.002);
+  g.gain.setTargetAtTime(peak * 0.3, t + 0.002, muted ? 0.04 : 0.45);
+  g.gain.setTargetAtTime(0, t + length, muted ? 0.02 : 0.07);
+  car.connect(g).connect(out);
+}
+
+// ---- candidate organ voices ----------------------------------------------------------------
+
+/** Today's default: one oscillator carrying a drawbar-style harmonic mix. */
+function organCurrent(c, out, t, dur, midi, vel) {
+  const f = midiToFreq(midi);
+  const end = t + dur + 0.4;
+  const g = c.createGain();
+  const peak = vel * 0.55;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(peak, t + 0.012);
+  g.gain.setTargetAtTime(0, t + dur, 0.05);
+  const key = 'lab-organ-cur';
+  let wave = organWaves.get(key);
+  if (!wave) { wave = makeWave(c, [1, 0.8, 0.5, 0.3, 0, 0.2]); organWaves.set(key, wave); }
+  const o = c.createOscillator();
+  o.setPeriodicWave(wave); o.frequency.value = f; o.detune.value = (Math.random() - 0.5) * 6;
+  o.start(t); o.stop(end);
+  o.connect(g).connect(out);
+}
+const organWaves = new Map();
+function makeWave(c, harmonics) {
+  const imag = new Float32Array(harmonics.length + 1);
+  harmonics.forEach((h, i) => { imag[i + 1] = h; });
+  return c.createPeriodicWave(new Float32Array(imag.length), imag);
+}
+
+/** Four drawbars (8', 4', 2 2/3', 2') on separate oscillators, with a slow shared vibrato (a hint of Leslie). */
+function organDrawbars(c, out, t, dur, midi, vel) {
+  const f = midiToFreq(midi);
+  const end = t + dur + 0.4;
+  const g = c.createGain();
+  const peak = vel * 0.5;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(peak, t + 0.01);
+  g.gain.setTargetAtTime(0, t + dur, 0.06);
+  const sum = c.createGain();
+  sum.gain.value = 0.4;
+  const lfo = c.createOscillator();
+  lfo.type = 'sine'; lfo.frequency.value = 5.4;
+  const lfoGain = c.createGain();
+  lfoGain.gain.value = 5; // cents of wobble
+  lfo.connect(lfoGain);
+  lfo.start(t); lfo.stop(end);
+  const bars = [[1, 0.55], [2, 0.9], [3, 0.22], [4, 0.35]];
+  for (const [harmonic, amt] of bars) {
+    const o = c.createOscillator();
+    o.type = 'sine'; o.frequency.value = f * harmonic;
+    lfoGain.connect(o.detune);
+    o.start(t); o.stop(end);
+    const og = c.createGain(); og.gain.value = amt;
+    o.connect(og).connect(sum);
+  }
+  sum.connect(g).connect(out);
+}
+
+// ---- wiring the cards --------------------------------------------------------------------
+
+function card(container, { tag, name, desc, current = false, play, chug, amp = true }) {
+  const el = document.createElement('div');
+  el.className = 'card' + (current ? ' current' : '');
+  const ampBox = amp ? `<label class="amp"><input type="checkbox" class="ampbox"> Amped</label>` : '';
+  el.innerHTML = `<span class="tag">${tag}</span><h3>${name}</h3><p>${desc}</p>
+    <div class="row"><button type="button" class="go">Play chord</button>${chug ? '<button type="button" class="go chug">Play muted chug</button>' : ''}${ampBox}</div>`;
+  const ampbox = el.querySelector('.ampbox');
+  el.querySelector('.go').addEventListener('click', () => play(ampbox?.checked ?? false));
+  if (chug) el.querySelector('.chug').addEventListener('click', () => chug(ampbox?.checked ?? false));
+  container.append(el);
+}
+
+const guitarCards = document.getElementById('guitar-cards');
+card(guitarCards, {
+  tag: 'Today', name: 'Current: raw sawtooth', current: true,
+  desc: 'One sawtooth oscillator through a lowpass. What rock’s Keys panel plays right now — the one flagged as not good.',
+  play: (amped) => playChord(guitarCurrent, { amped }),
+  chug: (amped) => playChug(guitarCurrent, { amped }),
+});
+card(guitarCards, {
+  tag: 'Candidate', name: 'Plucked string (Karplus–Strong)',
+  desc: 'A physically-modelled pluck: a burst of noise rung through a short feedback loop tuned to the note, so it brightens on the attack and darkens as it rings, like a real string.',
+  play: (amped) => playChord((c, o, t, d, m, v, a) => guitarPluck(c, o, t, d, m, v, a), { amped }),
+  chug: (amped) => playChug((c, o, t, d, m, v, a) => guitarPluck(c, o, t, d, m, v, a), { amped }),
+});
+card(guitarCards, {
+  tag: 'Candidate', name: 'Unison strings',
+  desc: 'Three slightly detuned saws for width, plus a short noise burst on the attack for a pick transient. Cheaper than the pluck model, still rounder than a single saw.',
+  play: (amped) => playChord(guitarUnison, { amped }),
+  chug: (amped) => playChug(guitarUnison, { amped }),
+});
+card(guitarCards, {
+  tag: 'Candidate', name: 'FM pluck',
+  desc: 'Two-operator FM with a fast-decaying modulation index — percussive and a little metallic, a different character again.',
+  play: (amped) => playChord(guitarFM, { amped }),
+  chug: (amped) => playChug(guitarFM, { amped }),
+});
+
+const organCards = document.getElementById('organ-cards');
+card(organCards, {
+  tag: 'Today', name: 'Current: one drawbar mix', current: true,
+  desc: 'A single oscillator carrying a fixed drawbar-style harmonic blend, with a touch of random detune.',
+  play: () => playChord(organCurrent, {}), amp: false,
+});
+card(organCards, {
+  tag: 'Candidate', name: 'Four drawbars + Leslie wobble',
+  desc: 'Four separate oscillators (8′, 4′, 2⅓′, 2′) sharing one slow vibrato, closer to how a real tonewheel organ with the Leslie on slow actually moves.',
+  play: () => playChord(organDrawbars, {}), amp: false,
+});
+</script>
+</body>
+</html>
