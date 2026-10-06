@@ -6,12 +6,13 @@ Builds the bundled instrument samples in ./samples from openly licensed sources.
     python tools/build_samples.py            # downloads (cached), processes, writes ./samples
 
 Sources (see CREDITS.md for licences and attribution):
-  jazz drums   Virtuosity Drums (Versilian Studios / Karoryfer Samples)   CC0
-  rock drums   MuldjordKit (Lars Muldjord, DrumGizmo)                     CC BY 4.0
-  piano        Salamander Grand Piano V3 (Alexander Holm), via Tone.js    CC BY 3.0
-  e-piano      Wurlitzer EP200 (Greg Sullivan)                            CC BY 3.0
-  double bass  Meatbass, pizzicato (Karoryfer Samples / D. Smolken)       CC0
-  bass guitar  Black And Blue Basses (Karoryfer Samples): Dark Black, Baby Blue   CC0
+  jazz drums     Virtuosity Drums (Versilian Studios / Karoryfer Samples)   CC0
+  rock drums     MuldjordKit (Lars Muldjord, DrumGizmo)                     CC BY 4.0
+  piano          Salamander Grand Piano V3 (Alexander Holm), via Tone.js    CC BY 3.0
+  e-piano        Wurlitzer EP200 (Greg Sullivan)                            CC BY 3.0
+  double bass    Meatbass, pizzicato (Karoryfer Samples / D. Smolken)       CC0
+  bass guitar    Black And Blue Basses (Karoryfer Samples): Dark Black, Baby Blue   CC0
+  electric guitar  Black And Green Guitars (Karoryfer Samples / Brian Wood): Hofner Club, Gretsch Anniversary   CC0
 
 What the script does to each hit: mixes microphones (multi-mic kits), time-aligns and
 polarity-matches close mics to the overheads so they can't cancel, trims leading silence and
@@ -361,6 +362,61 @@ def build_wurli():
     }
 
 
+def build_electric_guitar(flavor, bank_id, name, credit):
+    """
+    Black And Green Guitars: a green Gretsch Anniversary and a black Hofner Club, recorded by Brian Wood (CC0).
+    'ord/twang' (ringing notes, two dynamics) is the normal comping sound; 'stac/staccato' (one dynamic, choked
+    short) is the muted sound rock's palm-muted chug uses - a real recorded mute instead of just a short gain
+    envelope on the ringing sample.
+    """
+    tree = json.loads(fetch_text('https://api.github.com/repos/sfzinstruments/karoryfer.black-and-green-guitars/git/trees/main?recursive=1'))
+    names = {t['path'] for t in tree['tree'] if t['type'] == 'blob'}
+    base = f'{GH}/karoryfer.black-and-green-guitars/main'
+    DYN = {'p': 0.45, 'f': 0.9}                           # two dynamics keep the download small, as with the Wurlitzer
+
+    ord_found, stac_found = {}, {}
+    for p in names:
+        m = re.fullmatch(rf'Samples/{flavor}/ord/twang_([a-g]b?\d)_(p|mf|f)_rr1\.wav', p)
+        if m and m.group(2) in DYN:
+            ord_found.setdefault(m.group(2), []).append((note_midi(m.group(1)), p))
+        m = re.fullmatch(rf'Samples/{flavor}/stac/staccato_([a-g]b?\d)_rr1\.wav', p)
+        if m:
+            stac_found[note_midi(m.group(1))] = p
+    fetch_many([f'{base}/{p}' for lst in ord_found.values() for _, p in lst] + [f'{base}/{p}' for p in stac_found.values()])
+
+    # every third note (minor thirds), same spacing as the piano and basses: the app pitch-shifts between them
+    all_midi = sorted({m for lst in ord_found.values() for m, _ in lst})
+    chosen_midi = set(pick(all_midi, max(1, len(all_midi) // 3)))
+
+    # Each note is normalised to its own dynamic's target peak, not scaled from whichever note in the layer happens
+    # to be loudest: a human player's "p" notes vary enough in recorded level that deriving the scale from the
+    # loudest one left quieter ones too soft. f and p still contrast (0.79 vs 0.56), just consistently per note.
+    ORD_TARGET = {'p': db(-5), 'f': db(-2)}
+    notes = []
+    for layer, lst in ord_found.items():
+        for midi, p in sorted(lst):
+            if midi not in chosen_midi:
+                continue
+            x, sr = read(f'{base}/{p}')
+            y = resample(trim(x, sr, 1.5, floor_db=-60), sr, 32000)
+            y = y * (ORD_TARGET[layer] / (np.max(np.abs(y)) + 1e-9))
+            notes.append({**write(f'keys/{bank_id}/ord_{midi}_{layer}.wav', y, 32000), 'midi': midi, 'ref': DYN[layer]})
+
+    muted = []
+    chosen_stac = sorted(m for m in stac_found if m in chosen_midi)
+    for midi in chosen_stac:
+        x, sr = read(f'{base}/{stac_found[midi]}')
+        y = resample(trim(x, sr, 0.4, floor_db=-50), sr, 32000)
+        y = y * (db(-3) / (np.max(np.abs(y)) + 1e-9))
+        muted.append({**write(f'keys/{bank_id}/stac_{midi}.wav', y, 32000), 'midi': midi, 'ref': 1})
+
+    print(f'  {bank_id}: {len(notes)} ringing notes, {len(muted)} muted notes')
+    return {
+        'id': bank_id, 'name': name, 'kind': 'multisample', 'release': 0.15, 'gain': 0.65, 'brightness': False,
+        'credit': credit, 'notes': notes, 'muted': muted,
+    }
+
+
 # ---- Basses -----------------------------------------------------------------------------
 
 MEATBASS = 'https://raw.githubusercontent.com/sfzinstruments/karoryfer.meatbass/master/Samples/pizz'
@@ -469,6 +525,14 @@ if __name__ == '__main__':
         print('piano...'); manifest['keys']['piano'] = build_piano()
     if not only or 'wurli' in only:
         print('wurlitzer...'); manifest['keys']['wurli'] = build_wurli()
+    if not only or 'hofner' in only:
+        print('electric guitar (Hofner)...')
+        manifest['keys']['hofner'] = build_electric_guitar('black', 'hofner', 'Electric guitar (Hofner, warm)',
+            'Black And Green Guitars (Hofner Club) by Karoryfer Samples, recorded by Brian Wood (CC0)')
+    if not only or 'gretsch' in only:
+        print('electric guitar (Gretsch)...')
+        manifest['keys']['gretsch'] = build_electric_guitar('green', 'gretsch', 'Electric guitar (Gretsch, bright)',
+            'Black And Green Guitars (Gretsch Anniversary) by Karoryfer Samples, recorded by Brian Wood (CC0)')
     if not only or 'double' in only:
         print('double bass...'); manifest['basses']['double'] = build_double()
     if not only or 'guitar' in only:

@@ -122,11 +122,17 @@ for (const [id, kit] of Object.entries(manifest.drums)) {
   });
 }
 
+// A keyboard goes as low as the comping engine ever asks; a guitar does not need to, because it couldn't really -
+// Black And Green Guitars' own lowest recorded note is E3 (52), and no standard-tuned guitar comps below its open
+// low E anyway. The engine does not know which timbre is picked, so an extreme Register setting still just
+// pitch-shifts down from 52 rather than failing.
+const RANGE_FLOOR = { hofner: 52, gretsch: 52 };
+
 for (const [id, bank] of Object.entries(manifest.keys)) {
   test(`keyboard "${id}": notes span the range comping uses, files are sound WAVs`, () => {
     assert.ok(bank.credit && bank.name && bank.release > 0 && bank.gain > 0);
     const midis = bank.notes.map((n) => n.midi);
-    assert.ok(Math.min(...midis) <= 42 && Math.max(...midis) >= 79, `range ${Math.min(...midis)}-${Math.max(...midis)}`);
+    assert.ok(Math.min(...midis) <= (RANGE_FLOOR[id] ?? 42) && Math.max(...midis) >= 79, `range ${Math.min(...midis)}-${Math.max(...midis)}`);
     const layers = new Set(bank.notes.map((n) => n.ref ?? 1));
     for (const ref of layers) {
       const ms = bank.notes.filter((n) => (n.ref ?? 1) === ref).map((n) => n.midi).sort((a, b) => a - b);
@@ -138,6 +144,18 @@ for (const [id, bank] of Object.entries(manifest.keys)) {
       assert.equal(w.channels, 1);
       assert.ok(w.seconds > 0.3 && w.seconds < 5, `${n.file} ${w.seconds}s`);
       assert.ok(w.peak > 0.3, `${n.file} peak ${w.peak}`);
+    }
+    // a muted/choked recording (rock's palm-muted chug), where the bank has one: short, one dynamic, same notes
+    if (bank.muted) {
+      const mm = bank.muted.map((n) => n.midi).sort((a, b) => a - b);
+      for (let i = 1; i < mm.length; i++) assert.ok(mm[i] - mm[i - 1] <= 8, `muted gap ${mm[i - 1]}-${mm[i]}`);
+      for (const n of bank.muted) {
+        assert.ok(existsSync(join(SAMPLES, n.file)), n.file);
+        const w = readWav(join(SAMPLES, n.file));
+        assert.equal(w.channels, 1);
+        assert.ok(w.seconds > 0.05 && w.seconds < 1, `${n.file} ${w.seconds}s`);
+        assert.ok(w.peak > 0.3, `${n.file} peak ${w.peak}`);
+      }
     }
   });
 }
@@ -173,8 +191,11 @@ test('the bundle stays a reasonable size', () => {
   let total = 0;
   const files = new Set();
   for (const kit of Object.values(manifest.drums)) for (const l of Object.values(kit.voices).flat()) l.files.forEach((f) => files.add(f));
-  for (const bank of Object.values(manifest.keys)) bank.notes.forEach((n) => files.add(n.file));
+  for (const bank of Object.values(manifest.keys)) { bank.notes.forEach((n) => files.add(n.file)); (bank.muted ?? []).forEach((n) => files.add(n.file)); }
   for (const bank of Object.values(manifest.basses)) bank.notes.forEach((n) => files.add(n.file));
   for (const f of files) total += statSync(join(SAMPLES, f)).size;
-  assert.ok(total < 26e6, `${(total / 1e6).toFixed(1)} MB`);
+  // every bank is lazy-loaded only when its sound is actually picked (see src/audio/samples.js), so this bounds the
+  // repo's total weight, not what any one visit downloads. Raised from 26 MB when the two electric guitars (~7 MB
+  // for both, including their muted/staccato notes) were added.
+  assert.ok(total < 32e6, `${(total / 1e6).toFixed(1)} MB`);
 });

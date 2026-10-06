@@ -144,7 +144,7 @@ export class Bus {
       case 'chords': {
         const bank = this.library?.get('keys', n.timbre);
         if (bank) {
-          playSampledNote(this.ctx, this.chordInputs.sampled, bank, t, n.dur, n.midi, n.vel * SAMPLE_LEVEL.keys);
+          playSampledNote(this.ctx, this.chordInputs.sampled, bank, t, n.dur, n.midi, n.vel * SAMPLE_LEVEL.keys, n.art);
         } else {
           // synth timbres, and the stand-in while a recorded keyboard is still loading
           const timbre = ['organ', 'guitar'].includes(n.timbre) ? n.timbre : 'epiano';

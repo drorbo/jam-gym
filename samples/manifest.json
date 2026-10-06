@@ -677,6 +677,572 @@
      "ref": 0.5
     }
    ]
+  },
+  "hofner": {
+   "id": "hofner",
+   "name": "Electric guitar (Hofner, warm)",
+   "kind": "multisample",
+   "release": 0.15,
+   "gain": 0.65,
+   "brightness": false,
+   "credit": "Black And Green Guitars (Hofner Club) by Karoryfer Samples, recorded by Brian Wood (CC0)",
+   "notes": [
+    {
+     "file": "keys/hofner/ord_52_f.wav",
+     "ms": 1500,
+     "midi": 52,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/hofner/ord_55_f.wav",
+     "ms": 1500,
+     "midi": 55,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/hofner/ord_59_f.wav",
+     "ms": 1500,
+     "midi": 59,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/hofner/ord_62_f.wav",
+     "ms": 1500,
+     "midi": 62,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/hofner/ord_65_f.wav",
+     "ms": 1500,
+     "midi": 65,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/hofner/ord_68_f.wav",
+     "ms": 1500,
+     "midi": 68,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/hofner/ord_72_f.wav",
+     "ms": 1500,
+     "midi": 72,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/hofner/ord_75_f.wav",
+     "ms": 1500,
+     "midi": 75,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/hofner/ord_78_f.wav",
+     "ms": 1500,
+     "midi": 78,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/hofner/ord_82_f.wav",
+     "ms": 1500,
+     "midi": 82,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/hofner/ord_85_f.wav",
+     "ms": 1500,
+     "midi": 85,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/hofner/ord_88_f.wav",
+     "ms": 1500,
+     "midi": 88,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/hofner/ord_91_f.wav",
+     "ms": 1500,
+     "midi": 91,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/hofner/ord_95_f.wav",
+     "ms": 1500,
+     "midi": 95,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/hofner/ord_98_f.wav",
+     "ms": 1244,
+     "midi": 98,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/hofner/ord_52_p.wav",
+     "ms": 1500,
+     "midi": 52,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/hofner/ord_55_p.wav",
+     "ms": 1500,
+     "midi": 55,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/hofner/ord_59_p.wav",
+     "ms": 1382,
+     "midi": 59,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/hofner/ord_62_p.wav",
+     "ms": 1381,
+     "midi": 62,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/hofner/ord_65_p.wav",
+     "ms": 1204,
+     "midi": 65,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/hofner/ord_68_p.wav",
+     "ms": 1500,
+     "midi": 68,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/hofner/ord_72_p.wav",
+     "ms": 1500,
+     "midi": 72,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/hofner/ord_75_p.wav",
+     "ms": 1500,
+     "midi": 75,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/hofner/ord_78_p.wav",
+     "ms": 1500,
+     "midi": 78,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/hofner/ord_82_p.wav",
+     "ms": 1500,
+     "midi": 82,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/hofner/ord_85_p.wav",
+     "ms": 1500,
+     "midi": 85,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/hofner/ord_88_p.wav",
+     "ms": 1500,
+     "midi": 88,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/hofner/ord_91_p.wav",
+     "ms": 1500,
+     "midi": 91,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/hofner/ord_95_p.wav",
+     "ms": 1500,
+     "midi": 95,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/hofner/ord_98_p.wav",
+     "ms": 1193,
+     "midi": 98,
+     "ref": 0.45
+    }
+   ],
+   "muted": [
+    {
+     "file": "keys/hofner/stac_52.wav",
+     "ms": 400,
+     "midi": 52,
+     "ref": 1
+    },
+    {
+     "file": "keys/hofner/stac_55.wav",
+     "ms": 341,
+     "midi": 55,
+     "ref": 1
+    },
+    {
+     "file": "keys/hofner/stac_59.wav",
+     "ms": 325,
+     "midi": 59,
+     "ref": 1
+    },
+    {
+     "file": "keys/hofner/stac_62.wav",
+     "ms": 330,
+     "midi": 62,
+     "ref": 1
+    },
+    {
+     "file": "keys/hofner/stac_65.wav",
+     "ms": 298,
+     "midi": 65,
+     "ref": 1
+    },
+    {
+     "file": "keys/hofner/stac_68.wav",
+     "ms": 292,
+     "midi": 68,
+     "ref": 1
+    },
+    {
+     "file": "keys/hofner/stac_72.wav",
+     "ms": 296,
+     "midi": 72,
+     "ref": 1
+    },
+    {
+     "file": "keys/hofner/stac_75.wav",
+     "ms": 291,
+     "midi": 75,
+     "ref": 1
+    },
+    {
+     "file": "keys/hofner/stac_78.wav",
+     "ms": 315,
+     "midi": 78,
+     "ref": 1
+    },
+    {
+     "file": "keys/hofner/stac_82.wav",
+     "ms": 292,
+     "midi": 82,
+     "ref": 1
+    },
+    {
+     "file": "keys/hofner/stac_85.wav",
+     "ms": 287,
+     "midi": 85,
+     "ref": 1
+    },
+    {
+     "file": "keys/hofner/stac_88.wav",
+     "ms": 210,
+     "midi": 88,
+     "ref": 1
+    },
+    {
+     "file": "keys/hofner/stac_91.wav",
+     "ms": 309,
+     "midi": 91,
+     "ref": 1
+    },
+    {
+     "file": "keys/hofner/stac_95.wav",
+     "ms": 250,
+     "midi": 95,
+     "ref": 1
+    },
+    {
+     "file": "keys/hofner/stac_98.wav",
+     "ms": 205,
+     "midi": 98,
+     "ref": 1
+    }
+   ]
+  },
+  "gretsch": {
+   "id": "gretsch",
+   "name": "Electric guitar (Gretsch, bright)",
+   "kind": "multisample",
+   "release": 0.15,
+   "gain": 0.65,
+   "brightness": false,
+   "credit": "Black And Green Guitars (Gretsch Anniversary) by Karoryfer Samples, recorded by Brian Wood (CC0)",
+   "notes": [
+    {
+     "file": "keys/gretsch/ord_52_p.wav",
+     "ms": 1500,
+     "midi": 52,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/gretsch/ord_55_p.wav",
+     "ms": 1500,
+     "midi": 55,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/gretsch/ord_59_p.wav",
+     "ms": 1500,
+     "midi": 59,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/gretsch/ord_62_p.wav",
+     "ms": 1500,
+     "midi": 62,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/gretsch/ord_65_p.wav",
+     "ms": 1500,
+     "midi": 65,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/gretsch/ord_68_p.wav",
+     "ms": 1500,
+     "midi": 68,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/gretsch/ord_72_p.wav",
+     "ms": 1500,
+     "midi": 72,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/gretsch/ord_75_p.wav",
+     "ms": 1500,
+     "midi": 75,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/gretsch/ord_78_p.wav",
+     "ms": 1500,
+     "midi": 78,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/gretsch/ord_82_p.wav",
+     "ms": 1500,
+     "midi": 82,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/gretsch/ord_85_p.wav",
+     "ms": 1500,
+     "midi": 85,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/gretsch/ord_88_p.wav",
+     "ms": 1500,
+     "midi": 88,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/gretsch/ord_91_p.wav",
+     "ms": 1500,
+     "midi": 91,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/gretsch/ord_95_p.wav",
+     "ms": 1500,
+     "midi": 95,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/gretsch/ord_98_p.wav",
+     "ms": 1443,
+     "midi": 98,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/gretsch/ord_52_f.wav",
+     "ms": 1500,
+     "midi": 52,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/gretsch/ord_55_f.wav",
+     "ms": 1500,
+     "midi": 55,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/gretsch/ord_59_f.wav",
+     "ms": 1500,
+     "midi": 59,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/gretsch/ord_62_f.wav",
+     "ms": 1500,
+     "midi": 62,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/gretsch/ord_65_f.wav",
+     "ms": 1500,
+     "midi": 65,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/gretsch/ord_68_f.wav",
+     "ms": 1500,
+     "midi": 68,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/gretsch/ord_72_f.wav",
+     "ms": 1500,
+     "midi": 72,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/gretsch/ord_75_f.wav",
+     "ms": 1500,
+     "midi": 75,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/gretsch/ord_78_f.wav",
+     "ms": 1500,
+     "midi": 78,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/gretsch/ord_82_f.wav",
+     "ms": 1500,
+     "midi": 82,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/gretsch/ord_85_f.wav",
+     "ms": 1500,
+     "midi": 85,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/gretsch/ord_88_f.wav",
+     "ms": 1500,
+     "midi": 88,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/gretsch/ord_91_f.wav",
+     "ms": 1500,
+     "midi": 91,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/gretsch/ord_95_f.wav",
+     "ms": 1500,
+     "midi": 95,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/gretsch/ord_98_f.wav",
+     "ms": 1500,
+     "midi": 98,
+     "ref": 0.9
+    }
+   ],
+   "muted": [
+    {
+     "file": "keys/gretsch/stac_52.wav",
+     "ms": 293,
+     "midi": 52,
+     "ref": 1
+    },
+    {
+     "file": "keys/gretsch/stac_55.wav",
+     "ms": 367,
+     "midi": 55,
+     "ref": 1
+    },
+    {
+     "file": "keys/gretsch/stac_59.wav",
+     "ms": 254,
+     "midi": 59,
+     "ref": 1
+    },
+    {
+     "file": "keys/gretsch/stac_62.wav",
+     "ms": 400,
+     "midi": 62,
+     "ref": 1
+    },
+    {
+     "file": "keys/gretsch/stac_65.wav",
+     "ms": 326,
+     "midi": 65,
+     "ref": 1
+    },
+    {
+     "file": "keys/gretsch/stac_68.wav",
+     "ms": 261,
+     "midi": 68,
+     "ref": 1
+    },
+    {
+     "file": "keys/gretsch/stac_72.wav",
+     "ms": 392,
+     "midi": 72,
+     "ref": 1
+    },
+    {
+     "file": "keys/gretsch/stac_75.wav",
+     "ms": 271,
+     "midi": 75,
+     "ref": 1
+    },
+    {
+     "file": "keys/gretsch/stac_78.wav",
+     "ms": 400,
+     "midi": 78,
+     "ref": 1
+    },
+    {
+     "file": "keys/gretsch/stac_82.wav",
+     "ms": 400,
+     "midi": 82,
+     "ref": 1
+    },
+    {
+     "file": "keys/gretsch/stac_85.wav",
+     "ms": 341,
+     "midi": 85,
+     "ref": 1
+    },
+    {
+     "file": "keys/gretsch/stac_88.wav",
+     "ms": 400,
+     "midi": 88,
+     "ref": 1
+    },
+    {
+     "file": "keys/gretsch/stac_91.wav",
+     "ms": 400,
+     "midi": 91,
+     "ref": 1
+    },
+    {
+     "file": "keys/gretsch/stac_95.wav",
+     "ms": 400,
+     "midi": 95,
+     "ref": 1
+    },
+    {
+     "file": "keys/gretsch/stac_98.wav",
+     "ms": 400,
+     "midi": 98,
+     "ref": 1
+    }
+   ]
   }
  },
  "basses": {

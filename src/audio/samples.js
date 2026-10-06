@@ -73,17 +73,24 @@ export class SampleLibrary {
       return { id, name: def.name, credit: def.credit, voices };
     }
 
-    const byRef = new Map();
-    for (const n of def.notes) {
-      const ref = n.ref ?? 1;
-      if (!byRef.has(ref)) byRef.set(ref, []);
-      byRef.get(ref).push({ midi: n.midi, buffer: buf(n.file) });
-    }
-    const layers = [];
-    for (const [ref, notes] of [...byRef].sort((a, b) => a[0] - b[0])) {
-      layers.push({ ref, notes: (await Promise.all(notes.map(async (n) => ({ midi: n.midi, buffer: await n.buffer })))).sort((a, b) => a.midi - b.midi) });
-    }
-    return { id, name: def.name, credit: def.credit, release: def.release, gain: def.gain, brightness: def.brightness, layers };
+    const groupByRef = async (list) => {
+      const byRef = new Map();
+      for (const n of list) {
+        const ref = n.ref ?? 1;
+        if (!byRef.has(ref)) byRef.set(ref, []);
+        byRef.get(ref).push({ midi: n.midi, buffer: buf(n.file) });
+      }
+      const out = [];
+      for (const [ref, notes] of [...byRef].sort((a, b) => a[0] - b[0])) {
+        out.push({ ref, notes: (await Promise.all(notes.map(async (n) => ({ midi: n.midi, buffer: await n.buffer })))).sort((a, b) => a.midi - b.midi) });
+      }
+      return out;
+    };
+    const layers = await groupByRef(def.notes);
+    // a separate, shorter recording for a muted/choked note (rock's palm-muted chug), where one exists: a real
+    // mute, not just a short gain envelope on the ringing note. Falls back to that envelope where there isn't one.
+    const mutedLayers = def.muted ? await groupByRef(def.muted) : null;
+    return { id, name: def.name, credit: def.credit, release: def.release, gain: def.gain, brightness: def.brightness, layers, mutedLayers };
   }
 }
 
@@ -116,8 +123,9 @@ export function chokeHat(handle, t) {
 }
 
 /** Play one note of a recorded keyboard, pitch-shifted from the nearest recorded key. */
-export function playSampledNote(ctx, out, bank, t, dur, midi, vel) {
-  const layer = pickLayer(bank.layers, vel);
+export function playSampledNote(ctx, out, bank, t, dur, midi, vel, art) {
+  const muted = art === 'mute' && bank.mutedLayers?.length;
+  const layer = pickLayer(muted ? bank.mutedLayers : bank.layers, vel);
   const note = pickNote(layer.notes, midi);
   const src = ctx.createBufferSource();
   src.buffer = note.buffer;
@@ -125,9 +133,9 @@ export function playSampledNote(ctx, out, bank, t, dur, midi, vel) {
 
   const gain = ctx.createGain();
   const peak = bank.gain * (0.3 + 0.95 * vel);
-  const tc = Math.max(0.03, bank.release / 3);
+  const tc = muted ? 0.025 : Math.max(0.03, bank.release / 3); // a real mute recording is already short and choked
   gain.gain.setValueAtTime(peak, t);
-  gain.gain.setTargetAtTime(0, t + dur, tc); // key up: the damper falls
+  gain.gain.setTargetAtTime(0, t + dur, tc); // key up: the damper falls (or the hand, for a muted hit)
 
   let node = src;
   if (bank.brightness) {
@@ -141,5 +149,5 @@ export function playSampledNote(ctx, out, bank, t, dur, midi, vel) {
   }
   node.connect(gain).connect(out);
   src.start(t);
-  src.stop(t + dur + bank.release * 2 + 0.1);
+  src.stop(t + dur + (muted ? tc : bank.release) * 2 + 0.1);
 }

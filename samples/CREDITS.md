@@ -10,18 +10,22 @@ The recorded instruments in this folder come from openly licensed libraries. Tha
 | Wurlitzer | Wurlitzer EP200 ([sfzinstruments/GregSullivan.E-Pianos](https://github.com/sfzinstruments/GregSullivan.E-Pianos)) | Greg Sullivan, [sullivang.net](http://www.sullivang.net/) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
 | Double bass | [Meatbass](https://github.com/sfzinstruments/karoryfer.meatbass), pizzicato: a 1958 Otto Rubner double bass | Karoryfer Samples, played and mapped by Drogomir Smolken | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | Bass guitar, Bass guitar (bright) | [Black And Blue Basses](https://github.com/sfzinstruments/karoryfer.black-and-blue-basses): "Dark Black" (fingered) and "Baby Blue" | Karoryfer Samples | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| Electric guitar (Hofner, warm), Electric guitar (Gretsch, bright) | [Black And Green Guitars](https://github.com/sfzinstruments/karoryfer.black-and-green-guitars): a black Hofner Club and a green Gretsch Anniversary | Karoryfer Samples, recorded by Brian Wood | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 
 ## What was changed
 
 The originals are large multi-microphone and multi-velocity recordings. For this app they were:
 
-- **cut down** to a handful of velocity layers and round-robins per drum, to every third key or so for the pianos,
-  and to every third semitone from E1 to G3 for the basses (the app pitch-shifts between recorded notes);
+- **cut down** to a handful of velocity layers and round-robins per drum, to every third key or so for the pianos
+  and the electric guitars, and to every third semitone from E1 to G3 for the basses (the app pitch-shifts between
+  recorded notes). The electric guitars also keep one choked, single-dynamic "staccato" recording per chosen note,
+  used for rock's palm-muted chug instead of just a short gain envelope on the ringing note;
 - **mixed to mono**. For the Rock kit the close, overhead and ambience microphones were combined, with each close
   microphone time-aligned and polarity-matched to the overheads so they add rather than cancel;
-- **trimmed** of leading silence and decayed tails, faded out, level-matched, and resampled: pianos to 32 kHz, basses to
-  24 kHz (a bass has little above 8 kHz). The basses also get a gentle compressor at build time: a plucked note is
-  mostly transient, and taming the peak lets the body sit at the level of a sustained bass without clipping;
+- **trimmed** of leading silence and decayed tails, faded out, level-matched, and resampled: pianos and electric
+  guitars to 32 kHz, basses to 24 kHz (a bass has little above 8 kHz). The basses also get a gentle compressor at
+  build time: a plucked note is mostly transient, and taming the peak lets the body sit at the level of a sustained
+  bass without clipping;
 - **saved as 16-bit WAV**.
 
 `tools/build_samples.py` reproduces all of this from the original sources.

@@ -43,7 +43,8 @@
   </div>
 
   <h2>Guitar</h2>
-  <p class="sub">What rock's Keys panel plays by default today, and three alternatives. Each has a clean and an amped (overdriven, cabinet-filtered) version — flip the switch and replay.</p>
+  <p class="sub">What rock's Keys panel plays by default today, two real recordings, and three synthesised alternatives.
+    Every card has an Amped (overdriven, cabinet-filtered) switch — flip it and replay, including on the recordings.</p>
   <div class="cards" id="guitar-cards"></div>
 
   <h2>Organ</h2>
@@ -52,11 +53,15 @@
 
   <footer>
     <p>"Play chord" plays a G7 comping voicing (G3 B3 D4 F4). Guitar cards also have "Play muted chug" — four quick palm-muted
-      eighth notes on the root, the rock rhythm-guitar move. The Wurlitzer and Grand piano choices aren't here: they're real
-      recordings already (<a href="../samples/CREDITS.md">credits</a>), not synthesised, so there's nothing to improve by ear.</p>
+      eighth notes on the root, the rock rhythm-guitar move; the two real recordings play an actual choked, muted take for
+      that, not just a shortened ringing note. The Wurlitzer and Grand piano choices aren't here: they're real recordings
+      already (<a href="../samples/CREDITS.md">credits</a>), already good, so there was nothing to compare them against.</p>
   </footer>
 
-<script>
+<script type="module">
+import { playChordNote } from './audio/voices.js';
+import { SampleLibrary, playSampledNote } from './audio/samples.js';
+
 // ---- shared audio plumbing --------------------------------------------------------------
 
 let ctx = null;
@@ -74,6 +79,16 @@ function audio() {
 document.getElementById('vol').addEventListener('input', (e) => {
   if (master) master.gain.setTargetAtTime((e.target.value / 100) ** 2, ctx.currentTime, 0.02);
 });
+
+let lib = null;
+const banks = new Map();
+/** Loads (once) and returns a real recorded keys bank, the same code path the app itself uses. */
+async function bank(id) {
+  const c = audio();
+  lib ??= new SampleLibrary(c); // its default base (src/audio/samples.js's own ../../samples/) already lands on /samples/
+  if (!banks.has(id)) banks.set(id, lib.load('keys', id));
+  return banks.get(id);
+}
 
 const midiToFreq = (midi) => 440 * 2 ** ((midi - 69) / 12);
 
@@ -121,14 +136,15 @@ function distortionCurve(amount = 3.5, samples = 1024) {
   }
   return curve;
 }
-/** A little "cab + light crunch" bus, shared by every candidate's amped mode. */
+/** The same "amp" bus src/audio/engine.js wires the synth guitar through in the real app (where it isn't
+    optional - every synth-guitar note goes through this, amped or not). Shared by every candidate's amped mode. */
 function ampBus(c, out) {
   const shaper = c.createWaveShaper();
   shaper.curve = distortionCurve(3.5);
   shaper.oversample = '2x';
-  const cab = filt(c, 'lowpass', 3600);
+  const cab = filt(c, 'lowpass', 3800);
   const level = c.createGain();
-  level.gain.value = 0.8;
+  level.gain.value = 0.45;
   shaper.connect(cab).connect(level).connect(out);
   return shaper; // candidates connect into here
 }
@@ -157,24 +173,30 @@ function playChug(fn, { amped = false } = {}) {
   for (let i = 0; i < 4; i++) fn(c, out, t0 + i * 0.22, 0.09, 43, i === 0 ? 0.95 : 0.8, 'mute'); // G2, muted
 }
 
-// ---- candidate guitar voices --------------------------------------------------------------
-
-/** Today's rock default: one raw sawtooth. This is the "very bad" one. */
-function guitarCurrent(c, out, t, dur, midi, vel, art) {
-  const f = midiToFreq(midi);
-  const muted = art === 'mute';
-  const length = muted ? Math.min(dur, 0.14) : dur;
-  const end = t + length + 0.4;
-  const lp = filt(c, 'lowpass', muted ? 1000 : 2400 * (0.7 + 0.5 * vel), 1);
-  const g = c.createGain();
-  const peak = vel * 0.6;
-  g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(peak, t + 0.002);
-  g.gain.setTargetAtTime(peak * 0.35, t + 0.002, muted ? 0.05 : 0.5);
-  g.gain.setTargetAtTime(0, t + length, muted ? 0.02 : 0.06);
-  osc(c, 'sawtooth', f, t, end).connect(lp);
-  lp.connect(g).connect(out);
+/** Same two, but for a real recorded bank (async: the bank loads from ./samples/ on first use). */
+async function playSampledChord(bankId, { amped = false } = {}) {
+  const c = audio();
+  c.resume();
+  const b = await bank(bankId);
+  if (!b) return;
+  const out = amped ? ampBus(c, master) : master;
+  const t0 = c.currentTime + 0.05;
+  const stagger = strummed() ? 0.009 : 0;
+  G7.forEach((midi, i) => playSampledNote(c, out, b, t0 + i * stagger, 1.1, midi, 0.72));
 }
+async function playSampledChug(bankId, { amped = false } = {}) {
+  const c = audio();
+  c.resume();
+  const b = await bank(bankId);
+  if (!b) return;
+  const out = amped ? ampBus(c, master) : master;
+  const t0 = c.currentTime + 0.05;
+  for (let i = 0; i < 4; i++) playSampledNote(c, out, b, t0 + i * 0.22, 0.09, 43, i === 0 ? 0.95 : 0.8, 'mute');
+}
+
+// ---- candidate guitar voices --------------------------------------------------------------
+// "Today" isn't reproduced here: it's imported above (playChordNote with timbre 'guitar'/'organ'), the exact
+// code the live app runs, so there is no risk of the lab quietly drifting from what rock and blues actually play.
 
 /**
  * Karplus-Strong: a burst of noise rung through a short feedback delay loop tuned to the note's
@@ -251,30 +273,6 @@ function guitarFM(c, out, t, dur, midi, vel, art) {
 
 // ---- candidate organ voices ----------------------------------------------------------------
 
-/** Today's default: one oscillator carrying a drawbar-style harmonic mix. */
-function organCurrent(c, out, t, dur, midi, vel) {
-  const f = midiToFreq(midi);
-  const end = t + dur + 0.4;
-  const g = c.createGain();
-  const peak = vel * 0.55;
-  g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(peak, t + 0.012);
-  g.gain.setTargetAtTime(0, t + dur, 0.05);
-  const key = 'lab-organ-cur';
-  let wave = organWaves.get(key);
-  if (!wave) { wave = makeWave(c, [1, 0.8, 0.5, 0.3, 0, 0.2]); organWaves.set(key, wave); }
-  const o = c.createOscillator();
-  o.setPeriodicWave(wave); o.frequency.value = f; o.detune.value = (Math.random() - 0.5) * 6;
-  o.start(t); o.stop(end);
-  o.connect(g).connect(out);
-}
-const organWaves = new Map();
-function makeWave(c, harmonics) {
-  const imag = new Float32Array(harmonics.length + 1);
-  harmonics.forEach((h, i) => { imag[i + 1] = h; });
-  return c.createPeriodicWave(new Float32Array(imag.length), imag);
-}
-
 /** Four drawbars (8', 4', 2 2/3', 2') on separate oscillators, with a slow shared vibrato (a hint of Leslie). */
 function organDrawbars(c, out, t, dur, midi, vel) {
   const f = midiToFreq(midi);
@@ -319,11 +317,24 @@ function card(container, { tag, name, desc, current = false, play, chug, amp = t
 }
 
 const guitarCards = document.getElementById('guitar-cards');
+const currentGuitar = (c, out, t, dur, midi, vel, art) => playChordNote(c, out, t, dur, midi, vel, 'guitar', art);
 card(guitarCards, {
   tag: 'Today', name: 'Current: raw sawtooth', current: true,
-  desc: 'One sawtooth oscillator through a lowpass. What rock’s Keys panel plays right now — the one flagged as not good.',
-  play: (amped) => playChord(guitarCurrent, { amped }),
-  chug: (amped) => playChug(guitarCurrent, { amped }),
+  desc: 'One sawtooth oscillator through a lowpass. What rock’s Keys panel plays right now — the one flagged as not good. Always goes through the amp in the real app (there is no clean mode for it today), so tick Amped for the honest comparison.',
+  play: (amped) => playChord(currentGuitar, { amped }),
+  chug: (amped) => playChug(currentGuitar, { amped }),
+});
+card(guitarCards, {
+  tag: 'Real recording', name: 'Electric guitar (Hofner, warm)',
+  desc: 'A real Hofner Club, recorded note by note (Black And Green Guitars, CC0) — including a real choked palm-mute recording for the chug, not a shortened ringing note.',
+  play: (amped) => playSampledChord('hofner', { amped }),
+  chug: (amped) => playSampledChug('hofner', { amped }),
+});
+card(guitarCards, {
+  tag: 'Real recording', name: 'Electric guitar (Gretsch, bright)',
+  desc: 'The same library’s green Gretsch Anniversary — brighter and more hollow-bodied than the Hofner.',
+  play: (amped) => playSampledChord('gretsch', { amped }),
+  chug: (amped) => playSampledChug('gretsch', { amped }),
 });
 card(guitarCards, {
   tag: 'Candidate', name: 'Plucked string (Karplus–Strong)',
@@ -345,10 +356,11 @@ card(guitarCards, {
 });
 
 const organCards = document.getElementById('organ-cards');
+const currentOrgan = (c, out, t, dur, midi, vel) => playChordNote(c, out, t, dur, midi, vel, 'organ');
 card(organCards, {
   tag: 'Today', name: 'Current: one drawbar mix', current: true,
   desc: 'A single oscillator carrying a fixed drawbar-style harmonic blend, with a touch of random detune.',
-  play: () => playChord(organCurrent, {}), amp: false,
+  play: () => playChord(currentOrgan, {}), amp: false,
 });
 card(organCards, {
   tag: 'Candidate', name: 'Four drawbars + Leslie wobble',
