@@ -26,6 +26,8 @@ export function mountTabs(tablist, { storage = null, default: fallback } = {}) {
       const panel = panelOf(t);
       if (panel) panel.hidden = !on;
     }
+    // a tab strip that scrolls sideways (phones) keeps the chosen tab in view; 'nearest' never moves the page itself
+    if (tablist.scrollWidth > tablist.clientWidth) tabs.find((t) => t.id === id)?.scrollIntoView({ inline: 'center', block: 'nearest' });
     let current = {};
     try { current = JSON.parse(storage?.getItem(KEY) || '{}') ?? {}; } catch { current = {}; }
     current[listId] = id;

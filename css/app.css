@@ -642,3 +642,112 @@ body.sidebar-lock { overflow: hidden; }
 #preset-note, #presets-msg { min-height: 1.2em; }
 #preset-note { margin: 0.4rem 0 0; }
 #preset-note.error, #presets-msg.error { color: var(--danger); }
+
+/* ---- big chords: the stage fills the screen (src/app/mobile.js) --------------------------------------------------
+   Works at every width (a tablet on a music stand wants it too). .app is a size container, which would make a
+   position: fixed overlay scroll with the page, so this hides everything else and stretches the stage instead. */
+.perform-bar { display: none; }
+.fab-info { display: none; }
+body[data-perform] :is(.top, .board, .tempowrap, .bandmod, .mod, .foot, .mnav, .loaded-now, .stage .toggles) { display: none; }
+body[data-perform] .app { padding-bottom: 7rem; }
+body[data-perform] .stage { align-content: start; min-height: calc(100dvh - 7rem); padding-top: 0.75rem; }
+body[data-perform] .perform-bar { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.perform-bpm { display: flex; align-items: center; gap: 0.6rem; }
+.perform-bpm output { min-width: 5.5ch; text-align: center; font-size: 1.25rem; font-weight: 800; }
+body[data-perform] .keyline .key { font-size: clamp(2rem, 9vw, 3.5rem); }
+body[data-perform] .chord { font-size: calc(min(60vw, 36vh) * var(--fit, 1)); }
+body[data-perform] .pips { margin: 0.6rem 0 1rem; }
+body[data-perform] .pips i { width: 18px; height: 18px; }
+body[data-perform] .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 0.6rem; }
+body[data-perform] .stats > div { border-left: 0; padding: 0; }
+body[data-perform] .stats > div:nth-child(4) { grid-column: 1 / -1; order: -1; }
+body[data-perform] .stats > div:nth-child(4) dd { font-size: min(14vw, 13vh); line-height: 1.05; }
+body[data-perform] .stats > div:nth-child(3) { display: none; }
+body[data-perform] .stats dd { font-size: 1.5rem; }
+body[data-perform] .headsup { font-size: 1.125rem; }
+
+/* ---- phone: one view at a time, a dock of transport + navigation at the bottom --------------------------------------
+   Below 701px the page stops being one long column. The nav (index.html #mnav) picks a view; the transport pill that
+   used to float top-left once the play button scrolled away is now always there, above the nav. Everything that was
+   on the page is still on a view: Play (readout, bars, Tempo), Chords (bars, progression, key, quick progressions),
+   Band (the five tabs) and Modulations (Key change and Tempo ramp, which act at the end of a loop). With no data-mview (script blocked) all of it shows. */
+.mnav { display: none; }
+@media (max-width: 700px) {
+  :root { --nav-h: calc(58px + env(safe-area-inset-bottom, 0px)); --dock-h: 64px; }
+  .app { padding-bottom: calc(var(--nav-h) + var(--dock-h) + 1.5rem); }
+  .top { padding-top: calc(0.5rem + env(safe-area-inset-top, 0px)); }
+  .foot { display: none; }
+
+  /* views */
+  body[data-mview='play'] :is(.entry, .bandmod, .mod),
+  body[data-mview='chords'] :is(.stage, .tempowrap, .bandmod, .mod),
+  body[data-mview='band'] :is(.stage, .board, .tempowrap, .mod),
+  body[data-mview='loop'] :is(.stage, .board, .tempowrap, .bandmod) { display: none; }
+  .tempowrap, .bandmod { margin-top: 0.75rem; }
+  .bandmod { border-top: 0; padding-top: 0; }
+  .stage { padding: 1rem 0 1.25rem; gap: 1rem; }
+  .transport .play, .transport .secondary { display: none; }
+  .transport { display: block; }
+  .toggles { flex-wrap: wrap; }
+  .key { font-size: 2.4rem; }
+  .stats dd { font-size: 1.25rem; }
+
+  /* bottom navigation */
+  .mnav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 26; display: grid; grid-template-columns: repeat(4, 1fr);
+    height: var(--nav-h); padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--raised); border-top: 1px solid var(--fret-strong);
+  }
+  .mnav button {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    background: none; border: 0; color: var(--muted); font-size: 0.75rem; font-weight: 600;
+  }
+  .mnav svg { width: 24px; height: 24px; }
+  .mnav button[aria-pressed='true'] { color: var(--brass); }
+  body[data-perform] .mnav { display: none; }
+
+  /* the transport dock: the floating pill, pinned above the nav and always shown */
+  .fab-transport {
+    top: auto; left: 0; right: 0; bottom: var(--nav-h); height: var(--dock-h);
+    padding: 0.4rem calc(var(--gutter) + env(safe-area-inset-right, 0px)) 0.4rem calc(var(--gutter) + env(safe-area-inset-left, 0px));
+    border-width: 1px 0 0; border-radius: 0; box-shadow: none; gap: 0.5rem;
+    opacity: 1; transform: none; pointer-events: auto;
+  }
+  body[data-perform] .fab-transport { bottom: 0; padding-bottom: calc(0.4rem + env(safe-area-inset-bottom, 0px)); height: calc(var(--dock-h) + env(safe-area-inset-bottom, 0px)); }
+  .fab-play { width: 52px; flex: none; }
+  .fab-transport .icon-btn { width: 48px; height: 48px; flex: none; }
+  .fab-info { display: block; flex: 1 1 auto; min-width: 0; overflow: hidden; text-align: right; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9375rem; font-weight: 600; }
+
+  /* touch sizes: 44px is the least a thumb hits reliably; 16px text so iOS doesn't zoom on focus */
+  .chip, .seg button, .ghost, select, input[type='number'], .save-form .chip, .keybtn { min-height: 44px; }
+  .link { min-height: 40px; }
+  .style-detail .presets .chip, .examples .chip, .bandpanel > .chip, .swing .chip { min-height: 44px; font-size: 0.9375rem; }
+  select, input, textarea { font-size: 1rem; }
+  .slider, .lvl input[type='range'] { height: 40px; }
+  .mute { min-height: 44px; }
+  .mixbtn { position: relative; min-height: 32px; padding: 0 0.8rem; font-size: 0.8125rem; }
+  .mixbtn::after { content: ''; position: absolute; inset: -8px -4px; }
+  .step { width: 52px; height: 52px; }
+  .heart { min-height: 44px; }
+
+  /* the band tab strip: all five tabs always in view, each an icon over a small label, sharing the row equally */
+  .bandtabs { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 1rem; border-radius: 18px; }
+  .bandtabs button { flex-direction: column; gap: 2px; min-height: 52px; padding: 0.3rem 0; border-radius: 15px; font-size: 0.75rem; line-height: 1.1; white-space: nowrap; }
+  .bandtabs .ticon { width: 18px; height: 18px; }
+  .bl-grid { gap: 1.1rem; }
+  .bl-field { grid-template-columns: 4.6rem minmax(0, 1fr); }
+  .hint { max-width: none; }
+
+  /* popups: a sheet from the bottom edge of the screen rather than a small box hanging off its button */
+  .keypop, .quickpop {
+    position: fixed; left: 0; right: 0; top: auto; bottom: calc(var(--nav-h) + var(--dock-h)); width: auto; max-height: 60dvh; overflow-y: auto;
+    border-radius: 16px 16px 0 0; border-width: 1px 0 0; z-index: 27; box-shadow: 0 -10px 30px rgb(0 0 0 / 0.35);
+    padding-bottom: 1rem;
+  }
+  .keytip { display: none; }
+  .keycell { min-height: 48px; }
+
+  /* the Tracks sheet covers the whole screen, dock and nav included */
+  .sidebar { z-index: 40; }
+  .sidebar-inner { padding-bottom: 6rem; }
+}

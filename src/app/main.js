@@ -8,6 +8,7 @@ import { mountBandUI } from './band-ui.js';
 import { mountCollapsibles } from './collapsible.js';
 import { mountSidebar } from './sidebar.js';
 import { mountPresetsUI } from './presets-ui.js';
+import { mountMobile } from './mobile.js';
 import { mountQuickProgressions } from './quick-ui.js';
 import { mountTabs } from './tabs.js';
 import { mountTracksUI } from './tracks-ui.js';
@@ -42,6 +43,7 @@ mountCollapsibles({ root: document.querySelector('.tempowrap'), storage });
 mountCollapsibles({ root: document.querySelector('.mod'), storage });
 // The Band module: Style, Bass line, Keys, Drums and Mix, one tab at a time.
 mountTabs(document.getElementById('band-tabs'), { storage, default: 'bt-style' });
+mountMobile({ store, storage });
 tracks.init();
 // the sign-in with eardle result is announced once (by tracks.init from the address), then taken off the address bar
 try {

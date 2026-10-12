@@ -36,6 +36,15 @@
     <main>
       <!-- Now playing -->
       <section class="stage" aria-label="Now playing">
+        <!-- Big chords mode (src/app/mobile.js): the stage fills the screen; this bar is only shown then -->
+        <div class="perform-bar">
+          <button class="ghost" id="perform-exit" type="button">Close</button>
+          <div class="perform-bpm" role="group" aria-label="Tempo">
+            <button class="step" id="perform-slower" type="button" aria-label="Slower">−</button>
+            <output id="perform-bpm-val" aria-live="off"></output>
+            <button class="step" id="perform-faster" type="button" aria-label="Faster">+</button>
+          </div>
+        </div>
         <div class="readout">
           <div class="keyline">
             <span class="keylabel">Key</span>
@@ -70,6 +79,7 @@
           <div class="toggles">
             <button class="chip" id="countin" type="button" aria-pressed="true">Count-in</button>
             <button class="chip" id="loop" type="button" aria-pressed="true">Loop</button>
+            <button class="chip" id="perform-open" type="button" aria-pressed="false" title="Fill the screen with the chord, to read from a stand">Big chords</button>
           </div>
         </div>
       </section>
@@ -374,7 +384,16 @@
     <button class="icon-btn" id="fab-restart" type="button" aria-label="Restart">
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12a7 7 0 1 0 2.3-5.2M5 4.5v4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
+    <span class="fab-info" id="fab-info" aria-hidden="true"></span>
   </div>
+
+  <!-- Phone navigation: one view at a time (src/app/mobile.js); hidden on wide screens, where the page is one long column -->
+  <nav class="mnav" id="mnav" aria-label="Views">
+    <button type="button" data-view="play" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 8.5v7l5.5-3.5z" fill="currentColor"/></svg><span>Play</span></button>
+    <button type="button" data-view="chords" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Chords</span></button>
+    <button type="button" data-view="band" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V9M12 19V5M19 19v-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Band</span></button>
+    <button type="button" data-view="loop" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 0 1 13-5.1M19.5 12a7.5 7.5 0 0 1-13 5.1M18 3v4h-4M6 21v-4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 15v-5.5M9.8 11.5l2.2-2.2 2.2 2.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Modulations</span></button>
+  </nav>
 
   <script type="module" src="src/app/main.js"></script>
 </body>
