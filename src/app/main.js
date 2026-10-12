@@ -48,7 +48,7 @@ tracks.init();
 // the sign-in with eardle result is announced once (by tracks.init from the address), then taken off the address bar
 try {
   const url = new URL(location.href);
-  if (url.searchParams.has('eardle')) { url.searchParams.delete('eardle'); history.replaceState(null, '', url.pathname + url.search + url.hash); }
+  if (url.searchParams.has('eardle') || url.searchParams.has('google')) { url.searchParams.delete('eardle'); url.searchParams.delete('google'); history.replaceState(null, '', url.pathname + url.search + url.hash); }
 } catch { /* an old browser: the parameter just stays */ }
 
 store.subscribe((state, patch) => {

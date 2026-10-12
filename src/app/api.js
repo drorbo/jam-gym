@@ -16,6 +16,9 @@ export class ApiError extends Error {
   get offline() { return this.status === 0; }
 }
 
+/** Where a person's photo is served from; the version in the address makes a changed photo a new address. */
+export const avatarUrl = (publicId, version) => `/api/avatar/${encodeURIComponent(publicId)}?v=${encodeURIComponent(version)}`;
+
 /** @param {{fetch?: typeof fetch, base?: string}} [opts] */
 export function createApi({ fetch: fetchImpl = globalThis.fetch?.bind(globalThis), base = '' } = {}) {
   async function call(method, path, body) {
@@ -59,8 +62,18 @@ export function createApi({ fetch: fetchImpl = globalThis.fetch?.bind(globalThis
     signOut: () => call('POST', '/api/me/signout'),
     signOutEverywhere: () => call('POST', '/api/me/signout', { everywhere: true }),
     rename: (displayName) => call('PATCH', '/api/me', { displayName }).then((r) => r.me),
-    recoveryCode: () => call('GET', '/api/me/recovery').then((r) => r.code),
-    recover: (code) => call('POST', '/api/me/recover', { code }).then((r) => r.me),
+    /** Name and/or bio: send only what changes. */
+    updateProfile: (patch) => call('PATCH', '/api/me', patch).then((r) => r.me),
+    /** The photo, as base64 of a small JPEG (see avatar.js). */
+    setAvatar: (image) => call('PUT', '/api/me/avatar', { image }).then((r) => r.me),
+    removeAvatar: () => call('DELETE', '/api/me/avatar').then((r) => r.me),
+    /** Someone's public profile and their published tracks: { profile, tracks }. */
+    profile: (publicId) => call('GET', `/api/profiles/${id(publicId)}`),
+    /** Make an account (or give this browser's library a login) with a username and password. Resolves to me. */
+    signUp: (username, password) => call('POST', '/api/auth/signup', { username, password }).then((r) => r.me),
+    /** Log this browser in to an existing account. Resolves to me. */
+    logIn: (username, password) => call('POST', '/api/auth/login', { username, password }).then((r) => r.me),
+    changePassword: (current, next) => call('POST', '/api/me/password', { current, next }),
     deleteMe: () => call('DELETE', '/api/me'),
 
     // tracks

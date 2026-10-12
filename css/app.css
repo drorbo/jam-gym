@@ -751,3 +751,83 @@ body[data-perform] .headsup { font-size: 1.125rem; }
   .sidebar { z-index: 40; }
   .sidebar-inner { padding-bottom: 6rem; }
 }
+
+/* ---- Jam Hub: the sidebar is a place to explore tracks and to publish your own ------------------------------------- */
+.tracks-head h2 { font-size: 1.375rem; font-weight: 800; letter-spacing: -0.01em; }
+.hub-sub { order: 2; flex: 1 0 100%; margin: -0.2rem 0 0.4rem; font-size: 0.9375rem; color: var(--muted); }
+.hub-me {
+  order: 1; margin-left: auto; display: inline-flex; align-items: center; gap: 0.5rem; max-width: 11rem; min-height: 40px; padding: 0 0.8rem 0 0.35rem;
+  background: none; border: 1px solid var(--fret-strong); border-radius: 999px; color: var(--text); font-size: 0.875rem;
+}
+.hub-me:hover { border-color: var(--text); }
+.hub-me-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tracks-head .sidebar-close { order: 1; }
+/* four tabs: the icon over a short label, so "My presets" and "My account" both fit */
+.tabs { grid-template-columns: repeat(4, 1fr); border-radius: 18px; }
+.tabs button { flex-direction: column; gap: 2px; min-height: 52px; padding: 0.3rem 0.2rem; border-radius: 15px; font-size: 0.75rem; line-height: 1.1; }
+.tabs .ticon { width: 18px; height: 18px; }
+
+/* a round photo, or the person's first letter on a colour from their name (src/app/tracks-ui.js avatarEl) */
+.avatar {
+  position: relative; flex: none; display: inline-grid; place-items: center; width: var(--sz, 40px); height: var(--sz, 40px);
+  border-radius: 50%; overflow: hidden; background: hsl(var(--hue, 40) 32% 30%); color: #fff;
+}
+.avatar-initial { font-weight: 700; font-size: calc(var(--sz, 40px) * 0.45); line-height: 1; }
+.avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+.chip.primary { color: var(--brass-ink); background: var(--brass); border-color: var(--brass); font-weight: 600; }
+.chip.primary:hover { color: var(--brass-ink); filter: brightness(1.06); }
+a.chip { display: inline-flex; align-items: center; text-decoration: none; }
+
+/* My account */
+.acct { display: grid; gap: 0.9rem; padding-top: 0.5rem; }
+.acct-card { padding: 1rem 1.1rem; background: var(--field); border: 1px solid var(--fret); border-radius: 14px; }
+.acct-card h3 { margin: 0 0 0.6rem; font-size: 0.9375rem; font-weight: 600; }
+.acct-card p { margin: 0 0 0.6rem; font-size: 0.9375rem; color: var(--muted); }
+.acct-card .hint { margin: 0.5rem 0 0.8rem; max-width: none; }
+.acct-card .inline-panel { margin-top: 0.8rem; }
+.acct-danger { border-color: transparent; background: none; padding-left: 0; }
+.acct-danger h3 { color: var(--muted); }
+.profile-head { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.profile-side { min-width: 0; }
+.profile-side .hint { margin: 0.5rem 0 0; font-size: 0.8125rem; }
+.profile-btns { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.8rem; }
+.pfield { position: relative; display: grid; gap: 0.3rem; margin-bottom: 0.8rem; font-size: 0.875rem; color: var(--muted); }
+.pfield input, .pfield textarea { width: 100%; min-height: 44px; padding: 0.6rem 0.8rem; font-size: 1rem; background: var(--bg); border: 1px solid var(--fret-strong); border-radius: 8px; color: var(--text); }
+.pfield textarea { min-height: 6.5rem; resize: vertical; line-height: 1.45; }
+.pcount { justify-self: end; font-size: 0.75rem; }
+
+/* an author under a Browse track, and a profile opened from it */
+.author {
+  display: inline-flex; align-items: center; gap: 0.5rem; min-height: 36px; margin-top: 0.35rem; padding: 0 0.6rem 0 0.15rem;
+  background: none; border: 0; border-radius: 999px; color: var(--muted); font-size: 0.875rem; max-width: 100%;
+}
+.author span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.author:hover { color: var(--brass); }
+.profile-view { padding-top: 0.6rem; }
+.profile-public { margin: 0.9rem 0 0.6rem; }
+.profile-who h3 { margin: 0; font-size: 1.25rem; overflow-wrap: anywhere; }
+.profile-who p { margin: 0.2rem 0 0; }
+.profile-bio { margin: 0 0 0.9rem; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.9375rem; }
+.profile-tracks-title { margin: 1.1rem 0 0.4rem; font-size: 0.875rem; font-weight: 600; color: var(--muted); }
+
+/* logging in / creating an account (My account) */
+.authmode { display: flex; width: 100%; margin: 0.2rem 0 1rem; }
+.authmode button { flex: 1 1 0; min-width: 0; padding: 0 0.6rem; }
+.auth-form { display: grid; }
+.auth-form .hint { margin: 0 0 0.8rem; max-width: none; }
+.auth-form .chip.primary { justify-self: start; }
+.auth-form .profile-btns { margin-top: 0.2rem; }
+.acct-card .profile-btns .hint { margin: 0; }
+
+/* "Continue with Google" and "Sign in with eardle" under the login form */
+.auth-more { display: grid; gap: 0.6rem; justify-items: stretch; margin-top: 1rem; padding-top: 0.9rem; border-top: 1px solid var(--fret); }
+.auth-or { justify-self: center; margin-top: -1.55rem; padding: 0 0.6rem; background: var(--field); font-size: 0.8125rem; color: var(--muted); }
+.google-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.7rem; min-height: 46px; padding: 0 1rem;
+  background: #fff; color: #1f1f1f; border: 1px solid #dadce0; border-radius: 999px; font-weight: 600; font-size: 0.9375rem; text-decoration: none;
+}
+.google-btn:hover { background: #f4f5f7; }
+.auth-more .chip { justify-content: center; }
+
+.auth-connect { margin-top: 0.6rem; padding-top: 0; border-top: 0; }

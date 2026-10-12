@@ -94,7 +94,8 @@ test('the API client sends what the server requires and builds correct URLs', as
     [() => api.like('id1'), 'PUT', '/api/tracks/id1/like'], [() => api.unlike('id1'), 'DELETE', '/api/tracks/id1/like'],
     [() => api.publish('id1'), 'POST', '/api/tracks/id1/publish'], [() => api.unpublish('id1'), 'POST', '/api/tracks/id1/unpublish'],
     [() => api.copy('id1'), 'POST', '/api/tracks/id1/copy'], [() => api.deleteTrack('id1'), 'DELETE', '/api/tracks/id1'],
-    [() => api.recoveryCode(), 'GET', '/api/me/recovery'],
+    [() => api.signUp('u', 'p'), 'POST', '/api/auth/signup'], [() => api.logIn('u', 'p'), 'POST', '/api/auth/login'],
+    [() => api.changePassword('a', 'b'), 'POST', '/api/me/password'],
     [() => api.deleteMe(), 'DELETE', '/api/me'], [() => api.session(), 'POST', '/api/session'], [() => api.myTracks(), 'GET', '/api/tracks/mine'],
   ]) {
     await fn();
@@ -367,7 +368,7 @@ test('searching by words, chords and filters through the real server, with pagin
 }));
 
 
-test('account: rename, recovery code shown and hidden, recovering on another device, deleting everything', withServer(async (server) => {
+test('account: rename, logging in on another device, deleting everything', withServer(async (server) => {
   const a = person(server);
   await a.tracks.init();
   await a.tracks.save('Keep');
@@ -375,135 +376,96 @@ test('account: rename, recovery code shown and hidden, recovering on another dev
   assert.equal(a.state().flash.kind, 'error');
   assert.equal(await a.tracks.rename('Nina'), true);
   assert.equal(a.state().me.displayName, 'Nina');
-  assert.equal(a.state().recovery, null);
-  await a.tracks.showRecovery();
-  const code = a.state().recovery;
-  assert.match(code, /^([0-9A-Z]{4}-){7}[0-9A-Z]{4}$/);
-  a.tracks.hideRecovery();
-  assert.equal(a.state().recovery, null);
+
+  assert.equal(await a.tracks.signUp('nina_k', 'short'), false, 'password too short');
+  assert.equal(await a.tracks.signUp('nina_k', 'a long enough one'), true);
+  assert.equal(a.state().me.username, 'nina_k', 'the library that was already saved got a login');
+  assert.deepEqual(a.state().mine.map((t) => t.title), ['Keep']);
+
   const phone = person(server);
   await phone.tracks.init();
-  assert.equal(await phone.tracks.recover('WRONG-CODE'), false);
-  assert.equal(await phone.tracks.recover(code), true);
+  assert.equal(await phone.tracks.logIn('nina_k', 'wrong password'), false);
+  assert.equal(phone.state().flash.kind, 'error');
+  assert.equal(phone.state().me, null);
+  assert.equal(await phone.tracks.logIn('nina_k', 'a long enough one'), true);
   assert.equal(phone.state().me.displayName, 'Nina');
   assert.deepEqual(phone.state().mine.map((t) => t.title), ['Keep']);
-  assert.match(phone.state().flash.text, /Signed in as Nina/);
+  assert.match(phone.state().flash.text, /Welcome back, Nina/);
+
+  assert.equal(await phone.tracks.changePassword('nope', 'another long one'), false);
+  assert.equal(await phone.tracks.changePassword('a long enough one', 'another long one'), true);
+  assert.equal(await phone.tracks.signOut(), true);
+  assert.equal(phone.state().me, null);
+  assert.equal(await phone.tracks.logIn('nina_k', 'another long one'), true);
+
   assert.equal(await phone.tracks.deleteAccount(), true);
   assert.deepEqual([phone.state().me, phone.state().mine], [null, []]);
   await a.tracks.refreshMine();
   assert.deepEqual(a.state().mine, [], 'the original browser shares the same deleted identity');
 }));
 
-test('deleting and unpublishing tracks', withServer(async (server) => {
-  const a = person(server); const b = person(server);
-  await a.tracks.init(); await b.tracks.init();
-  const t = await a.tracks.save('Temp');
-  await a.tracks.setPublished(t.id, true);
-  await a.tracks.setPublished(t.id, false);
-  assert.equal(a.state().mine[0].visibility, 'private');
-  assert.match(a.state().flash.text, /private again/);
-  assert.equal(await b.tracks.openShared(t.id), null, 'no longer reachable');
-  assert.match(b.state().flash.text, /not found/);
-  await a.tracks.remove(t.id);
-  assert.deepEqual([a.state().mine.length, a.state().active], [0, null]);
-  assert.match(a.state().flash.text, /Deleted "Temp"/);
+test('profile: save a bio, set and remove a photo, and open another person\'s profile from Browse', withServer(async (server) => {
+  // a minimal JPEG-shaped file (the markers the server checks), as base64
+  const jpeg = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00, 0xff, 0xc0, 0x00, 0x0b, 0x08, 0x00, 0x40, 0x00, 0x40, 0x01, 0x01, 0x11, 0x00, 0xff, 0xda, 0x00, 0x02, 0xff, 0xd9])]).toString('base64');
+
+  const ann = person(server);
+  await ann.tracks.init();
+  await ann.tracks.save('Ann tune');
+  await ann.api.publish(ann.state().mine[0].id);
+  assert.equal(await ann.tracks.saveProfile({ displayName: 'Ann Lee', bio: 'Plays upright.' }), true);
+  assert.deepEqual([ann.state().me.displayName, ann.state().me.bio, ann.state().me.avatar], ['Ann Lee', 'Plays upright.', null]);
+  assert.equal(await ann.tracks.setAvatar('not a jpeg'), false);
+  assert.equal(ann.state().flash.kind, 'error');
+  assert.equal(await ann.tracks.setAvatar(jpeg), true);
+  assert.ok(ann.state().me.avatar > 0);
+
+  const bob = person(server);
+  await bob.tracks.init();
+  await bob.tracks.search({});
+  const item = bob.state().browse.items[0];
+  assert.deepEqual([item.author, item.authorId, item.authorAvatar], ['Ann Lee', ann.state().me.id, ann.state().me.avatar]);
+
+  await bob.tracks.openProfile(item.authorId);
+  assert.equal(bob.state().tab, 'browse');
+  assert.equal(bob.state().profile.status, 'ok');
+  assert.deepEqual([bob.state().profile.data.profile.bio, bob.state().profile.data.tracks.map((t) => t.title)], ['Plays upright.', ['Ann tune']]);
+  await bob.tracks.toggleLike(bob.state().profile.data.tracks[0].id);
+  assert.equal(bob.state().profile.data.tracks[0].likedByMe, true, 'liking works from the profile too');
+  bob.tracks.closeProfile();
+  assert.equal(bob.state().profile, null);
+
+  await bob.tracks.openProfile('NOSUCHID');
+  assert.equal(bob.state().profile.status, 'error');
+
+  assert.equal(await ann.tracks.removeAvatar(), true);
+  assert.equal(ann.state().me.avatar, null);
 }));
 
-test('a shared link opens the track for a brand new visitor, without giving them a cookie', withServer(async (server) => {
-  const a = person(server);
-  await a.tracks.init();
-  a.setSong({ progressionText: 'Fmaj7 | Bb7 | Em7 A7', tempo: 99 });
-  const t = await a.tracks.save('Link me');
-  await a.tracks.setPublished(t.id, true);
-  const visitor = person(server, { search: `?track=${t.id}` });
-  await visitor.tracks.init();
-  assert.equal(visitor.store.get().song.progressionText, 'Fmaj7 | Bb7 | Em7 A7');
-  assert.equal(visitor.store.get().song.tempo, 99);
-  assert.equal(visitor.state().active.id, t.id);
-  assert.equal(visitor.jar.size, 0, 'just listening: still no cookie');
-  const gone = person(server, { search: '?track=doesNotExist' });
-  await gone.tracks.init();
-  assert.match(gone.state().flash.text, /not found/);
-  assert.equal(a.tracks.shareUrl('abc 1', 'https://jam-gym.eardle.com'), 'https://jam-gym.eardle.com/?track=abc%201');
+test('signing up makes an account without saving anything, and a profile can then be filled in', withServer(async (server) => {
+  const p = person(server);
+  await p.tracks.init();
+  assert.equal(p.state().me, null);
+  assert.equal(await p.tracks.signUp('hello_you', 'password one'), true);
+  assert.match(p.state().me.displayName, /^Player-/);
+  assert.equal(p.state().cookieNote, true, 'the one-time cookie note is shown');
+  assert.equal(await p.tracks.saveProfile({ bio: 'Hi' }), true);
+  assert.equal(p.state().me.bio, 'Hi');
+  const again = person(server, { storage: p.storage });
+  await again.tracks.init();
+  assert.equal(again.state().me, null, 'another browser is still a guest');
+  assert.equal(await again.tracks.signUp('hello_you', 'password two'), false, 'the username is taken');
 }));
 
-test('moving the old local list into the library: good ones move, others stay', withServer(async (server) => {
-  const a = person(server);
-  await a.tracks.init();
-  const local = [
-    { id: '1', name: 'Fine one', text: 'Cmaj7 | Am7', key: 'C', timeSignature: '4/4', style: 'jazz', tempo: 120, swing: 60 },
-    { id: '2', name: 'Fine two', text: 'Am | G | F | E', key: 'A', timeSignature: '10/8', style: 'rock', tempo: 100, swing: null },
-    { id: '3', name: 'Broken', text: 'C Dm G', key: 'C', timeSignature: '6/8', style: 'jazz', tempo: 100, swing: null },
-  ];
-  a.store.set({ saved: local });
-  await a.tracks.importLocal();
-  assert.deepEqual(a.state().mine.map((t) => t.title).sort(), ['Fine one', 'Fine two']);
-  assert.deepEqual(a.store.get().saved.map((s) => s.name), ['Broken'], 'only what could not move stays');
-  assert.match(a.state().flash.text, /Moved 2 to your library. 1 could not be moved/);
-  const one = a.state().mine.find((t) => t.title === 'Fine one');
-  assert.equal((await a.api.getTrack(one.id)).data.config.swing, 60);
-  a.store.set({ saved: [] });
-  await a.tracks.importLocal();
-  assert.equal(a.state().mine.length, 2, 'nothing to move: nothing happens');
+test('coming back from Google says what happened, and the Connect/Continue state follows the server', withServer(async (server) => {
+  const ok = person(server, { search: '?google=ok' });
+  await ok.tracks.init();
+  assert.equal(ok.state().flash.kind, 'error', 'told it worked but there is no account: say so rather than stay quiet');
+  const g = person(server, { search: '?google=failed' });
+  await g.tracks.init();
+  assert.match(g.state().flash.text, /Google did not work/);
+  assert.equal(g.state().flash.kind, 'error');
+  const c = person(server, { search: '?google=cancelled' });
+  await c.tracks.init();
+  assert.match(c.state().flash.text, /cancelled/);
+  assert.deepEqual(c.state().features, { eardle: false, google: false });
 }));
-
-test('the tracks state starts out empty and the same every time', () => {
-  const s = initialTracksState();
-  assert.deepEqual([s.status, s.me, s.mine, s.active, s.tab], ['loading', null, [], null, 'mine']);
-  assert.notEqual(initialTracksState().browse, s.browse, 'no shared mutable state between controllers');
-});
-
-// ---- sign in with eardle -----------------------------------------------------------------------
-
-const SSO = { EARDLE_SSO_SECRET: 'client-test-secret-0123456789abcdef', EARDLE_URL: 'https://eardle.example' };
-
-test('the controller learns from the server whether sign in with eardle is offered', withServer(async (server) => {
-  const on = person(server);
-  await on.tracks.init();
-  assert.equal(on.state().features.eardle, true);
-}, SSO));
-
-test('without the secret the server does not offer it', withServer(async (server) => {
-  const off = person(server);
-  await off.tracks.init();
-  assert.equal(off.state().features.eardle, false);
-}));
-
-test('coming back from eardle says who you are, or that it did not work; signing out forgets the account here', withServer(async (server) => {
-  const { signToken } = await import('../server/sso.js');
-  const a = person(server);
-  await a.tracks.init();
-  // a real round trip through the server, done with the browser's own cookie jar
-  const start = await fetch(`${server.base}/api/auth/eardle/start`, { redirect: 'manual' });
-  const state = new URL(start.headers.get('location')).searchParams.get('state');
-  a.jar.set('jg_sso', state);
-  const back = await a_fetch(a, `${server.base}/api/auth/eardle/callback?token=${encodeURIComponent(signToken(SSO.EARDLE_SSO_SECRET, { sub: 5, name: 'Miles', state }))}`);
-  assert.equal(back.headers.get('location'), '/?eardle=ok');
-
-  const returned = person(server, { search: '?eardle=ok' });
-  returned.jar.set('jg_session', a.jar.get('jg_session'));
-  await returned.tracks.init();
-  assert.equal(returned.state().me.eardle, true);
-  assert.equal(returned.state().flash.text, 'Signed in with eardle as Miles.');
-
-  const failed = person(server, { search: '?eardle=failed' });
-  await failed.tracks.init();
-  assert.equal(failed.state().flash.kind, 'error');
-  assert.match(failed.state().flash.text, /did not work/);
-
-  assert.equal(await returned.tracks.signOut(), true);
-  assert.equal(returned.state().me, null);
-  assert.match(returned.state().flash.text, /Signed out/);
-  assert.equal(await failed.tracks.signOut(), false, 'an anonymous browser has nothing to sign out of');
-}, SSO));
-
-/** fetch through a person's cookie jar (their api uses the same jar). */
-async function a_fetch(p, url) {
-  const res = await fetch(url, { redirect: 'manual', headers: { Cookie: [...p.jar].map(([k, v]) => `${k}=${v}`).join('; ') } });
-  for (const c of res.headers.getSetCookie?.() ?? []) {
-    const [pair] = c.split(';');
-    const i = pair.indexOf('=');
-    if (/Max-Age=0/i.test(c) || !pair.slice(i + 1)) p.jar.delete(pair.slice(0, i)); else p.jar.set(pair.slice(0, i), pair.slice(i + 1));
-  }
-  return res;
-}

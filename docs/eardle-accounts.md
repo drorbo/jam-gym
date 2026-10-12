@@ -9,8 +9,8 @@ Jam Gym never sees a password, an email or a Google id. It keeps its own databas
 
 ## What people get
 
-- Optional. Jam Gym still works with no account: each browser gets an anonymous identity and a recovery code.
-- **Sidebar, Tracks, "Sign in with eardle"** links the browser's library to the eardle account. From then on the library
+- Optional. Jam Gym still works with no account: each browser gets an anonymous identity, which can be given a username and password.
+- **Jam Hub, My account, "Sign in with eardle"** links the browser's library to the eardle account. From then on the library
   follows the person to every device, and survives cleared cookies.
 - Signing in on a second device opens the same library, through a session of its own (up to 20 at once; signing in on a
   21st drops the one used least recently). "Sign out" ends that device only; "Sign out everywhere" ends all of them,
@@ -73,8 +73,7 @@ Rolling back: delete `EARDLE_SSO_SECRET` from `~/drorbo/jam-gym/.env` and run `d
 ## Things to know
 
 - A person's Jam Gym identity is `users.id`; the eardle link is a label on it. Deleting your Jam Gym data ("Delete my data") deletes the Jam Gym library, sessions included, and does **not** touch the eardle account.
-- The recovery code still works for the first device of an account (it holds the original secret). A device that signed in by eardle has no recovery code to show; sign in with eardle there instead.
-- A session token is **not** accepted as a recovery code (only a person's own secret is).
+- The first device of an account keeps its original secret in its cookie; a device that signed in with eardle holds a session of its own.
 - Bans are per Jam Gym identity. A browser whose anonymous identity is banned that signs in to a clean eardle account does not carry its ban to that account, and its library is not merged into it.
 - eardle's numeric user id is the only identifier stored. It is never reused (Postgres `serial`).
 - Cookies: `jg_session` (a person's own secret, or a sign-in session token) and `jg_sso` (a sign-in in progress). Nothing is

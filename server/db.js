@@ -104,6 +104,33 @@ const MIGRATIONS = [
   // 5: the community "Report" feature is gone (a track can still be taken down, just by a moderator directly —
   // server/moderation.js's hide/restore — not by a count of reports). Production has 0 rows in this table.
   (db) => db.exec(`DROP TABLE reports;`),
+
+  // 6: profiles. A short bio on the user, and an optional photo (a small JPEG) kept in its own table so the users table
+  // stays light. users.avatar_v is the time the photo was set (null = none): the client puts it in the image address so a
+  // changed photo is never served from a stale cache.
+  (db) => db.exec(`
+    ALTER TABLE users ADD COLUMN bio TEXT NOT NULL DEFAULT '';
+    ALTER TABLE users ADD COLUMN avatar_v INTEGER;
+    CREATE TABLE avatars (
+      user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      data       BLOB    NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+  `),
+
+  // 7: logging in with a username and password (server/password.js). The username is private (never shown to other
+  // people; the public name is display_name) and unique ignoring case; only a salted hash of the password is kept.
+  (db) => db.exec(`
+    ALTER TABLE users ADD COLUMN username TEXT;
+    ALTER TABLE users ADD COLUMN password_hash TEXT;
+    CREATE UNIQUE INDEX users_username ON users(username COLLATE NOCASE) WHERE username IS NOT NULL;
+  `),
+
+  // 8: "Continue with Google" (server/google.js): the person's Google account id, and nothing else about them.
+  (db) => db.exec(`
+    ALTER TABLE users ADD COLUMN google_sub TEXT;
+    CREATE UNIQUE INDEX users_google ON users(google_sub) WHERE google_sub IS NOT NULL;
+  `),
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

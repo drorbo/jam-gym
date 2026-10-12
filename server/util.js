@@ -23,19 +23,7 @@ export function newSecret() {
   return randomId(32, CROCKFORD);
 }
 
-/** Normalise what a user typed as a recovery code: strip separators and spaces, upper-case, fix look-alikes. */
-export function normalizeSecret(input) {
-  return String(input ?? '')
-    .toUpperCase()
-    .replace(/[\s-]/g, '')
-    .replace(/O/g, '0')
-    .replace(/[IL]/g, '1');
-}
-
 export const isSecret = (s) => typeof s === 'string' && s.length === 32 && [...s].every((c) => CROCKFORD.includes(c));
-
-/** "ABCD-EFGH-..." for showing a secret to a person. */
-export const formatSecret = (s) => s.match(/.{1,4}/g).join('-');
 
 export const sha256 = (s) => createHash('sha256').update(s).digest('hex');
 

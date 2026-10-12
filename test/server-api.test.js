@@ -100,7 +100,7 @@ test('browsing and reading set no cookie and need no identity', withServer(async
     assert.equal(r.status, 200, path);
     assert.deepEqual(r.setCookies, [], `${path} must not set a cookie`);
   }
-  assert.deepEqual((await b.get('/api/me')).json, { me: null, features: { eardle: false } });
+  assert.deepEqual((await b.get('/api/me')).json, { me: null, features: { eardle: false, google: false } });
   assert.deepEqual((await b.get('/api/tracks/mine')).json, { tracks: [] });
   assert.equal(b.jar.size, 0);
 }));
@@ -172,7 +172,7 @@ test('/api/me refreshes the cookie so regular visitors stay signed in', withServ
 test('a made-up or malformed cookie is simply "no identity"', withServer(async ({ browser }) => {
   for (const value of ['nonsense', 'A'.repeat(32), '', 'x'.repeat(500)]) {
     const b = browser({ Cookie: `jg_session=${value}` });
-    assert.deepEqual((await b.get('/api/me')).json, { me: null, features: { eardle: false } }, value);
+    assert.deepEqual((await b.get('/api/me')).json, { me: null, features: { eardle: false, google: false } }, value);
     assert.equal((await b.get('/api/tracks/mine')).status, 200);
   }
   const b = browser({ Cookie: 'jg_session=nonsense' });
@@ -196,23 +196,6 @@ test('display names: cleaned, length-limited, and reflected on published tracks 
   assert.equal(found.length, 1);
   assert.equal(found[0].author, 'Coltrane');
   assert.equal((await browser().get(`/api/browse?q=${encodeURIComponent(before)}`)).json.total, 0, 'the old name no longer finds it');
-}));
-
-test('recovery code: another browser can take over the identity; wrong codes are refused', withServer(async ({ browser }) => {
-  const a = browser();
-  const t = await makeTrack(a, { title: 'Mine' });
-  assert.equal((await browser().get('/api/me/recovery')).status, 401, 'no cookie, no code');
-  const { code } = (await a.get('/api/me/recovery')).json;
-  assert.match(code, /^([0-9A-Z]{4}-){7}[0-9A-Z]{4}$/);
-  const b = browser();
-  assert.equal((await b.post('/api/me/recover', { code: 'AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA' })).status, 404);
-  assert.equal((await b.post('/api/me/recover', { code: '' })).status, 404);
-  assert.equal((await b.post('/api/me/recover', {})).status, 404);
-  assert.equal(b.jar.size, 0, 'a failed attempt sets no cookie');
-  const ok = await b.post('/api/me/recover', { code: code.toLowerCase().replace(/-/g, ' ') }); // typed sloppily
-  assert.equal(ok.status, 200);
-  assert.equal(cookieOf(b), cookieOf(a));
-  assert.deepEqual((await b.get('/api/tracks/mine')).json.tracks.map((x) => x.id), [t.id]);
 }));
 
 test('deleting my data removes everything and keeps other people\'s like counts right', withServer(async ({ browser, db }) => {

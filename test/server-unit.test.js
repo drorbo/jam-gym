@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { cleanText, formatSecret, isSecret, newSecret, normalizeSecret, randomId, sha256 } from '../server/util.js';
+import { cleanText, isSecret, newSecret, randomId, sha256 } from '../server/util.js';
 import { asChordWord, chordToken, prepareText, prepareTrackData } from '../server/trackdata.js';
 import { buildMatch, parseBrowseParams } from '../server/search.js';
 import { createLimiter } from '../server/limits.js';
@@ -41,14 +41,7 @@ test('id generation has no modulo bias worth worrying about (all characters appe
   assert.ok(Math.max(...values) / Math.min(...values) < 1.5, 'even spread');
 });
 
-test('recovery codes: formatted for people, and forgiving of how they are typed', () => {
-  const s = newSecret();
-  const code = formatSecret(s);
-  assert.match(code, /^([0-9A-Z]{4}-){7}[0-9A-Z]{4}$/);
-  assert.equal(normalizeSecret(code), s);
-  assert.equal(normalizeSecret(` ${code.toLowerCase()} `), s);
-  assert.equal(normalizeSecret(code.replace(/-/g, ' ')), s);
-  assert.equal(normalizeSecret('OIl1'), '0111', 'look-alike characters are fixed');
+test('sha256 matches the standard test vector', () => {
   assert.equal(sha256('abc'), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
 });
 

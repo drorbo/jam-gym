@@ -3,7 +3,7 @@
 import { transaction } from './db.js';
 import { LIMITS } from './config.js';
 import { reindex, unindex } from './search.js';
-import { HttpError, bad, cleanText, formatSecret, isSecret, newSecret, normalizeSecret, now, randomId, sha256 } from './util.js';
+import { HttpError, bad, cleanText, isSecret, newSecret, now, randomId, sha256 } from './util.js';
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -23,6 +23,8 @@ export function createUsers(db) {
                                 JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`);
   const touchSession = db.prepare('UPDATE sessions SET last_used_at = ? WHERE token_hash = ?');
   const dropSession = db.prepare('DELETE FROM sessions WHERE token_hash = ?');
+  const byGoogle = db.prepare('SELECT * FROM users WHERE google_sub = ?');
+  const byUsername = db.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE');
   const byEardle = db.prepare(`SELECT * FROM users WHERE auth_provider = 'eardle' AND auth_subject = ?`);
   const eardleName = (name) => {
     const clean = cleanText(name, LIMITS.displayName);
@@ -61,14 +63,7 @@ export function createUsers(db) {
       return session;
     },
 
-    /** Look up by a recovery code as a person typed it. Only a person's own secret counts, not a sign-in session. */
-    findByRecoveryCode(code) {
-      const secret = normalizeSecret(code);
-      const user = isSecret(secret) ? byHash.get(sha256(secret)) : null;
-      return user ? { user, secret } : null;
-    },
-
-    /** True when this cookie value is the person's own secret (their recovery code), not a session from signing in. */
+    /** True when this cookie value is the person's own secret (the first browser's), not a session from logging in elsewhere. */
     isOwnSecret: (user, secret) => Boolean(secret) && sha256(secret) === user.secret_hash,
 
     // ---- sign in with eardle (server/sso.js) ------------------------------------------------
@@ -132,11 +127,52 @@ export function createUsers(db) {
         const rows = db.prepare(`SELECT rowid, title, description, chord_tokens, visibility FROM tracks
                                  WHERE owner_id = ? AND visibility = 'published'`).all(to.id);
         for (const r of rows) reindex(db, { ...r, author: to.display_name });
+        // a photo or bio made before signing in is kept unless the account already has its own
+        if (!to.bio && from.bio) db.prepare('UPDATE users SET bio = ? WHERE id = ?').run(from.bio, to.id);
+        if (to.avatar_v == null && from.avatar_v != null) {
+          db.prepare('UPDATE avatars SET user_id = ? WHERE user_id = ?').run(to.id, from.id);
+          db.prepare('UPDATE users SET avatar_v = ? WHERE id = ?').run(from.avatar_v, to.id);
+        }
         db.prepare('DELETE FROM users WHERE id = ?').run(from.id);
       });
     },
 
-    recoveryCode: (secret) => formatSecret(secret),
+    // ---- continue with Google (server/google.js) ------------------------------------------------
+
+    findByGoogle: (sub) => byGoogle.get(String(sub)) ?? null,
+
+    /** Make this identity the Google account `sub`. The name is left as it is: Google's is never adopted. */
+    linkGoogle(user, sub) {
+      db.prepare('UPDATE users SET google_sub = ? WHERE id = ?').run(String(sub), user.id);
+      return byId.get(user.id);
+    },
+
+    /** A new identity that is the Google account `sub` from the start. Returns its own secret for the cookie, as create() does. */
+    createLinkedGoogle(sub) {
+      const made = this.create();
+      return { user: this.linkGoogle(made.user, sub), secret: made.secret };
+    },
+
+    // ---- logging in with a username and password (server/password.js) -------------------------
+
+    findByUsername: (name) => byUsername.get(String(name)) ?? null,
+
+    /** Give this identity a username and password hash. A taken username is a 409, however the race went. */
+    setLogin(user, username, passwordHash) {
+      if (this.findByUsername(username)) throw new HttpError(409, 'username_taken', 'That username is taken. Try another.');
+      try {
+        db.prepare('UPDATE users SET username = ?, password_hash = ? WHERE id = ?').run(username, passwordHash, user.id);
+      } catch (err) {
+        if (/UNIQUE/i.test(String(err.message))) throw new HttpError(409, 'username_taken', 'That username is taken. Try another.');
+        throw err;
+      }
+      return byId.get(user.id);
+    },
+
+    setPasswordHash(user, passwordHash) {
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, user.id);
+      return byId.get(user.id);
+    },
 
     rename(user, name) {
       const clean = cleanText(name, LIMITS.displayName);
@@ -148,6 +184,56 @@ export function createUsers(db) {
                                  WHERE owner_id = ? AND visibility = 'published'`).all(user.id);
         for (const r of rows) reindex(db, { ...r, author: clean });
       });
+      return byId.get(user.id);
+    },
+
+    // ---- profile: a bio and a photo -------------------------------------------------------
+
+    setBio(user, bio) {
+      db.prepare('UPDATE users SET bio = ? WHERE id = ?').run(cleanText(bio, LIMITS.bio, { multiline: true }), user.id);
+      return byId.get(user.id);
+    },
+
+    /** Keep this JPEG (already checked by server/avatar.js) as the person's photo. */
+    setAvatar(user, jpeg) {
+      const t = now();
+      transaction(db, () => {
+        db.prepare('INSERT OR REPLACE INTO avatars(user_id, data, updated_at) VALUES (?, ?, ?)').run(user.id, jpeg, t);
+        db.prepare('UPDATE users SET avatar_v = ? WHERE id = ?').run(t, user.id);
+      });
+      return byId.get(user.id);
+    },
+
+    clearAvatar(user) {
+      transaction(db, () => {
+        db.prepare('DELETE FROM avatars WHERE user_id = ?').run(user.id);
+        db.prepare('UPDATE users SET avatar_v = NULL WHERE id = ?').run(user.id);
+      });
+      return byId.get(user.id);
+    },
+
+    /** The photo of the person with this public id, or null (none set, or the account is banned). */
+    avatarOf(publicId) {
+      const row = db.prepare(`SELECT a.data, a.updated_at FROM avatars a JOIN users u ON u.id = a.user_id
+                              WHERE u.public_id = ? AND u.banned = 0`).get(String(publicId));
+      return row ? { data: Buffer.from(row.data), version: row.updated_at } : null;
+    },
+
+    /** A person's public face: name, bio, photo and a few counts. Null for an unknown or banned account. */
+    profileOf(publicId) {
+      const u = db.prepare('SELECT * FROM users WHERE public_id = ? AND banned = 0').get(String(publicId));
+      if (!u) return null;
+      const c = db.prepare(`SELECT COUNT(*) AS published, COALESCE(SUM(like_count), 0) AS likes FROM tracks
+                            WHERE owner_id = ? AND visibility = 'published'`).get(u.id);
+      return { id: u.public_id, name: u.display_name, bio: u.bio, avatar: u.avatar_v ?? null, joinedAt: u.created_at, published: c.published, likes: c.likes };
+    },
+
+    /** Moderator: take away a person's photo and bio (their name and tracks are handled by their own commands). */
+    clearProfile(idOrPublicId) {
+      const user = byId.get(Number(idOrPublicId)) ?? db.prepare('SELECT * FROM users WHERE public_id = ?').get(String(idOrPublicId));
+      if (!user) throw new HttpError(404, 'not_found', 'No such user.');
+      this.clearAvatar(user);
+      db.prepare("UPDATE users SET bio = '' WHERE id = ?").run(user.id);
       return byId.get(user.id);
     },
 
@@ -178,5 +264,5 @@ export function createUsers(db) {
 
 /** What the API tells a client about itself. Never includes the secret or its hash. */
 export function publicMe(user, counts) {
-  return { id: user.public_id, displayName: user.display_name, banned: Boolean(user.banned), eardle: user.auth_provider === 'eardle', ...counts };
+  return { id: user.public_id, displayName: user.display_name, username: user.username ?? null, google: Boolean(user.google_sub), bio: user.bio ?? '', avatar: user.avatar_v ?? null, banned: Boolean(user.banned), eardle: user.auth_provider === 'eardle', ...counts };
 }

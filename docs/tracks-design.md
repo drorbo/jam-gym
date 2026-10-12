@@ -282,6 +282,16 @@ the import succeeds).
   DOM, fully unit-tested with a fake API) → `tracks-ui.js` (DOM only). The UI redraws a region only when its own inputs
   change, so a beat event never disturbs typing in the search or rename boxes.
 - **Test count:** 296 (unit, API over real HTTP, client controller, walking bass, and the original engine and UI-model suites).
+- **Recovery codes were replaced by username and password (schema 7).** `GET /api/me/recovery` and `POST /api/me/recover` are gone.
+  `POST /api/auth/signup` gives the current anonymous account (or a new one) a username and password; `POST /api/auth/login` makes
+  a browser that account (a session, as for eardle); `POST /api/me/password` changes it and logs other devices out;
+  `POST /api/me/signout` now works for any account with a login. `users.username` (private, unique ignoring case) and
+  `users.password_hash` (scrypt) hold it. No email, so no reset.
+- **Profiles (schema 6).** `users.bio` and `users.avatar_v` (the time the photo was set, null for none) plus an `avatars` table holding one
+  small JPEG per person. `PATCH /api/me` takes `displayName` and/or `bio`; `PUT|DELETE /api/me/avatar` sets or removes the photo (base64 JPEG
+  in JSON, at most 48 KB and 512 px, checked by `server/avatar.js`); `GET /api/avatar/:publicId` serves it (`nosniff`, `sandbox` CSP, long
+  cache keyed by `?v=`); `GET /api/profiles/:publicId` returns the profile and its published tracks. Browse items carry `authorId` and
+  `authorAvatar`. Banned users have no profile or photo; `admin.js clear-profile` removes a photo and bio. The sidebar is called Jam Hub.
 - **Sidebar, not inline.** The panel started in the middle of the page; it now lives in a collapsible sidebar (`src/app/sidebar.js`).
   The controller and panel code are unchanged. Docked on wide windows, a sheet on narrow ones, state remembered in localStorage.
 - **Bass settings are part of a track** (`config.bass`), so a saved walking line comes back exactly. Tracks saved before the panel existed get the style's default.

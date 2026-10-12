@@ -6,6 +6,8 @@
 import { METER_IDS, getMeter } from '../theory/meter.js';
 import { MAJOR_KEYS, MINOR_KEYS } from '../theory/keys.js';
 import { listStyles, getStyle } from '../styles/index.js';
+import { avatarUrl } from './api.js';
+import { photoToAvatar } from './avatar.js';
 import { describeSaved } from './saved.js';
 import { buildTrackData, setupSignature } from './tracks-model.js';
 import { prettyKey } from './ui.js';
@@ -32,6 +34,26 @@ function eardleLink() {
   return a;
 }
 
+/** "Continue with Google" (or "Connect Google"): a plain link, because it sends the whole page to Google and back. */
+function googleLink(label = 'Continue with Google', title = 'Opens Google to sign in. The same Google account opens your library on every device.') {
+  const a = el('a', 'google-btn');
+  a.href = '/api/auth/google/start';
+  a.title = title;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('width', '18'); svg.setAttribute('height', '18'); svg.setAttribute('aria-hidden', 'true');
+  for (const [fill, d] of [
+    ['#4285F4', 'M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z'],
+    ['#34A853', 'M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z'],
+    ['#FBBC05', 'M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z'],
+    ['#EA4335', 'M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z'],
+  ]) {
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('fill', fill); p.setAttribute('d', d); svg.append(p);
+  }
+  a.append(svg, label);
+  return a;
+}
+
 const HEART = 'M12 20.3 4.6 13.1C2.6 11.1 2.6 8 4.5 6.3 6.400 4.700 9 5 10.700 6.700L12 8l1.300-1.300C15 5 17.600 4.700 19.500 6.300c1.900 1.700 1.900 4.800-.1 6.800z';
 function heartSvg() {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -54,12 +76,35 @@ const chordPreview = (t) => {
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /**
+ * A round photo, or the person's first letter on a colour taken from their name when there is no photo (or it fails to load).
+ * The photo is drawn over the letter, so a slow or broken image still leaves something sensible.
+ */
+function avatarEl(id, version, name, size = 40) {
+  const span = el('span', 'avatar');
+  span.style.setProperty('--sz', `${size}px`);
+  let hue = 0;
+  for (const ch of String(name)) hue = (hue * 31 + ch.codePointAt(0)) % 360;
+  span.style.setProperty('--hue', String(hue));
+  span.append(el('span', 'avatar-initial', ([...String(name || '?').trim()][0] ?? '?').toUpperCase()));
+  if (version != null && id) {
+    const img = el('img');
+    img.alt = '';
+    img.width = size; img.height = size;
+    img.loading = 'lazy'; img.decoding = 'async';
+    img.src = avatarUrl(id, version);
+    img.addEventListener('error', () => img.remove());
+    span.append(img);
+  }
+  return span;
+}
+
+/**
  * @param {{store: ReturnType<typeof import('./state.js').createStore>, tracks: ReturnType<typeof import('./tracks.js').createTracksController>,
  *          player: any, sidebar?: ReturnType<typeof import('./sidebar.js').mountSidebar>}} deps
  */
 export function mountTracksUI({ store, tracks, player, sidebar = null }) {
   // Local UI state: which inline panel or confirmation is open. Not part of the app state on purpose.
-  const ui = { accountPanel: null, confirm: null /* {id, kind} */, recoverError: '' };
+  const ui = { accountPanel: null, confirm: null /* {id, kind} */, authMode: 'signup' /* 'signup' | 'login' */ };
   const last = {};
   let debounce = null;
 
@@ -72,7 +117,7 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
   fKey.append(option('Any', ''), ...[...MAJOR_KEYS, ...MINOR_KEYS].map((k) => option(prettyKey(k), k)));
   fSort.append(option('Best match', ''), option('Most liked', 'likes'), option('Newest', 'new'));
 
-  const tabs = { mine: $('tab-mine'), presets: $('tab-presets'), browse: $('tab-browse') };
+  const tabs = { mine: $('tab-mine'), presets: $('tab-presets'), browse: $('tab-browse'), account: $('tab-account') };
   for (const [name, tab] of Object.entries(tabs)) tab.addEventListener('click', () => tracks.setTab(name));
   $('tracks').querySelector('[role="tablist"]').addEventListener('keydown', (e) => {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
@@ -192,59 +237,137 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
     now.textContent = text; now.hidden = false;
   }
 
-  function renderAccount(t) {
-    const box = $('account');
-    box.replaceChildren();
-    $('sum-account').textContent = t.status === 'offline' ? 'offline' : t.me ? t.me.displayName : 'not saved yet';
-    if (t.status === 'offline') return;
-    const row = el('p', 'account-line');
-    if (t.me) {
-      row.append('You are ', el('strong', '', t.me.displayName), ' ');
-      const links = el('span', 'account-links');
-      if (t.me.eardle) row.append('(eardle account) ');
-      links.append(
-        button('Change name', 'link', { 'data-act': 'account', 'data-panel': 'rename' }),
-        button('Recovery code', 'link', { 'data-act': 'account', 'data-panel': 'recovery' }),
-        button('Use another code', 'link', { 'data-act': 'account', 'data-panel': 'recover' }),
-      );
-      if (t.me.eardle) links.append(button('Sign out', 'link', { 'data-act': 'sign-out' }), button('Sign out everywhere', 'link', { 'data-act': 'account', 'data-panel': 'signout-everywhere' }));
-      else if (t.features.eardle) links.append(eardleLink());
-      links.append(button('Delete my data', 'link', { 'data-act': 'account', 'data-panel': 'delete' }));
-      row.append(links);
-    } else {
-      row.append('Your tracks stay in this browser once you save one. ');
-      row.append(button('Use a recovery code', 'link', { 'data-act': 'account', 'data-panel': 'recover' }));
-      if (t.features.eardle) row.append(' ', eardleLink());
-    }
-    box.append(row);
+  /** A labelled text or password field for the login forms. `kind` 'username' is text; the others are passwords. */
+  function fieldInput(label, kind, autocomplete) {
+    const wrap = el('label', 'pfield'); wrap.append(el('span', '', label));
+    const input = el('input');
+    input.type = kind === 'username' ? 'text' : 'password';
+    input.name = kind; input.id = `f-${kind}`; input.autocomplete = autocomplete; input.required = true;
+    if (kind === 'username') { input.maxLength = 20; input.spellcheck = false; input.autocapitalize = 'none'; input.setAttribute('autocorrect', 'off'); }
+    else input.maxLength = 128;
+    wrap.append(input);
+    return wrap;
+  }
 
-    const panel = ui.accountPanel;
-    if (!panel) return;
-    const inline = el('div', 'inline-panel');
-    if (panel === 'rename' && t.me) {
-      const input = el('input'); input.type = 'text'; input.id = 'rename-input'; input.name = 'display-name'; input.maxLength = 24; input.value = t.me.displayName; input.setAttribute('aria-label', 'Your display name');
-      inline.append(el('p', '', 'This name appears on tracks you publish.'), input,
-        button('Save name', 'chip', { 'data-act': 'do-rename' }), button('Cancel', 'chip', { 'data-act': 'account-close' }));
-    } else if (panel === 'recovery') {
-      if (t.recovery) {
-        inline.append(el('p', '', 'Your recovery code opens your library in another browser or after clearing cookies. Keep it private: anyone with it can use your library.'));
-        inline.append(el('code', 'code', t.recovery));
-        inline.append(button('Copy', 'chip', { 'data-act': 'copy-code' }), button('Hide', 'chip', { 'data-act': 'account-close' }));
-      } else {
-        inline.append(el('p', '', 'Show the code that lets you open this library somewhere else.'), button('Show my code', 'chip', { 'data-act': 'show-code' }), button('Cancel', 'chip', { 'data-act': 'account-close' }));
-      }
-    } else if (panel === 'recover') {
-      const input = el('input'); input.type = 'text'; input.id = 'recover-input'; input.name = 'recovery-code'; input.placeholder = 'XXXX-XXXX-XXXX-…'; input.autocomplete = 'off'; input.spellcheck = false; input.setAttribute('aria-label', 'Recovery code');
-      inline.append(el('p', '', t.me ? 'Switch this browser to another library. Tracks in this one stay with its own recovery code.' : 'Enter the recovery code from your other browser.'), input,
-        button('Use code', 'chip', { 'data-act': 'do-recover' }), button('Cancel', 'chip', { 'data-act': 'account-close' }));
-    } else if (panel === 'signout-everywhere' && t.me?.eardle) {
-      inline.append(el('p', '', 'Ends the eardle sign-in on every device, including this one — useful if one was lost or you just want to be sure. Your library stays with the eardle account.'),
-        button('Sign out everywhere', 'chip danger', { 'data-act': 'do-signout-everywhere' }), button('Cancel', 'chip', { 'data-act': 'account-close' }));
-    } else if (panel === 'delete' && t.me) {
-      inline.append(el('p', '', 'This deletes your name, all your tracks (including published ones) and your likes. It cannot be undone.'),
-        button('Delete everything', 'chip danger', { 'data-act': 'do-delete-account' }), button('Cancel', 'chip', { 'data-act': 'account-close' }));
+  /** The little "you" chip in the Jam Hub header: tap it to open My account. */
+  function renderHubMe(t) {
+    const chip = $('hub-me');
+    chip.hidden = !t.me;
+    chip.replaceChildren();
+    if (!t.me) return;
+    chip.append(avatarEl(t.me.id, t.me.avatar, t.me.displayName, 24), el('span', 'hub-me-name', t.me.displayName));
+    chip.setAttribute('aria-label', `My account: ${t.me.displayName}`);
+  }
+
+  function renderAccount(t) {
+    const box = $('acct');
+    box.replaceChildren();
+    if (t.status === 'offline') { box.append(el('p', 'msg', 'My account needs a connection to the server.')); return; }
+    const me = t.me;
+    const card = (title, ...kids) => { const c = el('section', 'acct-card'); if (title) c.append(el('h3', '', title)); c.append(...kids); box.append(c); return c; };
+    const inlinePanel = (name) => (ui.accountPanel === name ? el('div', 'inline-panel') : null);
+
+    // ---- profile ----
+    if (me) {
+      const head = el('div', 'profile-head');
+      head.append(avatarEl(me.id, me.avatar, me.displayName, 88));
+      const side = el('div', 'profile-side');
+      const photoBtns = el('div', 'profile-btns');
+      photoBtns.append(button(me.avatar != null ? 'Change photo' : 'Add a photo', 'chip', { 'data-act': 'pick-photo' }));
+      if (me.avatar != null) photoBtns.append(button('Remove', 'link', { 'data-act': 'remove-photo' }));
+      const file = el('input'); file.type = 'file'; file.id = 'avatar-file'; file.accept = 'image/*'; file.hidden = true;
+      side.append(photoBtns, el('p', 'hint', 'Cropped from the middle and shrunk here before it is sent. Shown next to your published tracks.'), file);
+      head.append(side);
+
+      const nameLabel = el('label', 'pfield'); nameLabel.append(el('span', '', 'Name'));
+      const name = el('input'); name.type = 'text'; name.id = 'profile-name'; name.name = 'display-name'; name.maxLength = 24; name.value = me.displayName; name.autocomplete = 'nickname'; name.spellcheck = false;
+      nameLabel.append(name);
+      const bioLabel = el('label', 'pfield'); bioLabel.append(el('span', '', 'About you'));
+      const bio = el('textarea'); bio.id = 'profile-bio'; bio.name = 'bio'; bio.rows = 4; bio.maxLength = 280; bio.value = me.bio ?? '';
+      bio.placeholder = 'What do you play? What are you working on?';
+      const count = el('span', 'pcount', `${[...bio.value].length}/280`); count.id = 'bio-count';
+      bioLabel.append(bio, count);
+      const actions = el('div', 'profile-btns');
+      actions.append(button('Save profile', 'chip primary', { 'data-act': 'save-profile' }), button('See my public profile', 'link', { 'data-act': 'open-profile', 'data-id': me.id }));
+      card('Your profile', head, nameLabel, bioLabel, el('p', 'hint', 'Your name, photo and bio are public once you publish a track.'), actions);
     }
-    box.append(inline);
+
+    // ---- logging in and out ----
+    const hasLogin = Boolean(me?.username || me?.eardle || me?.google);
+    if (hasLogin) {
+      const login = card('Your login');
+      if (me.username) login.append(el('p', '', `Logged in as ${me.username}. Only you see this name; others see your display name.${me.google ? ' Google is connected too.' : ''}`));
+      else if (me.google) login.append(el('p', '', 'You are signed in with Google, so your library follows you to every device.'));
+      else login.append(el('p', '', 'You are signed in with your eardle account, so your library follows you to every device.'));
+      const row = el('div', 'profile-btns');
+      row.append(button('Log out', 'chip', { 'data-act': 'sign-out' }));
+      if (me.username) row.append(button('Change password', 'link', { 'data-act': 'account', 'data-panel': 'password' }));
+      row.append(button('Log out everywhere', 'link', { 'data-act': 'account', 'data-panel': 'signout-everywhere' }));
+      login.append(row);
+      if (t.features.google && !me.google) {
+        login.append(el('p', 'hint', 'Connect your Google account to also open this library with one tap, on any device.'));
+        const connect = el('div', 'auth-more auth-connect');
+        connect.append(googleLink('Connect Google', 'Opens Google. Afterwards the same Google account opens this library.'));
+        login.append(connect);
+      }
+      const inline = inlinePanel('password') ?? inlinePanel('signout-everywhere');
+      if (inline && ui.accountPanel === 'password' && me.username) {
+        const form = el('form', 'auth-form'); form.id = 'password-form'; form.autocomplete = 'on';
+        form.append(fieldInput('Current password', 'current-password', 'current-password'), fieldInput('New password', 'new-password', 'new-password'),
+          el('p', 'hint', 'Other devices are logged out when you change it. There is no password reset, so choose one you will remember.'));
+        const actions = el('div', 'profile-btns');
+        const save = button('Change password', 'chip primary'); save.type = 'submit';
+        actions.append(save, button('Cancel', 'chip', { 'data-act': 'account-close' }));
+        form.append(actions);
+        inline.append(form);
+        login.append(inline);
+      } else if (inline && ui.accountPanel === 'signout-everywhere') {
+        inline.append(el('p', '', 'Logs you out on every device, including this one, in case one was lost. Your library stays with your account.'),
+          button('Log out everywhere', 'chip danger', { 'data-act': 'do-signout-everywhere' }), button('Cancel', 'chip', { 'data-act': 'account-close' }));
+        login.append(inline);
+      }
+    } else {
+      // no login yet: a guest, or a library that so far only lives in this browser
+      const signup = ui.authMode === 'signup';
+      const auth = card(me ? 'Add a login' : 'Log in or create an account');
+      auth.append(el('p', '', me
+        ? 'Your tracks only live in this browser right now. Add a username and password to open them on any device.'
+        : 'Create an account to add a photo and a bio and to keep your tracks and presets. Already have one? Log in.'));
+      const mode = el('div', 'seg authmode');
+      mode.setAttribute('role', 'radiogroup'); mode.setAttribute('aria-label', 'Create an account or log in');
+      for (const [v, label] of [['signup', me ? 'Add a login' : 'Create account'], ['login', 'Log in']]) {
+        const b = button(label, '', { role: 'radio', 'aria-checked': String(ui.authMode === v), 'data-act': 'auth-mode', 'data-panel': v });
+        mode.append(b);
+      }
+      auth.append(mode);
+      const form = el('form', 'auth-form'); form.id = 'auth-form'; form.autocomplete = 'on';
+      form.append(fieldInput('Username', 'username', 'username'), fieldInput('Password', 'password', signup ? 'new-password' : 'current-password'));
+      form.append(el('p', 'hint', signup
+        ? 'No email needed. A username is 3–20 letters, numbers, dots, dashes or underscores, and a password at least 8 characters. There is no password reset, so choose one you will remember.'
+        : me ? 'Logging in switches this browser to that account; tracks saved here without a login join it.' : ''));
+      const go = button(signup ? (me ? 'Add login' : 'Create account') : 'Log in', 'chip primary'); go.type = 'submit';
+      form.append(go);
+      auth.append(form);
+      if (t.features.google || t.features.eardle) {
+        const more = el('div', 'auth-more');
+        more.append(el('span', 'auth-or', 'or'));
+        if (t.features.google) more.append(googleLink());
+        if (t.features.eardle) { const a = eardleLink(); a.className = 'chip'; a.textContent = 'Sign in with eardle'; more.append(a); }
+        auth.append(more);
+      }
+    }
+
+    // ---- danger zone ----
+    if (me) {
+      const danger = card('Delete my data');
+      danger.classList.add('acct-danger');
+      danger.append(el('p', '', 'Removes your name, photo, bio, all your tracks (including published ones) and your likes. It cannot be undone.'));
+      if (ui.accountPanel === 'delete') {
+        const row = el('div', 'profile-btns');
+        row.append(button('Delete everything', 'chip danger', { 'data-act': 'do-delete-account' }), button('Cancel', 'chip', { 'data-act': 'account-close' }));
+        danger.append(row);
+      } else danger.append(button('Delete my data…', 'link danger', { 'data-act': 'account', 'data-panel': 'delete' }));
+    }
   }
 
   function renderCookieNote(t) {
@@ -252,7 +375,7 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
     note.hidden = !t.cookieNote;
     if (!t.cookieNote) return;
     note.replaceChildren(
-      el('p', '', 'We keep one small cookie so your tracks stay yours. It holds a random ID and nothing else, and it is only used for saving, publishing and liking. You can delete everything above at any time.'),
+      el('p', '', 'We keep one small cookie so your tracks stay yours. It holds a random ID and nothing else, and it is only used for saving, publishing and liking. You can delete everything under My account at any time.'),
       button('Got it', 'chip', { 'data-act': 'dismiss-note' }),
     );
   }
@@ -338,25 +461,64 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
 
   // ---- browse ----------------------------------------------------------------------------
 
-  function browseRow(t) {
+  function browseRow(t, { showAuthor = true } = {}) {
     const li = el('li', `track${tracks.state.active?.id === t.id ? ' is-active' : ''}`);
     const busy = Boolean(tracks.state.busy[t.id]);
     const main = el('div', 'track-main');
     const open = button('', 'track-open', { 'data-act': 'open-browse', 'data-id': t.id, title: 'Load this track into the player' });
     open.append(
       el('span', 'track-title', t.title),
-      el('span', 'track-by', `by ${t.author}${t.isMine ? ' (you)' : ''}`),
       el('span', 'track-meta', metaLine(t)),
       el('span', 'track-chords', chordPreview(t)),
     );
     if (t.description) open.append(el('span', 'track-desc', t.description));
     main.append(open, likeControl(t));
     li.append(main);
+    if (showAuthor) {
+      const by = button('', 'author', { 'data-act': 'open-profile', 'data-id': t.authorId, title: `See ${t.author}'s profile` });
+      by.append(avatarEl(t.authorId, t.authorAvatar, t.author, 24), el('span', '', `${t.author}${t.isMine ? ' (you)' : ''}`));
+      li.append(by);
+    }
     const actions = el('div', 'track-actions');
     actions.append(button('Save a copy', 'link', { 'data-act': 'copy', 'data-id': t.id }), button('Copy link', 'link', { 'data-act': 'share', 'data-id': t.id }));
     for (const b of actions.querySelectorAll('button')) b.disabled = busy;
     li.append(actions);
     return li;
+  }
+
+  /** An open profile replaces the search box and results; closing it brings them back. */
+  function applyProfileMode(open) {
+    for (const id of ['browse-form', 'browse-count', 'browse-list']) $(id).hidden = open;
+    if (open) $('browse-more').hidden = true;
+    $('profile-view').hidden = !open;
+  }
+
+  function renderProfile(state) {
+    const t = state.tracks;
+    const p = t.profile;
+    const view = $('profile-view');
+    view.replaceChildren();
+    applyProfileMode(Boolean(p));
+    if (!p) return;
+    view.append(button('← Back to tracks', 'link', { 'data-act': 'close-profile' }));
+    if (p.status === 'loading') { view.append(el('p', 'msg', 'Loading…')); return; }
+    if (p.status === 'error') { view.append(el('p', 'msg bad', p.error)); return; }
+    const { profile, tracks: list } = p.data;
+    const head = el('div', 'profile-head profile-public');
+    head.append(avatarEl(profile.id, profile.avatar, profile.name, 72));
+    const who = el('div', 'profile-who');
+    const joined = new Date(profile.joinedAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    who.append(el('h3', '', `${profile.name}${t.me?.id === profile.id ? ' (you)' : ''}`),
+      el('p', 'track-meta', `${plural(profile.published, 'published track')} · ${plural(profile.likes, 'like')} · here since ${joined}`));
+    head.append(who);
+    view.append(head);
+    if (profile.bio) view.append(el('p', 'profile-bio', profile.bio));
+    if (t.me?.id === profile.id) view.append(button('Edit my profile', 'chip', { 'data-act': 'go-account' }));
+    view.append(el('h3', 'profile-tracks-title', 'Published tracks'));
+    const ul = el('ul', 'track-list');
+    if (!list.length) ul.append(el('li', 'track-empty', 'No published tracks.'));
+    for (const track of list) ul.append(browseRow(track, { showAuthor: false }));
+    view.append(ul);
   }
 
   function renderBrowse(state) {
@@ -386,6 +548,7 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
     $('browse-more').hidden = !(b.items.length < b.total);
     $('browse-more').disabled = b.loading;
     $('browse-more').textContent = b.loading ? 'Loading…' : `Show more (${b.total - b.items.length} left)`;
+    if (state.tracks.profile) applyProfileMode(true);
   }
 
   // ---- render ----------------------------------------------------------------------------
@@ -398,21 +561,24 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
     $('panel-mine').hidden = tab !== 'mine';
     $('panel-presets').hidden = tab !== 'presets';
     $('panel-browse').hidden = tab !== 'browse';
-    $('sec-toggle-all').hidden = tab === 'browse'; // Browse has no collapsible sections of its own any more
+    $('panel-account').hidden = tab !== 'account';
+    $('sec-toggle-all').hidden = tab === 'browse' || tab === 'account'; // neither has collapsible sections
 
     // only rebuild a region when something it shows has changed
     const edited = t.active ? setupSignature(buildTrackData(state)) !== t.active.signature : false;
     const sigs = {
       messages: [t.flash?.id, t.status, sidebar?.isOpen],
       loaded: [t.active, edited, t.active && state.song.tempo],
-      account: [t.me, t.features, t.status, t.recovery, ui.accountPanel],
+      account: [t.me, t.features, t.status, ui.accountPanel, ui.authMode],
+      hubme: [t.me],
+      profile: [t.profile, t.busy, t.active, t.me?.id, t.status],
       note: [t.cookieNote],
       mine: [t.mine, t.active, t.busy, t.mineLoaded, t.status, t.me?.displayName, ui.confirm],
-      browse: [t.browse, t.busy, t.active, t.status, ui.confirm],
+      browse: [t.browse, t.busy, t.active, t.status, ui.confirm, Boolean(t.profile)],
       local: [state.saved, t.status],
     };
     for (const [name, fn] of Object.entries({
-      messages: () => renderMessages(state), loaded: () => renderLoaded(state), account: () => renderAccount(t),
+      messages: () => renderMessages(state), loaded: () => renderLoaded(state), account: () => renderAccount(t), hubme: () => renderHubMe(t), profile: () => renderProfile(state),
       note: () => renderCookieNote(t), mine: () => renderMine(state), browse: () => renderBrowse(state), local: () => renderLocal(state),
     })) {
       const s = JSON.stringify(sigs[name]);
@@ -422,11 +588,11 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
   }
 
   /** Force the regions that depend on local UI state to redraw. */
-  const poke = () => { last.account = null; last.mine = null; last.browse = null; render(store.get()); };
+  const poke = () => { last.account = null; last.mine = null; last.browse = null; last.profile = null; render(store.get()); };
 
   // ---- clicks (one listener for the whole panel) -------------------------------------------
 
-  const byId = (id) => tracks.state.mine.find((t) => t.id === id) ?? tracks.state.browse.items.find((t) => t.id === id);
+  const byId = (id) => tracks.state.mine.find((t) => t.id === id) ?? tracks.state.browse.items.find((t) => t.id === id) ?? tracks.state.profile?.data?.tracks.find((t) => t.id === id);
 
   async function copyText(text) {
     try { await navigator.clipboard.writeText(text); return true; } catch {
@@ -462,14 +628,17 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
       case 'confirm-overwrite': ui.confirm = null; poke(); tracks.updateFromCurrent(id); break;
       case 'retry-search': tracks.search({}); break;
       case 'dismiss-note': tracks.dismissCookieNote(); break;
-      case 'account': ui.accountPanel = ui.accountPanel === panel ? null : panel; if (panel !== 'recovery') tracks.hideRecovery(); poke(); $('rename-input')?.focus(); $('recover-input')?.focus(); break;
-      case 'account-close': ui.accountPanel = null; tracks.hideRecovery(); poke(); break;
-      case 'show-code': tracks.showRecovery(); break;
-      case 'copy-code': { const ok = await copyText(tracks.state.recovery ?? ''); tracks.notify(ok ? 'Recovery code copied.' : 'Select the code and copy it by hand.', ok ? 'ok' : 'error'); break; }
-      case 'do-rename': { if (await tracks.rename($('rename-input').value)) { ui.accountPanel = null; poke(); } break; }
+      case 'account': ui.accountPanel = ui.accountPanel === panel ? null : panel; poke(); $('f-current-password')?.focus(); break;
+      case 'auth-mode': ui.authMode = panel; poke(); $('f-username')?.focus(); break;
+      case 'account-close': ui.accountPanel = null; poke(); break;
+      case 'save-profile': await tracks.saveProfile({ displayName: $('profile-name').value, bio: $('profile-bio').value }); break;
+      case 'pick-photo': $('avatar-file')?.click(); break;
+      case 'remove-photo': tracks.removeAvatar(); break;
+      case 'open-profile': tracks.openProfile(id); break;
+      case 'close-profile': tracks.closeProfile(); break;
+      case 'go-account': tracks.setTab('account'); break;
       case 'sign-out': { if (await tracks.signOut()) { ui.accountPanel = null; poke(); } break; }
       case 'do-signout-everywhere': { if (await tracks.signOutEverywhere()) { ui.accountPanel = null; poke(); } break; }
-      case 'do-recover': { if (await tracks.recover($('recover-input').value)) { ui.accountPanel = null; poke(); } break; }
       case 'do-delete-account': { if (await tracks.deleteAccount()) { ui.accountPanel = null; poke(); } break; }
       case 'import-local': tracks.importLocal(); break;
       case 'local-load': { const item = player.loadSaved(id); if (item) { $('save-name').value = item.name; tracks.notify(`Loaded "${item.name}" from this device.`); } break; }
@@ -480,13 +649,39 @@ export function mountTracksUI({ store, tracks, player, sidebar = null }) {
 
   // Enter in the inline fields acts like their button; Escape closes the open inline panel or confirmation
   $('tracks').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && e.target.id === 'rename-input') { e.preventDefault(); $('tracks').querySelector('[data-act="do-rename"]')?.click(); }
-    if (e.key === 'Enter' && e.target.id === 'recover-input') { e.preventDefault(); $('tracks').querySelector('[data-act="do-recover"]')?.click(); }
+    if (e.key === 'Enter' && e.target.id === 'profile-name') { e.preventDefault(); $('tracks').querySelector('[data-act="save-profile"]')?.click(); }
     if (e.key === 'Escape' && (ui.confirm || ui.accountPanel)) {
       e.preventDefault(); // this Escape closes the open question, not the whole sidebar
-      ui.confirm = null; ui.accountPanel = null; tracks.hideRecovery(); poke();
+      ui.confirm = null; ui.accountPanel = null; poke();
     }
   });
+
+  // the login forms: a real <form>, so Enter works and password managers know what the fields are
+  $('tracks').addEventListener('submit', async (e) => {
+    const form = e.target.closest('form');
+    if (form?.id === 'auth-form') {
+      e.preventDefault();
+      const u = $('f-username').value; const p = $('f-password').value;
+      const ok = ui.authMode === 'signup' ? await tracks.signUp(u, p) : await tracks.logIn(u, p);
+      if (ok) { ui.accountPanel = null; poke(); }
+    } else if (form?.id === 'password-form') {
+      e.preventDefault();
+      if (await tracks.changePassword($('f-current-password').value, $('f-new-password').value)) { ui.accountPanel = null; poke(); }
+    }
+  });
+
+  // the photo: a file picked (or taken, on a phone) is cropped and shrunk here, then sent
+  $('tracks').addEventListener('change', async (e) => {
+    if (e.target.id !== 'avatar-file') return;
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try { await tracks.setAvatar(await photoToAvatar(file)); } catch (err) { tracks.notify(err.message, 'error'); }
+  });
+  $('tracks').addEventListener('input', (e) => {
+    if (e.target.id === 'profile-bio') $('bio-count').textContent = `${[...e.target.value].length}/280`;
+  });
+  $('hub-me').addEventListener('click', () => tracks.setTab('account'));
 
   store.subscribe(render);
   sidebar?.onChange(() => render(store.get()));

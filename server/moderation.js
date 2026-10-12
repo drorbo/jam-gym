@@ -63,6 +63,9 @@ export function createModeration(db) {
       return t;
     },
 
+    /** Take away a person's photo and bio (their name and tracks are left alone). */
+    clearProfile: (id) => users.clearProfile(id),
+
     /** Ban or unban by public id. A banned user's tracks disappear from browse and they can't save, publish or like. */
     ban: (publicId, banned = true) => users.ban(publicId, banned),
   };

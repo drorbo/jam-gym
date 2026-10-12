@@ -12,13 +12,13 @@ const withServer = (fn) => async () => {
 const wire = (id, name, at, over = {}) => ({ id, name, data: sanitizePresetSettings({ style: 'blues', ...over }), updatedAt: at });
 const sync = (b, presets = [], deleted = []) => b.post('/api/presets/sync', { presets, deleted });
 
-/** A person on a first device, and the same person on a second one (through their recovery code). */
+/** A person on a first device, and the same person on a second one (by logging in there with their password). */
 async function twoDevices(browser) {
   const one = browser();
   assert.equal((await one.post('/api/session')).status, 200);
-  const code = (await one.get('/api/me/recovery')).json.code;
+  assert.equal((await one.post('/api/auth/signup', { username: 'two_devices', password: 'correct horse' })).status, 201);
   const two = browser();
-  assert.equal((await two.post('/api/me/recover', { code })).status, 200);
+  assert.equal((await two.post('/api/auth/login', { username: 'two_devices', password: 'correct horse' })).status, 200);
   return { one, two };
 }
 

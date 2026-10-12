@@ -59,7 +59,7 @@ test('the token format is pinned: this exact token must keep verifying, so eardl
 
 test('without the shared secret the feature is off: no button, no start route', withServer(async ({ browser }) => {
   const b = browser();
-  assert.deepEqual((await b.get('/api/me')).json.features, { eardle: false });
+  assert.deepEqual((await b.get('/api/me')).json.features, { eardle: false, google: false });
   assert.equal((await b.get('/api/auth/eardle/start')).status, 404);
   const back = await b.get(`/api/auth/eardle/callback?token=${signToken(SECRET, { sub: 1, state: 'x' })}`);
   assert.equal(back.headers.get('location'), '/?eardle=failed', 'and a token is trusted by nothing');
@@ -67,7 +67,7 @@ test('without the shared secret the feature is off: no button, no start route', 
 
 test('with the secret set the page is told, and start sends the person to eardle with a state that is also in a cookie', withServer(async ({ browser }) => {
   const b = browser();
-  assert.deepEqual((await b.get('/api/me')).json.features, { eardle: true });
+  assert.deepEqual((await b.get('/api/me')).json.features, { eardle: true, google: false });
   const start = await b.get('/api/auth/eardle/start');
   assert.equal(start.status, 302);
   const to = new URL(start.headers.get('location'));
@@ -144,14 +144,6 @@ test('signing in on a second device opens the same library, and the two devices 
   assert.deepEqual((await phone.get('/api/tracks/mine')).json.tracks.map((t) => t.id), [track.id]);
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM sessions').get().n, 1, 'the phone holds a session of its own');
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM users').get().n, 1);
-
-  // the phone has no recovery code to show; the laptop, which holds the original secret, does
-  assert.equal((await phone.get('/api/me/recovery')).json.error.code, 'no_recovery_code');
-  assert.equal((await laptop.get('/api/me/recovery')).status, 200);
-  // a session token is not a recovery code
-  const sessionToken = phone.jar.get('jg_session');
-  const stranger = browser();
-  assert.equal((await stranger.post('/api/me/recover', { code: sessionToken })).status, 404);
 
   // signing out of the phone ends only the phone
   assert.equal((await phone.post('/api/me/signout')).status, 200);

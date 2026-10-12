@@ -35,6 +35,16 @@ export function loadConfig(env = process.env) {
     // misconfigured (set, but not long enough to be a real generated secret) is treated the same as unset: the
     // feature turns itself off rather than run with a weak secret. scripts/setup-eardle-sso.sh generates 64 characters.
     eardle: { url: (env.EARDLE_URL || 'https://eardle.com').replace(/\/+$/, ''), secret: eardleSecret(env.EARDLE_SSO_SECRET) },
+    // "Continue with Google" (server/google.js). Off unless both the client id and secret are set. The redirect address must be
+    // registered with Google exactly; when GOOGLE_REDIRECT_URI is empty it is worked out from the request (fine locally).
+    // GOOGLE_AUTH_URL / GOOGLE_TOKEN_URL exist so tests can stand in for Google; leave them alone otherwise.
+    google: {
+      clientId: env.GOOGLE_CLIENT_ID || '',
+      clientSecret: env.GOOGLE_CLIENT_SECRET || '',
+      redirectUri: env.GOOGLE_REDIRECT_URI || '',
+      authUrl: env.GOOGLE_AUTH_URL || 'https://accounts.google.com/o/oauth2/v2/auth',
+      tokenUrl: env.GOOGLE_TOKEN_URL || 'https://oauth2.googleapis.com/token',
+    },
     backupKeep:Number(env.BACKUP_KEEP) || 28,
     // every this many hours (checked at start-up and every six hours after); a deploy also takes one by hand first
     backupEveryHours: Number(env.BACKUP_EVERY_HOURS) || 6,
@@ -47,6 +57,11 @@ export const LIMITS = Object.freeze({
   description: 500,
   displayName: 24,
   displayNameMin: 2,
+  // a profile: a short bio, and a small square JPEG the browser has already cropped and re-encoded (see src/app/avatar.js)
+  bio: 280,
+  avatarBytes: 48 * 1024,
+  avatarBodyBytes: 96 * 1024, // the JPEG as base64 inside JSON
+  avatarMaxPx: 512,
   dataBytes: 16 * 1024,
   bodyBytes: 32 * 1024,
   progressionChars: 4000,

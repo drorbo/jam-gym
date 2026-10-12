@@ -15,16 +15,16 @@ export const emptyBrowse = () => ({
 
 export const initialTracksState = () => ({
   status: 'loading', // 'loading' | 'online' | 'offline'
-  me: null,          // { id, displayName, trackCount, publishedCount, banned, eardle } once an identity exists
-  features: { eardle: false }, // what the server offers: sign in with eardle
+  me: null,          // { id, displayName, username, bio, avatar, trackCount, publishedCount, banned, eardle, google } once an identity exists
+  features: { eardle: false, google: false }, // what the server offers: sign in with eardle, continue with Google
   mine: [], mineLoaded: false,
   active: null,      // the track whose setup is loaded: { id, title, author, likes, isMine, signature }
-  tab: 'mine',
+  tab: 'mine',       // 'mine' | 'presets' | 'browse' | 'account'
   browse: emptyBrowse(),
   busy: {},          // track id -> true while an action on it is in flight
   flash: null,       // { id, text, kind: 'ok' | 'error' }
-  recovery: null,    // the recovery code, while it is being shown
   cookieNote: false, // show the one-time "we keep a cookie" note
+  profile: null,     // someone's profile open in Browse: { id, status: 'loading' | 'ok' | 'error', data: { profile, tracks } | null, error }
 });
 
 /**
@@ -107,12 +107,17 @@ export function createTracksController({ store, player, api, storage = null, sea
       }
       try {
         const { me, features } = await api.whoami();
-        set({ status: 'online', me, features: features ?? { eardle: false } });
+        set({ status: 'online', me, features: features ?? { eardle: false, google: false } });
         if (me) await ctrl.refreshMine();
         // back from eardle: the server has already done the sign-in (or refused it); say which
         const outcome = new URLSearchParams(search).get('eardle');
         if (outcome === 'ok' && me) flash(`Signed in with eardle as ${me.displayName}.`);
         else if (outcome) flash('Signing in with eardle did not work. Please try again.', 'error');
+        // back from Google: same idea
+        const google = new URLSearchParams(search).get('google');
+        if (google === 'ok' && me) flash('Signed in with Google.');
+        else if (google === 'cancelled') flash('Google sign-in was cancelled.');
+        else if (google) flash('Signing in with Google did not work. Please try again.', 'error');
       } catch (err) { fail(err); }
       const shared = new URLSearchParams(search).get('track');
       if (shared) await ctrl.openShared(shared);
@@ -246,7 +251,7 @@ export function createTracksController({ store, player, api, storage = null, sea
     /** Like or unlike straight away, and undo the change if the server says no. */
     async toggleLike(id) {
       const { browse, mine } = state();
-      const item = browse.items.find((t) => t.id === id) ?? mine.find((t) => t.id === id);
+      const item = browse.items.find((t) => t.id === id) ?? mine.find((t) => t.id === id) ?? state().profile?.data?.tracks.find((t) => t.id === id);
       if (!item || item.isMine) return;
       const before = { likes: item.likes, likedByMe: item.likedByMe };
       const want = !item.likedByMe;
@@ -255,6 +260,7 @@ export function createTracksController({ store, player, api, storage = null, sea
         set({
           browse: { ...s.browse, items: replaceIn(s.browse.items, { id, ...patch }) },
           mine: replaceIn(s.mine, { id, ...patch }),
+          profile: s.profile?.data ? { ...s.profile, data: { ...s.profile.data, tracks: replaceIn(s.profile.data.tracks, { id, ...patch }) } } : s.profile,
           active: s.active?.id === id ? { ...s.active, likes: patch.likes } : s.active,
         });
       };
@@ -308,41 +314,98 @@ export function createTracksController({ store, player, api, storage = null, sea
       } catch (err) { fail(err); return false; }
     },
 
-    async showRecovery() {
-      try { set({ recovery: await api.recoveryCode() }); } catch (err) { fail(err); }
-    },
-    hideRecovery: () => set({ recovery: null }),
-
-    /** Switch this browser to another identity using its recovery code. */
-    async recover(code) {
+    /** Make an account with a username and password, or give this browser's library a login. True when it worked. */
+    async signUp(username, password) {
       try {
-        const me = await api.recover(code);
-        set({ me, active: null, recovery: null, mine: [], mineLoaded: false });
+        const me = await api.signUp(username, password);
+        set({ me });
+        if (!storage?.getItem(NOTE_KEY)) { set({ cookieNote: true }); storage?.setItem(NOTE_KEY, '1'); }
         await ctrl.refreshMine();
-        if (state().browse.loaded) await ctrl.search({});
-        flash(`Signed in as ${me.displayName}.`);
+        flash('Your account is ready. Add a photo and a bio below.');
         return true;
       } catch (err) { fail(err); return false; }
     },
 
-    /** End this browser's eardle sign-in. The library stays with the eardle account; sign in again to open it. */
+    /** Log this browser in to an existing account; a library made here without an account joins it. */
+    async logIn(username, password) {
+      try {
+        const me = await api.logIn(username, password);
+        set({ me, active: null, mine: [], mineLoaded: false, profile: null });
+        await ctrl.refreshMine();
+        if (state().browse.loaded) await ctrl.search({});
+        flash(`Welcome back, ${me.displayName}.`);
+        return true;
+      } catch (err) { fail(err); return false; }
+    },
+
+    async changePassword(current, next) {
+      try {
+        await api.changePassword(current, next);
+        flash('Your password was changed. Other devices were logged out.');
+        return true;
+      } catch (err) { fail(err); return false; }
+    },
+
+    /** Save the name and/or the bio. Returns true when the server accepted it. */
+    async saveProfile(patch) {
+      try {
+        set({ me: await api.updateProfile(patch) });
+        await ctrl.refreshMine();
+        flash('Your profile was saved.');
+        return true;
+      } catch (err) { fail(err); return false; }
+    },
+
+    /** Set the photo from base64 of a small JPEG (the UI makes it with avatar.js). */
+    async setAvatar(image) {
+      try {
+        set({ me: await api.setAvatar(image) });
+        flash('Your photo was updated.');
+        return true;
+      } catch (err) { fail(err); return false; }
+    },
+
+    async removeAvatar() {
+      try {
+        set({ me: await api.removeAvatar() });
+        flash('Your photo was removed.');
+        return true;
+      } catch (err) { fail(err); return false; }
+    },
+
+    /** Open someone's profile in Browse (their photo, bio and published tracks). */
+    async openProfile(publicId) {
+      set({ tab: 'browse', profile: { id: publicId, status: 'loading', data: null, error: null } });
+      try {
+        const data = await api.profile(publicId);
+        if (state().profile?.id !== publicId) return;
+        set({ profile: { id: publicId, status: 'ok', data, error: null } });
+      } catch (err) {
+        if (state().profile?.id !== publicId) return;
+        set({ profile: { id: publicId, status: 'error', data: null, error: err instanceof ApiError ? err.message : 'That profile could not be loaded.' } });
+        if (err instanceof ApiError && err.offline) set({ status: 'offline' });
+      }
+    },
+    closeProfile: () => set({ profile: null }),
+
+    /** End this browser's login (eardle, Google or password). The library stays with the account; log in again to open it. */
     async signOut() {
       try {
         await api.signOut();
-        set({ me: null, mine: [], mineLoaded: false, active: null, recovery: null });
+        set({ me: null, mine: [], mineLoaded: false, active: null, profile: null });
         if (state().browse.loaded) await ctrl.search({});
-        flash('Signed out. Sign in with eardle again to open your library.');
+        flash('Logged out. Log in again to open your library.');
         return true;
       } catch (err) { fail(err); return false; }
     },
 
-    /** End every device's eardle sign-in, not just this one — for a lost device, or just to be sure. */
+    /** End every device's login, not just this one — for a lost device, or just to be sure. */
     async signOutEverywhere() {
       try {
         await api.signOutEverywhere();
-        set({ me: null, mine: [], mineLoaded: false, active: null, recovery: null });
+        set({ me: null, mine: [], mineLoaded: false, active: null, profile: null });
         if (state().browse.loaded) await ctrl.search({});
-        flash('Signed out everywhere. Sign in with eardle again to open your library.');
+        flash('Logged out everywhere. Log in again to open your library.');
         return true;
       } catch (err) { fail(err); return false; }
     },
@@ -350,7 +413,7 @@ export function createTracksController({ store, player, api, storage = null, sea
     async deleteAccount() {
       try {
         await api.deleteMe();
-        set({ me: null, mine: [], mineLoaded: false, active: null, recovery: null });
+        set({ me: null, mine: [], mineLoaded: false, active: null, profile: null });
         if (state().browse.loaded) await ctrl.search({});
         flash('Your tracks, likes and name were deleted.');
         return true;

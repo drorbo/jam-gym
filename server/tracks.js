@@ -14,7 +14,7 @@ const conflict = (message, code = 'conflict') => new HttpError(409, code, messag
 
 /** @param {import('node:sqlite').DatabaseSync} db */
 export function createTracks(db) {
-  const SELECT = `SELECT t.rowid AS rowid, t.*, u.display_name AS author, u.public_id AS author_id, u.banned AS author_banned
+  const SELECT = `SELECT t.rowid AS rowid, t.*, u.display_name AS author, u.public_id AS author_id, u.avatar_v AS author_avatar, u.banned AS author_banned
                   FROM tracks t JOIN users u ON u.id = t.owner_id`;
   const rowById = (id) => db.prepare(`${SELECT} WHERE t.id = ?`).get(String(id));
   const isLiked = db.prepare('SELECT 1 FROM likes WHERE user_id = ? AND track_id = ?');
@@ -27,6 +27,8 @@ export function createTracks(db) {
       title: row.title,
       description: row.description,
       author: row.author,
+      authorId: row.author_id,
+      authorAvatar: row.author_avatar ?? null,
       style: row.style,
       key: row.key,
       timeSignature: row.time_signature,
@@ -201,6 +203,12 @@ export function createTracks(db) {
       return { likes: fresh.like_count, likedByMe: false };
     },
 
+    /** The published tracks of one person (the profile card), most liked first. A banned author has none. */
+    listPublishedBy(publicId, viewer) {
+      return db.prepare(`${SELECT} WHERE u.public_id = ? AND u.banned = 0 AND t.visibility = 'published'
+                         ORDER BY t.like_count DESC, t.published_at DESC LIMIT ?`).all(String(publicId), LIMITS.publishedPerUser).map((r) => present(r, viewer));
+    },
+
     /** Search and list published tracks. */
     browse(viewer, searchParams) {
       const p = parseBrowseParams(searchParams);
@@ -223,7 +231,7 @@ export function createTracks(db) {
       else if (p.sort === 'relevance' && p.match) order = 'bm25(track_search, 8.0, 1.0, 3.0, 0.0) ASC, t.like_count DESC, t.published_at DESC';
 
       const total = db.prepare(`SELECT COUNT(*) AS c ${from} WHERE ${where.join(' AND ')}`).get(...args).c;
-      const rows = db.prepare(`SELECT t.rowid AS rowid, t.*, u.display_name AS author, u.public_id AS author_id ${from}
+      const rows = db.prepare(`SELECT t.rowid AS rowid, t.*, u.display_name AS author, u.public_id AS author_id, u.avatar_v AS author_avatar ${from}
                                WHERE ${where.join(' AND ')} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...args, p.limit, p.offset);
       return { total, offset: p.offset, limit: p.limit, items: rows.map((r) => present(r, viewer)) };
     },

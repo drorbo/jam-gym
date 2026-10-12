@@ -11,8 +11,8 @@ synthesised in the browser. The band plays offline; saving and sharing tracks ne
 
 ```
 npm start        # serves http://localhost:5173 (the site and the tracks API), data in ./data
-npm test         # 549 tests, Node's built-in runner, no install needed
-npm run admin -- stats     # moderation and upkeep, see "Tracks" below
+npm test         # 564 tests, Node's built-in runner, no install needed
+npm run admin -- stats     # moderation and upkeep, see "Jam Hub" below
 ```
 
 Needs Node 22.13 or newer (the database is Node's built-in `node:sqlite`). The app must be served over `http://`
@@ -61,7 +61,7 @@ To ship a change (tests, commit, push, deploy, verify, in one go): `bash scripts
   straighter as the default tempo rises); a small button restores the default after you've moved it. It applies from
   the next bar, is saved with saved progressions, and is disabled in 6/8, 7/8 and 10/8, whose feel comes from their groupings.
 - **Bass line, Keys and Drums**: three tabs, alongside Style and Mix, that shape how each part of the band plays. See below.
-- **Tracks**: the button in the header opens the tracks sidebar, described below. Every section of it folds away, and
+- **Jam Hub**: the button in the header opens the sidebar for exploring and publishing tracks, described below. Every section of it folds away, and
   remembers whether it was open. A track is the whole setup, not just the chords.
 - **Key change**: *Step* moves by an interval (−11…+11 semitones, named) every N loops.
   *Random* picks a key every N loops: never the same twice, completely random, all 12 in random order,
@@ -194,9 +194,9 @@ direction, leap recovery and not repeating last bar's shape, with seeded noise s
 described by one schema (`src/styles/settings.js`); the players are `drumming.js`, `comping.js`, `walking.js` and
 `rockbass.js`.
 
-## Tracks: save, publish, search, like
+## Jam Hub: explore, save, publish, like
 
-The **Tracks** button in the header opens a sidebar. On a wide window it docks beside the practice controls and
+The **Jam Hub** button in the header opens a sidebar, a place to explore the tracks other players published and to share your own. Four tabs: **My tracks**, **My presets**, **Browse** and **My account**. On a wide window it docks beside the practice controls and
 pushes them over, so the play button stays in reach; on a phone it slides over the page as a sheet. It remembers
 whether you had it open.
 
@@ -204,8 +204,23 @@ whether you had it open.
   tempo, style, swing, sounds, key-change and tempo-ramp settings, loop, count-in and the mixer. Saving under an
   existing name updates it. Load brings it all back; Replace with current setup overwrites it.
 - **Identity** is one random ID in an HttpOnly cookie (`jg_session`), set the first time you save, publish or like, never
-  for just listening. Your name defaults to something like `Player-4F2K` and can be changed. A **recovery code** opens
-  your library in another browser; keep it private. **Delete my data** removes your name, tracks and likes.
+  for just listening. Your name defaults to something like `Player-4F2K` and can be changed.
+- **My account** is where you edit your **profile**: your name, a short **bio** (280 characters) and a **photo**. The photo is
+  cropped to a square from the middle and shrunk to 256 pixels in the browser before it is sent, which also drops everything the
+  file carried besides the picture (location, camera, date); the server re-checks that it is a small JPEG and serves it with
+  headers that stop it being anything else. It also has **Log in or create an account** (a **username and password**, or
+  eardle), **Change password**, **Log out** and **Delete my data**, which removes your name, photo, bio, tracks and likes.
+- **Continue with Google** signs in directly with Google (nothing to do with eardle): only the Google account id is kept, so no name, email or
+  photo ever reaches Jam Gym. **Connect Google** adds it to an account that logs in another way. Setup: [docs/google-login.md](docs/google-login.md).
+- **Username and password**: no email is asked for or kept. The username is private (other people only see your display name) and
+  unique ignoring case; the password is kept only as a salted scrypt hash (`server/password.js`), checked at the same cost
+  whether or not the name exists, and attempts are rate limited per name and place. Creating a login from a browser that already
+  has saved tracks keeps them; logging in from a browser with unsaved tracks brings them along. Changing the password logs every
+  other device out. **There is no password reset** (nothing to send one to), so the page says to choose one you will remember.
+  The old recovery codes are gone: a library made before this that has no login stays in the browser that made it, and My account
+  offers "Add a login" so it can be opened anywhere.
+- **Profiles are public once you publish.** In Browse, each track shows its author with their photo; tap it to open their
+  profile (photo, bio and published tracks). A banned person's profile and photo disappear with their tracks.
 - **A track keeps the whole setup**: progression, key, meter, tempo (set again when you open it, even while playing), style, swing, all three panels (grooves, patterns and the drum mixer
   included), sounds, key change, tempo ramp and the mixer. Saved, published, opened by someone else or copied, it comes back the same
   (`test/track-band.test.js`); a track saved before a setting existed opens with that setting at the style's own value.
@@ -218,13 +233,13 @@ whether you had it open.
   "On this device" and can be moved into the library.
 
 Design and decisions: [docs/tracks-design.md](docs/tracks-design.md). Moderation is a command on the server:
-`docker exec jam-gym-web-1 node server/admin.js show <id>` (also `stats hide restore delete ban unban backup`).
+`docker exec jam-gym-web-1 node server/admin.js show <id>` (also `stats hide restore delete ban unban clear-profile backup`; `clear-profile <user-id>` removes a photo and bio).
 
 ## Accounts: Jam Gym is part of eardle
 
 Jam Gym runs as a subdomain of [eardle](https://eardle.com) on the same server, and people can **sign in with their eardle
-account** (Tracks panel, "Sign in with eardle"). It is optional: without it each browser has an anonymous library and a
-recovery code. Signing in links that library to the eardle account so it follows the person to every device; if a browser
+account** (Jam Hub, My account, "Sign in with eardle"). It is optional: without it each browser has an anonymous library and a
+login. Signing in links that library to the eardle account so it follows the person to every device; if a browser
 already had a library and the account has one too, they are merged. Jam Gym never sees a password or email, and keeps its own
 database. How it works, the setup script and the deploy order (eardle first) are in [docs/eardle-accounts.md](docs/eardle-accounts.md);
 the eardle side is in that repo's `docs/jam-gym-integration.md`.

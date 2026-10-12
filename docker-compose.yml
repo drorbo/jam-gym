@@ -24,6 +24,11 @@ services:
       # scripts/setup-eardle-sso.sh); while it is empty the feature is off and nothing else changes.
       EARDLE_SSO_SECRET: ${EARDLE_SSO_SECRET:-}
       EARDLE_URL: ${EARDLE_URL:-https://eardle.com}
+      # "Continue with Google" (docs/google-login.md). From ~/drorbo/jam-gym/.env on the server; while the id or secret is empty the
+      # feature is off. The redirect address must be registered with Google exactly.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-https://jam-gym.eardle.com/api/auth/google/callback}
     volumes:
       # Tracks, likes and daily backups. Do NOT prune this volume: `docker volume prune` would delete every user's tracks.
       - data:/data

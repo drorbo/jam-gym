@@ -7,13 +7,19 @@ import { createPresets } from './presets.js';
 import { createStatic } from './static.js';
 import { createTracks } from './tracks.js';
 import { verifyToken } from './sso.js';
+import { readAvatar } from './avatar.js';
+import { authorizeUrl, exchangeCode, pkcePair } from './google.js';
+import { checkPassword, checkUsername, hashPassword, verifyPassword } from './password.js';
 import { createUsers, publicMe } from './users.js';
 import { HttpError, bad, isSecret, randomId } from './util.js';
+import { timingSafeEqual } from 'node:crypto';
 
 const SSO_COOKIE = 'jg_sso'; // the state of a sign-in with eardle that is under way (10 minutes); scoped to SSO_PATH,
 // so it cannot itself take the __Host- prefix below (that prefix requires Path=/), but that narrow path is its own
 // protection: nothing other than the two sign-in routes ever sees it.
 const SSO_PATH = '/api/auth/eardle';
+const GOOGLE_COOKIE = 'jg_google'; // state.nonce.verifier of a Google sign-in under way (10 minutes), scoped to GOOGLE_PATH like the one above
+const GOOGLE_PATH = '/api/auth/google';
 const TWO_YEARS = 60 * 60 * 24 * 365 * 2;
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -35,7 +41,13 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
   const users = createUsers(db);
   const tracks = createTracks(db);
   const presets = createPresets(db);
-  const features = { eardle: Boolean(config.eardle.secret) };
+  const features = { eardle: Boolean(config.eardle.secret), google: Boolean(config.google.clientId && config.google.clientSecret) };
+  const sameText = (a, b) => typeof a === 'string' && typeof b === 'string' && a.length === b.length && a.length > 0 && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  /** The Google settings for this request: the redirect address is the configured one, or this site's own callback. */
+  const googleConfig = (req) => ({
+    ...config.google,
+    redirectUri: config.google.redirectUri || `${isHttps(req) ? 'https' : 'http'}://${req.headers.host}${GOOGLE_PATH}/callback`,
+  });
   const serveStatic = createStatic(root, { watch: !config.production });
   // ---- request helpers -------------------------------------------------------------------
 
@@ -146,24 +158,142 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
       return { me: user ? publicMe(user, users.counts(user)) : null, features };
     }],
 
+    // the name and/or the bio; send only what changes
     ['PATCH', '/api/me', { auth: 'user', limit: W }, ({ user, body }) => {
-      const updated = users.rename(user, body.displayName);
+      let updated = user;
+      if (body.displayName !== undefined || body.bio === undefined) updated = users.rename(updated, body.displayName);
+      if (body.bio !== undefined) updated = users.setBio(updated, body.bio);
       return { me: publicMe(updated, users.counts(updated)) };
     }],
 
-    ['GET', '/api/me/recovery', { auth: 'user', limit: ['recovery', 20, HOUR] }, ({ user, secret }) => {
-      // a device that signed in with eardle holds a session, not the person's own secret, so there is no code to show from it
-      if (!users.isOwnSecret(user, secret)) {
-        throw new HttpError(404, 'no_recovery_code', 'This browser signed in with eardle. To open this library somewhere else, sign in with eardle there.');
-      }
-      return { code: users.recoveryCode(secret) };
+    // the photo: a small JPEG as base64, cropped and re-encoded by the browser (src/app/avatar.js) and re-checked here
+    ['PUT', '/api/me/avatar', { auth: 'user', limit: ['avatar', 10, HOUR], bodyBytes: LIMITS.avatarBodyBytes }, ({ user, body }) => {
+      if (user.banned) throw new HttpError(403, 'banned', 'This account can no longer change its profile.');
+      const updated = users.setAvatar(user, readAvatar(body.image));
+      return { me: publicMe(updated, users.counts(updated)) };
     }],
 
-    ['POST', '/api/me/recover', { auth: 'none', limit: ['recover', 20, HOUR] }, ({ req, res, body }) => {
-      const found = users.findByRecoveryCode(body.code);
-      if (!found) throw new HttpError(404, 'bad_code', 'That recovery code was not recognised.');
-      setSessionCookie(res, req, found.secret);
-      return { me: publicMe(found.user, users.counts(found.user)) };
+    ['DELETE', '/api/me/avatar', { auth: 'user', limit: W }, ({ user }) => {
+      const updated = users.clearAvatar(user);
+      return { me: publicMe(updated, users.counts(updated)) };
+    }],
+
+    // anyone can see a photo and a profile of someone who has published; the id is the public one, never the secret
+    ['GET', '/api/avatar/:id', { auth: 'none', limit: ['avatar-read', 600, MINUTE, true], raw: true }, ({ params }) => {
+      const a = users.avatarOf(params.id);
+      if (!a) throw new HttpError(404, 'not_found', 'No photo.');
+      return {
+        status: 200,
+        body: a.data,
+        headers: {
+          'Content-Type': 'image/jpeg',
+          // the address carries ?v=<version>, so a changed photo has a new address and this can be kept for a long time
+          'Cache-Control': 'public, max-age=86400',
+          'X-Content-Type-Options': 'nosniff',
+          'Content-Security-Policy': "default-src 'none'; sandbox",
+          'Cross-Origin-Resource-Policy': 'same-origin',
+        },
+      };
+    }],
+
+    ['GET', '/api/profiles/:id', { auth: 'optional', limit: ['read', 240, MINUTE] }, ({ user, params }) => {
+      const profile = users.profileOf(params.id);
+      if (!profile) throw new HttpError(404, 'not_found', 'That profile was not found.');
+      return { profile, tracks: tracks.listPublishedBy(params.id, user) };
+    }],
+
+    // ---- a username and a password ----
+    // signup: with no account yet it makes one; from a browser that already has an anonymous library it gives that
+    // library a login, so nothing already saved is lost. There is no reset (no email is kept), which the page says.
+    ['POST', '/api/auth/signup', { auth: 'optional', limit: ['signup', 10, HOUR, true] }, async ({ req, res, user, ip, body }) => {
+      const name = checkUsername(body.username);
+      const password = checkPassword(body.password, name);
+      if (user?.username) throw new HttpError(409, 'already_has_login', 'This account already has a login.');
+      if (users.findByUsername(name)) throw new HttpError(409, 'username_taken', 'That username is taken. Try another.');
+      const hash = await hashPassword(password);
+      let target = user;
+      let made = null;
+      if (!target) {
+        const gate = limiter.hit(`newid:${ip}`, 10, HOUR);
+        if (!gate.ok) throw new HttpError(429, 'rate_limited', 'Too many new sessions from here. Try again later.');
+        made = users.create();
+        target = made.user;
+      }
+      let updated;
+      try { updated = users.setLogin(target, name, hash); } catch (err) { if (made) users.deleteUser(made.user); throw err; }
+      if (made) setSessionCookie(res, req, made.secret);
+      return { me: publicMe(updated, users.counts(updated)) };
+    }, 201],
+
+    // login: this browser becomes that account (a session, like signing in with eardle on a second device). A library this
+    // browser had made without an account joins it. Wrong name and wrong password get the same answer and the same cost.
+    ['POST', '/api/auth/login', { auth: 'optional', limit: ['login', 40, 15 * MINUTE, true] }, async ({ req, res, user, ip, body }) => {
+      const name = String(body.username ?? '').trim().slice(0, 40);
+      const password = typeof body.password === 'string' ? body.password : '';
+      for (const [key, max, window] of [[`login:${ip}:${name.toLowerCase()}`, 10, 15 * MINUTE], [`login-name:${name.toLowerCase()}`, 60, HOUR]]) {
+        if (!limiter.hit(key, max, window).ok) throw new HttpError(429, 'rate_limited', 'Too many attempts. Wait a few minutes and try again.');
+      }
+      const target = users.findByUsername(name);
+      if (!(await verifyPassword(password, target?.password_hash)) || !target) {
+        throw new HttpError(401, 'bad_login', 'That username and password do not match.');
+      }
+      if (user?.id !== target.id) {
+        // whatever this browser had been building without an account joins the one being logged in to
+        if (user && !user.auth_provider && !user.username && !user.google_sub && !user.banned) users.absorb(target, user);
+        setSessionCookie(res, req, users.startSession(target));
+      }
+      const fresh = users.findByUsername(name);
+      return { me: publicMe(fresh, users.counts(fresh)) };
+    }],
+
+    // changing it needs the current one; every other device is logged out, this one stays in
+    ['POST', '/api/me/password', { auth: 'user', limit: ['password', 10, HOUR] }, async ({ req, res, user, secret, body }) => {
+      if (!user.password_hash) throw bad('This account has no password yet. Create a login first.', 'no_login');
+      if (!(await verifyPassword(typeof body.current === 'string' ? body.current : '', user.password_hash))) {
+        throw new HttpError(401, 'bad_login', 'The current password is not right.');
+      }
+      const next = checkPassword(body.next, user.username);
+      users.setPasswordHash(user, await hashPassword(next));
+      users.endAllSessions(user);
+      if (!users.isOwnSecret(user, secret)) setSessionCookie(res, req, users.startSession(user));
+      return { changed: true };
+    }],
+
+    // ---- continue with Google (server/google.js, docs/google-login.md) ----
+    // start: remember a random state, nonce and PKCE verifier in a cookie and send the person to Google
+    ['GET', `${GOOGLE_PATH}/start`, { auth: 'none', limit: ['sso', 30, HOUR], redirect: true }, ({ req, res }) => {
+      if (!features.google) throw new HttpError(404, 'google_off', 'Continue with Google is not switched on here.');
+      const state = randomId(32);
+      const nonce = randomId(32);
+      const { verifier, challenge } = pkcePair();
+      addCookie(res, req, GOOGLE_COOKIE, `${state}.${nonce}.${verifier}`, { path: GOOGLE_PATH, maxAge: 600 });
+      return authorizeUrl(googleConfig(req), { state, nonce, challenge });
+    }],
+
+    // callback: Google sends the person back with a one-time code. Whatever goes wrong, they land on the home page with a
+    // message and nothing is changed; only a code that checks out against the cookie gets as far as a Google account id.
+    ['GET', `${GOOGLE_PATH}/callback`, { auth: 'none', limit: ['sso', 30, HOUR], redirect: true }, async ({ req, res, url, user, secret }) => {
+      const [state, nonce, verifier] = String(parseCookies(req.headers.cookie)[GOOGLE_COOKIE] ?? '').split('.');
+      addCookie(res, req, GOOGLE_COOKIE, '', { path: GOOGLE_PATH, maxAge: 0 }); // a state is good for one attempt
+      if (!features.google) return '/?google=failed';
+      if (url.searchParams.get('error')) return '/?google=cancelled'; // the person said no, or closed the window
+      const code = url.searchParams.get('code');
+      if (!sameText(state, url.searchParams.get('state')) || !code || !nonce || !verifier) return '/?google=failed';
+      let who;
+      try { who = await exchangeCode(googleConfig(req), { code, verifier, nonce }); } catch { return '/?google=failed'; }
+
+      const existing = users.findByGoogle(who.sub);
+      if (existing) {
+        if (user?.id === existing.id) return '/?google=ok';
+        // whatever this browser had been building without an account joins the Google account's library
+        if (user && !user.auth_provider && !user.username && !user.google_sub && !user.banned) users.absorb(existing, user);
+        setSessionCookie(res, req, users.startSession(existing));
+      } else if (user && !user.google_sub) {
+        users.linkGoogle(user, who.sub); // "Connect Google": this browser's account (with or without another login) gains it; its cookie stays
+      } else {
+        setSessionCookie(res, req, users.createLinkedGoogle(who.sub).secret);
+      }
+      return '/?google=ok';
     }],
 
     // ---- sign in with eardle (server/sso.js, docs/eardle-accounts.md) ----
@@ -187,7 +317,7 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
       if (existing) {
         if (user?.id === existing.id) return '/?eardle=ok';
         // whatever this browser had been building without an account joins the eardle account's library
-        if (user && !user.auth_provider && !user.banned) users.absorb(existing, user);
+        if (user && !user.auth_provider && !user.username && !user.google_sub && !user.banned) users.absorb(existing, user);
         setSessionCookie(res, req, users.startSession(existing));
       } else if (user && !user.auth_provider) {
         users.linkEardle(user, who.sub, who.name); // the browser's own library becomes the eardle account's; its cookie stays
@@ -197,11 +327,12 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
       return '/?eardle=ok';
     }],
 
-    // only for someone signed in with eardle: it ends this browser's session (their library stays with the eardle account).
+    // only for an account that can be logged back in to (eardle, or a username and password): it ends this browser's session
+    // (the library stays with the account).
     // With { everywhere: true } it also ends every other device's session — a stolen or forgotten session can be cut off
     // without needing to know which one it is.
     ['POST', '/api/me/signout', { auth: 'user', limit: W }, ({ req, res, user, secret, body }) => {
-      if (!user.auth_provider) throw bad('This library is not linked to an eardle account. Keep its recovery code instead.', 'not_linked');
+      if (!user.auth_provider && !user.username && !user.google_sub) throw bad('Create a login first: without one, logging out would lose this library.', 'not_linked');
       if (body?.everywhere) users.endAllSessions(user);
       else users.endSession(secret);
       clearSessionCookie(res, req);
@@ -294,6 +425,11 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
     }
 
     const result = await r.handler({ req, res, url, params, body, user, secret: activeSecret, ip });
+    if (r.opts.raw) {
+      res.writeHead(result.status, { ...result.headers, 'Content-Length': result.body.length });
+      res.end(result.body);
+      return;
+    }
     if (r.opts.redirect) {
       res.writeHead(302, { Location: result, 'Cache-Control': 'no-store' });
       res.end();
