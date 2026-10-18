@@ -1,0 +1,23 @@
+{
+  "packageId": "com.eardle.jamgym",
+  "host": "jam-gym.eardle.com",
+  "name": "Jam Gym",
+  "launcherName": "Jam Gym",
+  "display": "standalone",
+  "orientation": "default",
+  "themeColor": "#0e1110",
+  "navigationColor": "#0e1110",
+  "backgroundColor": "#0e1110",
+  "startUrl": "/",
+  "iconUrl": "https://jam-gym.eardle.com/icons/icon-512.png",
+  "maskableIconUrl": "https://jam-gym.eardle.com/icons/maskable-512.png",
+  "webManifestUrl": "https://jam-gym.eardle.com/manifest.webmanifest",
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "enableNotifications": false,
+  "fallbackType": "customtabs",
+  "signingKey": {
+    "path": "./jam-gym-upload.keystore",
+    "alias": "jam-gym"
+  }
+}

@@ -9,6 +9,7 @@ import { mountCollapsibles } from './collapsible.js';
 import { mountSidebar } from './sidebar.js';
 import { mountPresetsUI } from './presets-ui.js';
 import { mountMobile } from './mobile.js';
+import { mountPwa } from './pwa.js';
 import { mountQuickProgressions } from './quick-ui.js';
 import { mountTabs } from './tabs.js';
 import { mountTracksUI } from './tracks-ui.js';
@@ -32,6 +33,12 @@ const tracks = createTracksController({ store, player, api, storage, search: loc
 const presets = createPresetsController({ store, api, storage, player });
 presets.start();
 const sidebar = mountSidebar({ storage });
+// Installable as an app, and kept for offline use. The site itself works the same either way.
+mountPwa({
+  button: document.getElementById('install-app'),
+  info: document.getElementById('install-info'),
+  note: document.getElementById('offline-note'),
+});
 mountTracksUI({ store, player, tracks, sidebar });
 mountPresetsUI({ store, presets, tracks, sidebar });
 mountCollapsibles({ root: document.getElementById('sidebar'), storage, toggleAll: document.getElementById('sec-toggle-all') });

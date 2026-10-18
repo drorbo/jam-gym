@@ -90,6 +90,14 @@ the same value as eardle's `JAMGYM_SSO_SECRET`; `bash scripts/setup-eardle-sso.s
 secret the feature is simply off and everything else works as before. The `sessions` table (schema 3) is created by the normal
 start-up migration, after the usual pre-deploy backup.
 
+## The installable app and Android
+
+The site serves its own `/sw.js` (generated), `/manifest.webmanifest`, `/icons/` and `/.well-known/assetlinks.json`, all through the
+normal Node server, so the host nginx needs nothing special (it proxies everything). The `Dockerfile` copies `icons`, `manifest.webmanifest`
+and `.well-known`. To let the Android app open without a browser bar, put its signing certificate SHA-256 fingerprint(s) in
+`.well-known/assetlinks.json` and deploy (steps in `android/README.md`). The in-container `deploy/nginx.conf` variant serves static
+files only and cannot produce `/sw.js`, so the app install and offline mode need the Node server.
+
 ## Backups and restoring
 
 Users' tracks live in one SQLite file on the `jam-gym_data` volume. Three layers protect it:

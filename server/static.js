@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { createReadStream, readdirSync, readFileSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { extname, join, normalize, relative, resolve, sep } from 'node:path';
+import { buildServiceWorker, precacheLists } from './pwa.js';
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -16,10 +17,13 @@ const TYPES = {
   '.md': 'text/plain; charset=utf-8',
   '.png': 'image/png',
   '.ico': 'image/x-icon',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
 };
 
-const ALLOWED = ['src', 'css', 'fonts', 'samples'];
-const LONG_CACHE = /^\/(fonts|samples\/(drums|keys))\//;
+const ALLOWED = ['src', 'css', 'fonts', 'samples', 'icons'];
+// single files at the site root that are served too: the app manifest, and the file that ties the Android app to this site
+const ROOT_FILES = new Set(['/manifest.webmanifest', '/.well-known/assetlinks.json']);
+const LONG_CACHE = /^\/(fonts|samples\/(drums|keys|basses))\//;
 
 /**
  * Content-Security-Policy for the page. The one inline script (which applies the saved theme before first paint) is
@@ -92,6 +96,7 @@ export function createStatic(root, { watch = false } = {}) {
   const base = resolve(root);
   let versions;
   let page;
+  let worker;
   let builtAt = 0;
 
   /** (Re)build the fingerprints and the page. In production this happens once; in development, at most twice a second. */
@@ -100,6 +105,8 @@ export function createStatic(root, { watch = false } = {}) {
     const html = versionedHtml(readFileSync(join(base, 'index.html'), 'utf8'), versions);
     const tag = createHash('sha256').update(html).digest('hex').slice(0, 16);
     page = { html, csp: buildCsp(html), etag: `W/"${tag}"` };
+    // the worker's text changes whenever the page, a script or a style does, so browsers install the new one
+    worker = Buffer.from(buildServiceWorker(precacheLists(base, versions), tag), 'utf8');
     builtAt = Date.now();
   }
   build();
@@ -110,6 +117,7 @@ export function createStatic(root, { watch = false } = {}) {
     try { p = decodeURIComponent(pathname); } catch { return null; }
     if (p.includes('\0') || p.includes('\\')) return null;
     if (p === '/' || p === '/index.html') return join(base, 'index.html');
+    if (ROOT_FILES.has(p)) return join(base, p.slice(1));
     // Never accept dot segments, even ones hidden as %2e or %2f. Then check the folder the path really lands in,
     // after resolving, not the one it starts with.
     if (p.split('/').some((seg) => seg === '..' || seg === '.')) return null;
@@ -138,6 +146,13 @@ export function createStatic(root, { watch = false } = {}) {
       const body = Buffer.from(page.html, 'utf8');
       res.writeHead(200, { ...headers, 'Content-Length': body.length });
       return res.end(req.method === 'HEAD' ? undefined : body);
+    }
+
+    if (pathname === '/sw.js') {
+      res.writeHead(200, {
+        'Content-Type': TYPES['.js'], 'Content-Length': worker.length, 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff',
+      });
+      return res.end(req.method === 'HEAD' ? undefined : worker);
     }
 
     const file = locate(pathname);

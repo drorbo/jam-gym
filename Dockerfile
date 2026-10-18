@@ -22,6 +22,9 @@ COPY css ./css
 COPY fonts ./fonts
 COPY src ./src
 COPY samples ./samples
+COPY icons ./icons
+COPY manifest.webmanifest ./manifest.webmanifest
+COPY .well-known ./.well-known
 
 # /data holds the database and its backups. The compose file mounts a named volume there, so it survives rebuilds.
 # The `node` user (uid 1000) owns it, so the process never runs as root.
