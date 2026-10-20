@@ -1,1 +1,10 @@
-[]
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.eardle.jamgym",
+    "sha256_cert_fingerprints": [
+      "F9:ED:28:C8:9D:83:88:A6:7B:E3:35:75:96:DB:55:61:1A:A1:03:6D:96:96:63:74:22:CD:CB:63:CC:35:81:5B"
+    ]
+  }
+}]
