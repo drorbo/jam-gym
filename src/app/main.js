@@ -14,11 +14,16 @@ import { mountQuickProgressions } from './quick-ui.js';
 import { mountTabs } from './tabs.js';
 import { mountTracksUI } from './tracks-ui.js';
 import { mountUI } from './ui.js';
+import { createHistory } from './history.js';
+import { mountHistoryUI } from './history-ui.js';
+import { mountChordEditor } from './chord-editor.js';
 
 const store = createStore({ ...loadState(), saved: loadSaved(), activeSaved: null });
 const player = new Player(store);
 mountUI({ store, player });
 mountQuickProgressions({ store, player });
+mountChordEditor({ store, player });
+mountHistoryUI({ store, player, history: createHistory() });
 
 let storage = null;
 try { storage = window.localStorage; } catch { /* storage blocked: the cookie note will simply show each visit */ }

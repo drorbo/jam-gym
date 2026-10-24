@@ -93,10 +93,20 @@
       <!-- Progression -->
       <section class="board" aria-label="Progression">
         <ol class="bars" id="bars"></ol>
+        <!-- Tap a bar above and this opens: pick its chord, add, copy, move or delete bars (src/app/chord-editor.js) -->
+        <div class="chordpicker" id="chordpicker" role="dialog" aria-label="Edit bar" hidden></div>
         <div class="entry">
           <div class="entry-head">
             <label for="prog">Progression</label>
             <div class="entry-tools">
+              <div class="undoredo" role="group" aria-label="Undo and redo chord changes">
+                <button class="icon-btn" id="undo" type="button" disabled aria-label="Undo" title="Undo chord change (Ctrl+Z). Only the chords go back, the key stays as it is.">
+                  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 7 4.5 11.5 9 16M5 11.5h8.5a5 5 0 0 1 0 10H11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 -3)"/></svg>
+                </button>
+                <button class="icon-btn" id="redo" type="button" disabled aria-label="Redo" title="Redo chord change (Ctrl+Y)">
+                  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="m15 7 4.500 4.500L15 16M19 11.500h-8.500a5 5 0 0 0 0 10H13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 -3)"/></svg>
+                </button>
+              </div>
               <div class="quickpick" id="quickpick">
                 <button type="button" class="keybtn" id="quickbtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="quickpop">
                   <span class="keybtn-label">Quick progressions</span>

@@ -2,6 +2,7 @@
 
 import { MAX_BPM, MIN_BPM, RANDOM_MODES, describeInterval, INTERVAL_NAMES } from '../engine/planner.js';
 import { chordParts } from '../theory/chord.js';
+import { gridBars } from '../theory/baredit.js';
 import { MAJOR_KEYS, formatKey, parseKey } from '../theory/keys.js';
 import { describeSwing } from '../engine/feel.js';
 import { BASS_SOUNDS, DRUM_SOUNDS, KEY_SOUNDS, defaultBass, defaultComp, defaultKit, defaultSwing, getStyle, listStyles, resolveTimbres } from '../styles/index.js';
@@ -275,31 +276,59 @@ export function mountUI({ store, player }) {
     return lastGoodBars;
   }
 
-  function renderBars(state, bars) {
+  function renderBars(state, playingBars) {
     const list = $('bars');
-    const sig = bars.map((b) => b.source).join('|') + (state.transport === 'stopped' ? '' : `#${state.view.chorus}`);
+    // Stopped, or while a bar is being edited: the grid is the text itself, bar for bar (src/app/chord-editor.js taps
+    // into it by bar number). Playing and not editing: the bars of the chorus that is sounding.
+    const fromText = state.transport === 'stopped' || Boolean(state.editing);
+    const bars = fromText ? gridBars(state.song.progressionText) : playingBars;
+    // How many columns the grid has now (4 wide, 2 on a phone): the last row is padded with empty cells to that many, so
+    // every row has all of its lines.
+    const columns = Math.max(1, getComputedStyle(list).gridTemplateColumns.split(' ').filter(Boolean).length);
+    const sig = `${columns}${fromText ? 'T' : `P${state.view.chorus}`}`
+      + bars.map((b) => b.source + (b.chords.some((c) => c.invalid) ? '!' : '')).join('|');
     if (sig !== barsSig) {
       barsSig = sig;
       list.replaceChildren();
       list.classList.toggle('empty', bars.length === 0);
-      if (!bars.length) list.append(el('li', '', 'Type a progression below to see its bars here.'));
+      if (!bars.length) list.append(el('li', '', 'Type a progression below, or tap the button, to see its bars here.'));
       bars.forEach((bar, i) => {
         const li = el('li', 'bar');
+        li.dataset.bar = String(i);
         li.append(el('span', 'num', `${i + 1}`));
         const segs = el('div', bar.chords.length >= 3 ? 'bss many' : 'bss');
         for (const s of bar.chords) {
-          const seg = el('span', s.chord ? 'bs' : 'bs nc');
-          if (s.chord) seg.append(chordEl(s.chord)); else seg.textContent = 'N.C.';
+          const seg = el('span', s.invalid ? 'bs bad' : s.chord ? 'bs' : 'bs nc');
+          if (s.invalid) seg.textContent = s.text;
+          else if (s.chord) seg.append(chordEl(s.chord));
+          else seg.textContent = 'N.C.';
           segs.append(seg);
         }
-        li.append(segs, el('span', 'progress'));
+        const hit = el('button', 'barhit');
+        hit.type = 'button';
+        hit.setAttribute('aria-label', `Bar ${i + 1}: ${bar.chords.map((s) => s.chord?.symbol ?? s.text ?? 'no chord').join(' ')}. Edit`);
+        li.append(segs, el('span', 'progress'), hit);
         list.append(li);
       });
+      if (fromText) {
+        const add = el('li', 'bar add');
+        const hit = el('button', 'barhit', bars.length ? '+ Add bar' : '+ Add the first bar');
+        hit.type = 'button';
+        add.append(hit);
+        list.append(add);
+      }
+      if (bars.length) {
+        for (let n = list.children.length; n % columns !== 0; n += 1) {
+          const filler = el('li', 'bar filler');
+          filler.setAttribute('aria-hidden', 'true');
+          list.append(filler);
+        }
+      }
     }
     const playing = state.transport !== 'stopped' && state.view.bar > 0;
     const slotSeconds = (60 / (state.view.bpm || state.song.tempo)) * getMeter(state.view.meter ?? state.song.timeSignature).slotLen;
     [...list.children].forEach((li, i) => {
-      if (!li.classList.contains('bar')) return;
+      if (!li.classList.contains('bar') || li.classList.contains('add') || li.classList.contains('filler')) return;
       const current = playing && i === state.view.bar - 1;
       li.classList.toggle('current', current);
       li.querySelectorAll('.bs').forEach((s, k) => s.classList.toggle('active', current && k === state.view.segIndex));
@@ -534,4 +563,11 @@ export function mountUI({ store, player }) {
   store.subscribe(render);
   render(store.get());
   new ResizeObserver(fitChord).observe(document.querySelector('.readout'));
+  // the grid changes between 4 and 2 columns with the window: draw it again so its last row is padded to match
+  let gridColumns = 0;
+  new ResizeObserver(() => {
+    const now = getComputedStyle($('bars')).gridTemplateColumns.split(' ').filter(Boolean).length;
+    if (gridColumns && now !== gridColumns) render(store.get());
+    gridColumns = now;
+  }).observe($('bars'));
 }
