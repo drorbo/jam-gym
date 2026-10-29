@@ -171,3 +171,12 @@ test('after any edit the text still parses cleanly', () => {
     assert.ok(parseProgression(t).ok, t);
   }
 });
+
+test('the picker shows five everyday qualities up front, and the rest sit behind "More"', async () => {
+  const { MAIN_QUALITIES, QUALITIES } = await import('../src/theory/baredit.js');
+  assert.deepEqual(MAIN_QUALITIES, ['', 'm', '7', 'maj7', 'm7'], 'major, minor, 7, maj7, m7, in that order');
+  const written = QUALITIES.map(([, q]) => q);
+  for (const q of MAIN_QUALITIES) assert.ok(written.includes(q), `"${q}" is a real choice`);
+  assert.deepEqual(QUALITIES.slice(0, 5).map(([, q]) => q), MAIN_QUALITIES, 'and they are the first five of the list');
+  assert.equal(QUALITIES.length - MAIN_QUALITIES.length, 22, 'every other quality is still reachable');
+});

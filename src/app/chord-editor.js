@@ -3,7 +3,7 @@
 // so the band, saving, sharing and the text box all keep working off the one text.
 
 import {
-  ACCIDENTALS, QUALITIES, ROOTS, barSymbols, buildSymbol, canEditText, deleteBar, duplicateBar, insertBar, moveBar,
+  ACCIDENTALS, MAIN_QUALITIES, QUALITIES, ROOTS, barSymbols, buildSymbol, canEditText, deleteBar, duplicateBar, insertBar, moveBar,
   gridBars, removeSegment, setChord, splitBar, symbolToPicker, toggleRepeat, tokenizeBars,
 } from '../theory/baredit.js';
 import { getMeter } from '../theory/meter.js';
@@ -34,6 +34,7 @@ export function mountChordEditor({ store, player }) {
   let sel = null;
   let message = '';
   let shown = '';
+  let moreQualities = false; // the rest of the chord types, behind the "More" button
 
   const text = () => store.get().song.progressionText;
   const timeSignature = () => store.get().song.timeSignature;
@@ -53,6 +54,7 @@ export function mountChordEditor({ store, player }) {
     const bar = sel?.bar;
     sel = null;
     message = '';
+    moreQualities = false;
     setEditing(false);
     paint(true);
     if (focus && bar !== undefined) bars.querySelector(`li.bar[data-bar="${bar}"] .barhit`)?.focus();
@@ -115,6 +117,27 @@ export function mountChordEditor({ store, player }) {
     g.append(row);
     return g;
   };
+
+  /**
+   * The Quality choices: the five everyday ones, then "More" which opens the rest. When the chord being edited uses one of the
+   * rest, it is shown (pressed) beside the five even while they are folded away, so you can always see what the chord is.
+   */
+  function qualityButtons(parts) {
+    const pick = ([label, quality]) => button(label, { key: `q${quality || 'maj'}`, pressed: Boolean(parts) && parts.quality === quality, onClick: () => choose({ quality }) });
+    const main = QUALITIES.filter(([, q]) => MAIN_QUALITIES.includes(q));
+    const rest = QUALITIES.filter(([, q]) => !MAIN_QUALITIES.includes(q));
+    const items = main.map(pick);
+    const current = parts && rest.find(([, q]) => q === parts.quality);
+    if (current && !moreQualities) items.push(pick(current));
+    const more = button(moreQualities ? 'Fewer ▴' : 'More ▾', {
+      key: 'qmore', cls: 'pk pk-more', title: moreQualities ? 'Show fewer chord types' : 'All the other chord types',
+      onClick: () => { moreQualities = !moreQualities; paint(true); },
+    });
+    more.setAttribute('aria-expanded', String(moreQualities));
+    items.push(more);
+    if (moreQualities) items.push(...rest.map(pick));
+    return items;
+  }
 
   function paint(force = false) {
     const t = text();
@@ -183,7 +206,7 @@ export function mountChordEditor({ store, player }) {
         group('Root',
           ...ROOTS.map((r) => button(r, { key: `r${r}`, pressed: !isNC && parts.root === r, onClick: () => choose({ root: r }) })),
           ...ACCIDENTALS.map(([label, acc]) => button(label, { key: `a${label}`, pressed: !isNC && parts.acc === acc, cls: 'pk pk-acc', title: acc === 'b' ? 'Flat' : acc === '#' ? 'Sharp' : 'Natural', onClick: () => choose({ acc }) }))),
-        group('Quality', ...QUALITIES.map(([label, quality]) => button(label, { key: `q${quality || 'maj'}`, pressed: !isNC && parts.quality === quality, onClick: () => choose({ quality }) }))),
+        group('Quality', ...qualityButtons(!isNC && parts)),
         group('Bass note (slash chord)',
           button('none', { key: 'bnone', pressed: !isNC && !parts.bass, onClick: () => choose({ bass: '' }) }),
           ...BASS_NOTES.map(([label, note]) => button(label, {

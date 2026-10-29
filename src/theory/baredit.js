@@ -256,6 +256,9 @@ export const QUALITIES = [
   ['add9', 'add9'], ['m(maj7)', 'mMaj7'], ['5', '5'],
 ];
 
+/** The five qualities the picker shows up front; the rest of QUALITIES sit behind its "More" button. */
+export const MAIN_QUALITIES = ['', 'm', '7', 'maj7', 'm7'];
+
 /** "Bb" + "maj7" + "D" -> "Bbmaj7/D", or null if it is not a chord the parser accepts. */
 export function buildSymbol({ root, acc = '', quality = '', bass = '' }) {
   const symbol = `${root}${acc}${quality}${bass ? `/${bass}` : ''}`;

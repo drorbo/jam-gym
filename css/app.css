@@ -305,6 +305,12 @@ h2 { margin: 0 0 0.85rem; font-size: 0.875rem; font-weight: 600; color: var(--mu
 .pk:disabled { opacity: 0.4; cursor: default; }
 .pk:focus-visible, .pk-done:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
 .pk-seg { font-weight: 800; }
+.pk-more { font-size: 0.9375rem; font-weight: 500; color: var(--muted); }
+/* phones: the five qualities and "More" should share one row where they can */
+@media (max-width: 700px) {
+  .pk-quality .pk-row { gap: 0.3rem; }
+  .pk-quality .pk { min-width: 40px; padding: 0 0.5rem; font-size: 0.9375rem; }
+}
 .pk-act { font-size: 0.9375rem; font-weight: 500; }
 .pk-danger { color: var(--danger); }
 .pk-done {
