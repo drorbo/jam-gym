@@ -120,4 +120,52 @@ export const SONGS = [
       'Amaj7 | Amaj7 | Am7 | D7 | Amaj7 | Amaj7 | Em7 | A7 | Dmaj7 | G7 | C#m7 F#7 | B7 | Bm7 | E7 | Am7 D7 | Am7 D7 | Am7 D7 | Am7 D7',
     ].join('\n'), bars: 34,
   },
+  {
+    title: 'Alone Together', key: 'Dm', preset: 'jazz-swing', tempo: 132,
+    description: 'Schwartz. 44 bars in D minor: a 14-bar A (played twice, with an ending that closes on Dmaj7), an 8-bar bridge that moves to F major, and a last A. Mostly ii-V pairs: Em7b5 A7b9 into Dm, Bm7 E7 into Gm7.',
+    text: [
+      'Dm | Em7b5 A7b9 | Dm | Em7b5 A7b9 | Dm | Am7b5 D7b9 | Gm7 | Gm7 | Bm7 E7 | Gm7 C7 | Fmaj7 | Em7b5 A7b9 | Dmaj7 | Em7b5 A7b9',
+      'Dm | Em7b5 A7b9 | Dm | Em7b5 A7b9 | Dm | Am7b5 D7b9 | Gm7 | Gm7 | Bm7 E7 | Gm7 C7 | Fmaj7 | Em7b5 A7b9 | Dmaj7 | Dmaj7',
+      'Am7b5 | D7b9 | Gm | Gm | Gm7b5 | C7b9 | Fmaj7 | Em7b5 A7b9',
+      'Dm | Em7b5 A7b9 | Dm | Em7b5 A7b9 | Dm | Bb7 A7b9 | Dm | Em7b5 A7b9',
+    ].join('\n'), bars: 44,
+  },
+  {
+    title: 'Beautiful Love', key: 'Dm', preset: 'jazz-swing', tempo: 138,
+    description: 'Victor Young. 32 bars in D minor, ABAC: the same 8-bar A twice, with two different bridges. The first bridge turns around to the A (G7#11 Em7b5 A7b9); the second goes through B7 and Bb7 and settles on Dm.',
+    text: [
+      'Em7b5 | A7b9 | Dm | Dm | Gm7 | C7 | Fmaj7 | Em7b5 A7b9',
+      'Dm7 | Gm7 | Bb7 | A7b9 | Dm | G7#11 | Em7b5 | A7b9',
+      'Em7b5 | A7b9 | Dm | Dm | Gm7 | C7 | Fmaj7 | Em7b5 A7b9',
+      'Dm7 | Gm7 | Bb7 | A7b9 | Dm B7 | Bb7 A7b9 | Dm | Dm',
+    ].join('\n'), bars: 32,
+  },
+  {
+    title: 'Black Orpheus', key: 'Am', preset: 'jazz-bossa', tempo: 132,
+    description: 'Bonfa, "Manha de Carnaval". 32 bars in A minor: a 16-bar A built from Bm7b5 E7b9 into Am, then a ii-V chain to Cmaj7 and Fmaj7, and a 16-bar B that borrows the A\'s opening before moving through Dm and Em7b5 A7b9. Bossa nova.',
+    text: [
+      'Am | Bm7b5 E7b9 | Am | Bm7b5 E7b9 | Am | Dm7 G7 | Cmaj7 | A7b9 | Dm7 | G7 | Cmaj7 | Fmaj7 | Bm7b5 | E7b9 | Am | Bm7b5 E7b9',
+      'Am | Bm7b5 E7b9 | Am | Bm7b5 E7b9 | Em7b5 | A7b9 | Dm | Dm | Dm7 Dm7/C | Bm7b5 E7b9 | Am Am7/G | Fmaj7 | Bm7b5 | E7b9 | Am | Bm7b5 E7b9',
+    ].join('\n'), bars: 32,
+  },
+  {
+    title: 'My Funny Valentine', key: 'Cm', preset: 'jazz-ballad', tempo: 66,
+    description: 'Rodgers. 36 bars in C minor, a ballad. The A section has a descending line in its top note (Cm, Cm(maj7), Cm7, Cm6); the bridge moves to Eb major and falls by half steps (Cm7 B7 Bbm7 A7) into Abmaj7. The last A ends on Eb6 with a turnaround.',
+    text: [
+      'Cm | Cm(maj7) | Cm7 | Cm6 | Abmaj7 | Fm7 | Dm7b5 | G7b9',
+      'Cm | Cm(maj7) | Cm7 | Cm6 | Abmaj7 | Fm7 | Fm7b5 | Bb7b9',
+      'Ebmaj7 Fm7 | Gm7 Fm7 | Ebmaj7 Fm7 | Gm7 Fm7 | Ebmaj7 G7 | Cm7 B7 Bbm7 A7 | Abmaj7 | Dm7b5 G7b9',
+      'Cm | Cm(maj7) | Cm7 | Cm6 | Abmaj7 | Dm7b5 G7b9 | Cm7 B7 | Bbm7 A7 | Abmaj7 | Fm7 Bb7b9 | Eb6 | Dm7b5 G7b9',
+    ].join('\n'), bars: 36,
+  },
+  {
+    title: 'On Green Dolphin Street', key: 'Eb', preset: 'jazz-swing', tempo: 144,
+    description: 'Kaper. 32 bars ABAC in Eb. The A sits over an Eb pedal with a chromatic climb (Ebm7, F7/Eb, Emaj7/Eb); the bridge is ii-V in Eb then Gb; the last eight run down a chain of ii-Vs. Traditionally the A is played Latin and the rest swung; this track swings throughout.',
+    text: [
+      'Ebmaj7 | Ebmaj7 | Ebm7 | Ebm7 | F7/Eb | Emaj7/Eb | Ebmaj7 | Ebmaj7',
+      'Fm7 | Bb7 | Ebmaj7 | Ebmaj7 | Abm7 | Db7 | Gbmaj7 | Bb7',
+      'Ebmaj7 | Ebmaj7 | Ebm7 | Ebm7 | F7/Eb | Emaj7/Eb | Ebmaj7 | Ebmaj7',
+      'Fm7 Fm7/Eb | Dm7b5 G7b9 | Cm7 Cm7/Bb | Am7b5 D7b9 | Gm7 C7 | Fm7 Bb7 | Ebmaj7 | Ebmaj7',
+    ].join('\n'), bars: 32,
+  },
 ];

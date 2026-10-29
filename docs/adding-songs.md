@@ -173,11 +173,24 @@ Open any of them via **Jam Hub > Browse** (author `jam-gym`), or at `/?track=<id
 | You Don't Know What Love Is | Fm | Ballad | 64 | 32 | Chromatic bass walk checks out; endings as `Db7 \| Gm7b5 C7b9` then `Db7 C7b9 \| Fm6` |
 | Wave | D | Bossa nova | 126 | 44 | 12-bar A twice, 8-bar bridge, A; bar 12 of each A is `Dm7 G7` (a turnaround, so the loop returns to `Dmaj7`) |
 | Triste | A | Bossa nova | 120 | 34 | Bar 15 `C#m7 F#7` (Real Book) rather than Jobim's `C#maj7`; B ends with the `Am7 D7` vamp ×4 |
+| Alone Together | Dm | Medium swing | 132 | 44 | 14-bar A twice (first ending `Em7b5 A7b9`, second `Dmaj7 \| Dmaj7`), 8-bar B, 8-bar A. Plain `Dm`/`Gm` where iReal has `Dm6`/`Gm6`; `D7b9` in the bridge (the lead sheet's `Dm7b9` is a typo) |
+| Beautiful Love | Dm | Medium swing | 138 | 32 | ABAC: two different bridges (first turns around, second ends `Dm B7 \| Bb7 A7b9 \| Dm`); `A7b9` throughout, plain `Bb7`; bar 4 is `Dm` (iReal's `D7` is an alternate) |
+| Black Orpheus | Am | Bossa nova | 132 | 32 | Bar 8 `A7b9` (lead sheet has `C#dim7 A7b5`, same notes); bar 20 is `Bm7b5 E7b9` (lead sheet, repeats the opening) but iReal has `Am`: a genuine 1-bar disagreement; coda not included |
+| My Funny Valentine | Cm | Ballad | 66 | 36 | Uses the descending-line version (`Cm \| Cm(maj7) \| Cm7 \| Cm6`), not iReal's `Dm7b5 G7b9` main; `B7` kept in `Cm7 B7 Bbm7 A7` (iReal only); `A7` not `Eb7` in the last A; final `Dm7b5 G7b9` turnaround from iReal |
+| On Green Dolphin Street | Eb | Medium swing | 144 | 32 | Bars 7-8 hold `Ebmaj7` (Real Book; iReal's `C7` is a substitution); bar 16 `Bb7` (iReal adds `Fm7`); swung throughout though the A is traditionally Latin (the app can't switch groove mid-track) |
 
-Songs considered and **not** published because the sources disagreed on the chart: Summertime, There Will Never Be Another You.
+Songs considered and **not** published because the sources disagreed on the chart: Summertime, There Will Never Be Another You,
+Have You Met Miss Jones (bar 2 `F#dim7` vs `D7`, and a different last A), Confirmation (bar 6 `Am7b5` vs `Am7`), Oleo and Donna Lee
+(different harmonisations), Bye Bye Blackbird, How Insensitive (bars 15-16 and the bridge's first chord), Desafinado,
+Girl from Ipanema (sources give a 16-bar bridge, 40 bars in all: unresolved), Blue Monk (bars 4, 6, 9-10 differ).
 Tune Up was replaced by All of Me for the same reason.
 
-### Ideas for more standards with well-agreed charts
-Bye Bye Blackbird, Beautiful Love, Alone Together, Just Friends, Have You Met Miss Jones, Girl from Ipanema (check the bridge's bar
-count carefully: iReal doubles it), Footprints (3/4 not supported by the app's meters, skip), blues heads (Billie's Bounce, Blues for Alice:
-verify bars 9-12). Verify each one with the process above before publishing.
+### Ideas for more standards
+Just Friends, Billie's Bounce, Blues for Alice (verify bars 9-12), Lady Bird, Four, Moment's Notice, Autumn in New York, P.S. I Love You,
+It Could Happen to You (several alternates: check), Witchcraft. Footprints and All Blues are in 3/4 and 6/4, which the app's meters
+don't support. Several of the "not published" songs above could be added if you find a chart that settles the disputed bars.
+Verify each one with the process above before publishing.
+
+A useful trick: iReal and the jazzleadsheet.com ABC chart are two lineages. When they agree on the form, the endings and nearly every
+bar, the remaining differences are almost always plain extensions (`Dm` vs `Dm6`) or substitutions that share notes (`Abm6` = `Fm7b5`).
+When they disagree on the form or on whole sections, drop the song.
