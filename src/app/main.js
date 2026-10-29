@@ -1,7 +1,7 @@
 import { createApi } from './api.js';
 import { Player } from './player.js';
 import { loadSaved, persistSaved } from './saved.js';
-import { createStore, loadState, saveState } from './state.js';
+import { createStore, freshStart, loadState, saveState } from './state.js';
 import { createPresetsController } from './presets-controller.js';
 import { createTracksController } from './tracks.js';
 import { mountBandUI } from './band-ui.js';
@@ -18,7 +18,7 @@ import { createHistory } from './history.js';
 import { mountHistoryUI } from './history-ui.js';
 import { mountChordEditor } from './chord-editor.js';
 
-const store = createStore({ ...loadState(), saved: loadSaved(), activeSaved: null });
+const store = createStore({ ...freshStart(loadState()), saved: loadSaved(), activeSaved: null });
 const player = new Player(store);
 mountUI({ store, player });
 mountQuickProgressions({ store, player });

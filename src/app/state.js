@@ -110,6 +110,24 @@ export function loadState() {
   }
 }
 
+/**
+ * What a visit to the site starts from: the band, key and tempo the person last used, but a blank progression and no key
+ * change or tempo ramp, however the last visit ended. (defaultState() keeps playable chords because the server and the
+ * tests build tracks from it; sanitize() puts them back when a saved progression is blank, so the blanking happens here,
+ * once, when the page starts.) Tracks opened from a link or the Jam Hub load after this and replace it as usual.
+ */
+export function freshStart(state) {
+  return {
+    ...state,
+    song: { ...state.song, progressionText: '' },
+    config: {
+      ...state.config,
+      modulation: { ...state.config.modulation, type: 'off' },
+      tempoRamp: { ...state.config.tempoRamp, enabled: false },
+    },
+  };
+}
+
 export function saveState(state) {
   try {
     const out = {};
