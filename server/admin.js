@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { loadConfig } from './config.js';
 import { openDatabase } from './db.js';
 import { createModeration } from './moderation.js';
+import { createUsers } from './users.js';
 import { snapshot } from './backup.js';
 
 const HELP = `Jam Gym moderation
@@ -19,6 +20,9 @@ const HELP = `Jam Gym moderation
   ban <user-id>          stop a user saving, publishing or liking, and hide their tracks (ids look like 4F2K9XQ7)
   unban <user-id>
   clear-profile <user-id>  remove a user's photo and bio
+  system-key <username>  make the account a system user: print a new API key (shown once; replaces any earlier one).
+                         A system user has no rate limits and can no longer log in with its password.
+  system-revoke <username>  take the key away; the account is an ordinary one again
   backup                 write a database snapshot to the backups folder now
   ids                    every track id, one per line (the deploy script compares these before and after)
 `;
@@ -42,6 +46,8 @@ export async function run(argv, { db, log = print } = {}) {
       case 'ban': { const u = mod.ban(need(), true); log(`Banned ${u.public_id} (${u.display_name})`); break; }
       case 'unban': { const u = mod.ban(need(), false); log(`Unbanned ${u.public_id} (${u.display_name})`); break; }
       case 'clear-profile': { const u = mod.clearProfile(need()); log(`Cleared the photo and bio of ${u.public_id} (${u.display_name})`); break; }
+      case 'system-key': { const { user, key } = createUsers(db).issueSystemKey(need()); log(`System key for ${user.username} (${user.public_id}). Shown once:\n${key}`); break; }
+      case 'system-revoke': { const u = createUsers(db).revokeSystemKey(need()); log(`Revoked the system key of ${u.username} (${u.public_id})`); break; }
       case 'ids': log(db.prepare('SELECT id FROM tracks ORDER BY id').all().map((r) => r.id).join('\n')); break;
       case 'backup': log(`Backup written: ${await snapshot(db, join(config.dataDir, 'backups'), config.backupKeep)}`); break;
       default: log(HELP);

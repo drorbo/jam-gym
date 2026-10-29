@@ -146,6 +146,15 @@ ssh eardle-prod "docker exec jam-gym-web-1 node server/admin.js show TRACK_ID"
 ssh eardle-prod "docker exec jam-gym-web-1 node server/admin.js hide TRACK_ID"
 ```
 
+```bash
+# system users (the "jam-gym" account that publishes the standards, docs/adding-songs.md): an API key, no rate limits, no password login
+ssh eardle-prod "docker exec jam-gym-web-1 node server/admin.js system-key jam-gym"      # prints a NEW key once; replaces the old one
+ssh eardle-prod "docker exec jam-gym-web-1 node server/admin.js system-revoke jam-gym"   # back to an ordinary account (password login works again)
+ssh eardle-prod "docker logs jam-gym-web-1 2>&1 | grep 'system user'"                    # what system users have written
+```
+Only the key's hash is stored. Run `system-key` with its output redirected straight into the key file (never into a terminal log or a
+commit); to cut the key off, run `system-revoke`.
+
 Environment (set in `docker-compose.yml`): `TRUST_PROXY=1` (believe the host nginx's `X-Forwarded-Proto` and Cloudflare's
 client IP, which is safe only because the port is published on loopback), `BACKUPS=1`, `DATA_DIR=/data`.
 The server sends a Content-Security-Policy and refuses cross-site writes, so nginx needs no extra headers.

@@ -33,6 +33,11 @@ export function createLimiter(clock = Date.now) {
       b.count++;
       return b.count <= max ? { ok: true } : { ok: false, retryAfter: Math.max(1, Math.ceil((b.resetAt - t) / 1000)) };
     },
+    /** True when `key` has already used up `max` hits in its current window (counts nothing). */
+    exhausted(key, max) {
+      const b = buckets.get(key);
+      return Boolean(b) && b.resetAt > clock() && b.count >= max;
+    },
     size: () => buckets.size,
     stop: () => clearInterval(timer),
   };

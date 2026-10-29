@@ -154,7 +154,7 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
 
     // Refreshing the cookie here keeps it alive for people who keep visiting.
     ['GET', '/api/me', { auth: 'optional', limit: ['read', 240, MINUTE] }, ({ req, res, user, secret }) => {
-      if (user) setSessionCookie(res, req, secret);
+      if (user && secret) setSessionCookie(res, req, secret);
       return { me: user ? publicMe(user, users.counts(user)) : null, features };
     }],
 
@@ -234,7 +234,8 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
         if (!limiter.hit(key, max, window).ok) throw new HttpError(429, 'rate_limited', 'Too many attempts. Wait a few minutes and try again.');
       }
       const target = users.findByUsername(name);
-      if (!(await verifyPassword(password, target?.password_hash)) || !target) {
+      // a system user is reached only with its API key, never with a password
+      if (!(await verifyPassword(password, target?.password_hash)) || !target || target.system_key_hash) {
         throw new HttpError(401, 'bad_login', 'That username and password do not match.');
       }
       if (user?.id !== target.id) {
@@ -248,6 +249,7 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
 
     // changing it needs the current one; every other device is logged out, this one stays in
     ['POST', '/api/me/password', { auth: 'user', limit: ['password', 10, HOUR] }, async ({ req, res, user, secret, body }) => {
+      if (user.system_key_hash) throw new HttpError(403, 'system_user', 'A system user is reached with its API key; it has no password.');
       if (!user.password_hash) throw bad('This account has no password yet. Create a login first.', 'no_login');
       if (!(await verifyPassword(typeof body.current === 'string' ? body.current : '', user.password_hash))) {
         throw new HttpError(401, 'bad_login', 'The current password is not right.');
@@ -394,15 +396,32 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
     }
     const { r, params } = matched;
 
-    const overall = limiter.hit(`ip:${ip}`, 600, MINUTE);
-    if (!overall.ok) throw Object.assign(new HttpError(429, 'rate_limited', 'Too many requests. Slow down a little.'), { retryAfter: overall.retryAfter });
+    // A system user (server/users.js) sends its API key instead of a cookie. A valid key is the one thing exempt from every rate
+    // limit below. Wrong keys are counted per address, and an address that keeps guessing is refused before the key is even checked.
+    let systemUser = null;
+    const auth = req.headers.authorization;
+    if (auth !== undefined) {
+      const failKey = `syskey-fail:${ip}`;
+      if (limiter.exhausted(failKey, 10)) throw new HttpError(429, 'rate_limited', 'Too many wrong keys. Try again later.');
+      const given = /^Bearer (\S+)$/.exec(auth)?.[1];
+      systemUser = given ? users.findBySystemKey(given) : null;
+      if (!systemUser) {
+        limiter.hit(failKey, 10, 15 * MINUTE);
+        throw new HttpError(401, 'bad_key', 'That API key is not valid.');
+      }
+    }
+
+    if (!systemUser) {
+      const overall = limiter.hit(`ip:${ip}`, 600, MINUTE);
+      if (!overall.ok) throw Object.assign(new HttpError(429, 'rate_limited', 'Too many requests. Slow down a little.'), { retryAfter: overall.retryAfter });
+    }
 
     const writes = !['GET', 'HEAD'].includes(req.method);
     if (writes) checkCsrf(req);
     const body = writes ? await readJson(req, r.opts.bodyBytes) : {};
 
-    const secret = parseCookies(req.headers.cookie)[cookieName(req)];
-    let user = isSecret(secret) ? users.findBySecret(secret) : null;
+    const secret = systemUser ? undefined : parseCookies(req.headers.cookie)[cookieName(req)];
+    let user = systemUser ?? (isSecret(secret) ? users.findBySecret(secret) : null);
     let activeSecret = user ? secret : null;
     if (r.opts.auth === 'user' && !user) throw new HttpError(401, 'no_session', 'You have not saved anything yet.');
     if (r.opts.auth === 'create' && !user) {
@@ -414,7 +433,9 @@ export function createApp({ db, config, root, limiter = createLimiter() }) {
       setSessionCookie(res, req, made.secret);
     }
 
-    if (r.opts.limit) {
+    if (systemUser && writes) console.log(`system user ${systemUser.public_id}: ${req.method} ${url.pathname}`);
+
+    if (r.opts.limit && !systemUser) {
       const [name, max, windowMs, alsoIp] = r.opts.limit;
       const who = user ? `u${user.id}` : `ip:${ip}`;
       const a = limiter.hit(`${name}:${who}`, max, windowMs);

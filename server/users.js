@@ -1,5 +1,6 @@
 // Anonymous identities. A user is a random secret held in a cookie; we keep only its hash.
 
+import { randomBytes } from 'node:crypto';
 import { transaction } from './db.js';
 import { LIMITS } from './config.js';
 import { reindex, unindex } from './search.js';
@@ -12,6 +13,7 @@ const DAY = 24 * HOUR;
 // itself never "expires" on its own), a session is a server-side row that would otherwise accumulate forever and
 // stay valid forever — see the 2026-09 audit (L-3).
 const SESSION_MAX_AGE = LIMITS.sessionMaxAgeDays * DAY;
+const SYSTEM_KEY_PATTERN = /^jgs_[A-Za-z0-9_-]{43}$/;
 const PUBLIC_ID_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
 /** @param {import('node:sqlite').DatabaseSync} db */
@@ -23,6 +25,7 @@ export function createUsers(db) {
                                 JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`);
   const touchSession = db.prepare('UPDATE sessions SET last_used_at = ? WHERE token_hash = ?');
   const dropSession = db.prepare('DELETE FROM sessions WHERE token_hash = ?');
+  const bySystemKey = db.prepare('SELECT * FROM users WHERE system_key_hash = ?');
   const byGoogle = db.prepare('SELECT * FROM users WHERE google_sub = ?');
   const byUsername = db.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE');
   const byEardle = db.prepare(`SELECT * FROM users WHERE auth_provider = 'eardle' AND auth_subject = ?`);
@@ -61,6 +64,31 @@ export function createUsers(db) {
       if (now() - session.session_last_used_at > HOUR) touchSession.run(now(), hash);
       if (now() - session.last_seen_at > HOUR) touch.run(now(), session.id);
       return session;
+    },
+
+    // ---- system users: an API key instead of a cookie, no rate limits (server/app.js) --------------
+
+    /** The system user for an API key, or null. Only the key's hash is stored, so a leaked database gives nobody a key. */
+    findBySystemKey(key) {
+      if (typeof key !== 'string' || !SYSTEM_KEY_PATTERN.test(key)) return null;
+      return bySystemKey.get(sha256(key)) ?? null;
+    },
+
+    /** Give the account with this username a new API key (replacing any earlier one). Returns the key, shown once. */
+    issueSystemKey(username) {
+      const user = byUsername.get(String(username));
+      if (!user) throw new HttpError(404, 'not_found', 'No account has that username.');
+      const key = `jgs_${randomBytes(32).toString('base64url')}`;
+      db.prepare('UPDATE users SET system_key_hash = ? WHERE id = ?').run(sha256(key), user.id);
+      return { user, key };
+    },
+
+    /** Take the key away: the account is an ordinary one again (it can log in with its password, and has limits). */
+    revokeSystemKey(username) {
+      const user = byUsername.get(String(username));
+      if (!user) throw new HttpError(404, 'not_found', 'No account has that username.');
+      db.prepare('UPDATE users SET system_key_hash = NULL WHERE id = ?').run(user.id);
+      return user;
     },
 
     /** True when this cookie value is the person's own secret (the first browser's), not a session from logging in elsewhere. */

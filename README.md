@@ -233,6 +233,8 @@ whether you had it open.
 - Offline or with the server down, Save keeps the track on this device. Older browser-only saves are listed under
   "On this device" and can be moved into the library.
 
+Adding the standards published under the `jam-gym` user (chord research, presets, publishing script): [docs/adding-songs.md](docs/adding-songs.md).
+
 Design and decisions: [docs/tracks-design.md](docs/tracks-design.md). Moderation is a command on the server:
 `docker exec jam-gym-web-1 node server/admin.js show <id>` (also `stats hide restore delete ban unban clear-profile backup`; `clear-profile <user-id>` removes a photo and bio).
 

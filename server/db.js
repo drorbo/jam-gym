@@ -131,6 +131,14 @@ const MIGRATIONS = [
     ALTER TABLE users ADD COLUMN google_sub TEXT;
     CREATE UNIQUE INDEX users_google ON users(google_sub) WHERE google_sub IS NOT NULL;
   `),
+
+  // 9: system users (server/users.js, docs/adding-songs.md). A user with a key hash is a "system user": it is used only through an
+  // API key (Authorization: Bearer ...), which only the server's admin command can issue, it has no rate limits, and its
+  // password login is switched off. Only the hash of the key is kept.
+  (db) => db.exec(`
+    ALTER TABLE users ADD COLUMN system_key_hash TEXT;
+    CREATE UNIQUE INDEX users_system_key ON users(system_key_hash) WHERE system_key_hash IS NOT NULL;
+  `),
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;
