@@ -86,3 +86,45 @@ test('a new build gets a new worker, so browsers update', withServer(async ({ br
   assert.equal((await b.get('/sw.js')).text, one, 'same files, same worker');
   assert.notEqual(buildServiceWorker(precacheLists(root, fingerprints(root)), 'other'), one);
 }));
+
+// ---- the saved copy of the sound list must never hide a newly added sound -----------------------------------------------
+// (what happened when the Epiphone guitar was added: the old worker served its saved sounds/manifest.json, which did not list it,
+// so choosing it said "Couldn't load".)
+
+/** Run the generated worker against a fake browser, send one request through it, and say what came back and what is now saved. */
+async function viaWorker(pathname, { saved, network }) {
+  const store = new Map(saved ? [[`http://x${pathname}`, saved]] : []);
+  const cache = {
+    match: async (req) => store.get(typeof req === 'string' ? req : req.url) ?? undefined,
+    put: async (req, res) => { store.set(typeof req === 'string' ? req : req.url, res); },
+  };
+  const handlers = {};
+  const res = (body) => ({ ok: true, body, clone() { return this; } });
+  const sandbox = {
+    self: { addEventListener: (name, fn) => { handlers[name] = fn; }, location: { origin: 'http://x' } },
+    caches: { open: async () => cache, keys: async () => [] },
+    fetch: async () => res(network),
+    Response: { error: () => ({ ok: false, body: 'error' }) },
+    URL, Set, Promise, setTimeout, clearTimeout,
+  };
+  vm.runInNewContext(buildServiceWorker({ shell: ['/'], samples: [], samplesTag: 'abc1234567' }, 'tag'), sandbox);
+  let answer;
+  handlers.fetch({
+    request: { method: 'GET', url: `http://x${pathname}`, mode: 'cors', headers: { has: () => false } },
+    respondWith: (p) => { answer = p; },
+  });
+  const got = await answer;
+  if (got) await new Promise((r) => setTimeout(r, 5)); // let the worker finish saving the fresh copy
+  return { got: got.body, savedNow: store.get(`http://x${pathname}`)?.body };
+}
+
+test('the worker serves the sound list from the network while online, and saves it for offline', async () => {
+  const r = await viaWorker('/samples/manifest.json', { saved: { ok: true, body: 'OLD list', clone() { return this; } }, network: 'NEW list' });
+  assert.equal(r.got, 'NEW list', 'a saved list from before a sound was added is not served while online');
+  assert.equal(r.savedNow, 'NEW list', 'and the saved copy is refreshed');
+});
+
+test('recorded sounds themselves stay cache-first (a file never changes under its name)', async () => {
+  const r = await viaWorker('/samples/keys/piano/a.wav', { saved: { ok: true, body: 'SAVED wav', clone() { return this; } }, network: 'NET wav' });
+  assert.equal(r.got, 'SAVED wav');
+});

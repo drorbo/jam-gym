@@ -92,6 +92,10 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate') {
     event.respondWith(caches.open(SHELL).then((cache) => networkFirst(request, cache, '/', 4000)));
+  } else if (url.pathname === '/samples/manifest.json') {
+    // the list of sounds changes whenever one is added or retuned, so it comes from the network while online (the saved copy is
+    // only for offline). Every recording below it never changes under the same name, so those can stay cache-first.
+    event.respondWith(caches.open(SAMPLES).then((cache) => networkFirst(request, cache, request, 4000)));
   } else if (url.pathname.startsWith('/samples/')) {
     event.respondWith((async () => {
       const cache = await caches.open(SAMPLES);

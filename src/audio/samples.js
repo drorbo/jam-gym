@@ -27,6 +27,19 @@ export class SampleLibrary {
     return this.manifestPromise;
   }
 
+  /**
+   * Fetch the manifest again, bypassing any saved copy (an installed app, a proxy, the browser). Used once when a bank is not in the
+   * copy this page already has, which is what happens right after a new sound was added. If the fetch fails the old copy stays.
+   */
+  async refreshManifest() {
+    const previous = this.manifestPromise;
+    this.manifestPromise = fetch(new URL('manifest.json', this.base), { cache: 'reload' }).then((r) => {
+      if (!r.ok) throw new Error(`manifest.json: ${r.status}`);
+      return r.json();
+    });
+    try { return await this.manifestPromise; } catch (err) { this.manifestPromise = previous; throw err; }
+  }
+
   /** Ready banks only; null while loading, failed or unknown. */
   get(kind, id) {
     return this.banks.get(`${kind}:${id}`) ?? null;
@@ -50,7 +63,9 @@ export class SampleLibrary {
   }
 
   async #load(kind, id) {
-    const manifest = await this.manifest();
+    let manifest = await this.manifest();
+    // not listed: this page may be holding a manifest from before the sound existed, so look once more before giving up
+    if (!manifest[kind]?.[id]) manifest = await this.refreshManifest().catch(() => manifest);
     const def = manifest[kind]?.[id];
     if (!def) throw new Error('unknown bank');
     const files = new Map(); // file -> Promise<AudioBuffer>, so shared files load once

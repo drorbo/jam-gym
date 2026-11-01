@@ -199,3 +199,33 @@ test('the bundle stays a reasonable size', () => {
   // for both, including their muted/staccato notes) were added, and to 36 MB for the Epiphone guitar (~4 MB).
   assert.ok(total < 36e6, `${(total / 1e6).toFixed(1)} MB`);
 });
+
+test('a sound missing from the sound list this page holds is looked up again once (a list from before it was added)', async () => {
+  const { SampleLibrary } = await import('../src/audio/samples.js');
+  const wav = new ArrayBuffer(8);
+  const lists = [
+    { drums: {}, keys: {}, basses: {} },                                                    // the stale copy
+    { drums: {}, basses: {}, keys: { newguitar: { name: 'New', notes: [{ file: 'keys/n.wav', midi: 60, ref: 1 }] } } }, // after a reload
+  ];
+  const calls = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), cache: init?.cache });
+    if (String(url).endsWith('manifest.json')) return { ok: true, json: async () => lists[init?.cache === 'reload' ? 1 : 0] };
+    return { ok: true, arrayBuffer: async () => wav };
+  };
+  try {
+    const lib = new SampleLibrary({ decodeAudioData: async () => ({ duration: 1 }) }, new URL('http://x/samples/'));
+    const bank = await lib.load('keys', 'newguitar');
+    assert.ok(bank, 'it loaded after looking again');
+    assert.equal(calls.filter((c) => c.url.endsWith('manifest.json')).length, 2, 'the list was fetched twice: the copy, then once fresh');
+    assert.equal(calls.find((c, i) => i > 0 && c.url.endsWith('manifest.json')).cache, 'reload', 'the second time past any saved copy');
+    // and a sound that really does not exist still fails cleanly (and does not loop)
+    assert.equal(await lib.load('keys', 'nothing'), null);
+    assert.equal(calls.filter((c) => c.url.endsWith('manifest.json')).length, 3, 'one more look for the unknown sound, no more');
+    // if looking again fails, the copy already held keeps working
+    globalThis.fetch = async (url) => (String(url).endsWith('manifest.json') ? { ok: false, status: 503 } : { ok: true, arrayBuffer: async () => wav });
+    assert.equal(await lib.load('keys', 'alsonothing'), null);
+    assert.ok(await lib.load('keys', 'newguitar'), 'a bank already loaded is still there');
+  } finally { globalThis.fetch = realFetch; }
+});
