@@ -337,6 +337,12 @@ card(guitarCards, {
   chug: (amped) => playSampledChug('gretsch', { amped }),
 });
 card(guitarCards, {
+  tag: 'Real recording', name: 'Electric guitar (Epiphone Emily, direct)',
+  desc: 'A solid-body Epiphone with flatwound strings, recorded straight into the interface with no amp (Emilyguitar by Karoryfer Samples, CC0). It is a raw, dry guitar, so tick Amped to hear it as a rock guitar; clean it is closer to a jazz or blues tone. It has no recorded palm-mute, so the chug here is the note cut short.',
+  play: (amped) => playSampledChord('emily', { amped }),
+  chug: (amped) => playSampledChug('emily', { amped }),
+});
+card(guitarCards, {
   tag: 'Candidate', name: 'Plucked string (Karplus–Strong)',
   desc: 'A physically-modelled pluck: a burst of noise rung through a short feedback loop tuned to the note, so it brightens on the attack and darkens as it rings, like a real string.',
   play: (amped) => playChord((c, o, t, d, m, v, a) => guitarPluck(c, o, t, d, m, v, a), { amped }),

@@ -324,9 +324,34 @@ function guitar(ctx, out, t, dur, midi, vel, art) {
   lp.connect(g).connect(out);
 }
 
+/**
+ * A fast two-operator FM pluck for the guitar amp: percussive and a little metallic, an alternative to the saw-based guitar().
+ * The modulator (1.5x the pitch) starts strong and falls quickly, so each note is bright on the attack and mellows as it rings.
+ */
+function guitarFM(ctx, out, t, dur, midi, vel, art) {
+  const f = midiToFreq(midi);
+  const muted = art === 'mute';
+  const length = muted ? Math.min(dur, 0.1) : dur;
+  const end = t + length + 0.4;
+  const carrier = osc(ctx, 'sine', f, t, end);
+  const mod = osc(ctx, 'sine', f * 1.5, t, end);
+  const depth = ctx.createGain();
+  depth.gain.setValueAtTime(f * (muted ? 2.2 : 3.2) * vel, t);
+  depth.gain.setTargetAtTime(f * 0.15, t, 0.05);
+  mod.connect(depth).connect(carrier.frequency);
+  const g = ctx.createGain();
+  const peak = vel * 0.13; // level-matched to guitar() through the shared amp (a sine pair is far denser than one saw, and the amp saturates)
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(peak, t + 0.002);
+  g.gain.setTargetAtTime(peak * 0.3, t + 0.002, muted ? 0.04 : 0.45);
+  g.gain.setTargetAtTime(0, t + length, muted ? 0.02 : 0.07);
+  carrier.connect(g).connect(out);
+}
+
 export function playChordNote(ctx, out, t, dur, midi, vel, timbre, art) {
   if (timbre === 'organ') organ(ctx, out, t, dur, midi, vel);
   else if (timbre === 'guitar') guitar(ctx, out, t, dur, midi, vel, art);
+  else if (timbre === 'guitarfm') guitarFM(ctx, out, t, dur, midi, vel, art);
   else epiano(ctx, out, t, dur, midi, vel);
 }
 

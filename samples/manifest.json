@@ -1243,6 +1243,235 @@
      "ref": 1
     }
    ]
+  },
+  "emily": {
+   "id": "emily",
+   "name": "Electric guitar (Epiphone, direct)",
+   "kind": "multisample",
+   "release": 0.15,
+   "gain": 0.37,
+   "brightness": false,
+   "credit": "Emilyguitar (Epiphone Emily the Strange, direct) by Karoryfer Samples, played and mapped by D. Smolken (CC0)",
+   "amped": true,
+   "notes": [
+    {
+     "file": "keys/emily/ord_37_f.wav",
+     "ms": 1800,
+     "midi": 37,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_40_f.wav",
+     "ms": 1800,
+     "midi": 40,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_42_f.wav",
+     "ms": 1800,
+     "midi": 42,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_45_f.wav",
+     "ms": 1800,
+     "midi": 45,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_48_f.wav",
+     "ms": 1800,
+     "midi": 48,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_51_f.wav",
+     "ms": 1800,
+     "midi": 51,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_54_f.wav",
+     "ms": 1800,
+     "midi": 54,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_57_f.wav",
+     "ms": 1800,
+     "midi": 57,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_60_f.wav",
+     "ms": 1800,
+     "midi": 60,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_63_f.wav",
+     "ms": 1800,
+     "midi": 63,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_66_f.wav",
+     "ms": 1800,
+     "midi": 66,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_69_f.wav",
+     "ms": 1800,
+     "midi": 69,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_72_f.wav",
+     "ms": 1800,
+     "midi": 72,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_75_f.wav",
+     "ms": 1800,
+     "midi": 75,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_78_f.wav",
+     "ms": 1800,
+     "midi": 78,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_81_f.wav",
+     "ms": 1677,
+     "midi": 81,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_84_f.wav",
+     "ms": 1800,
+     "midi": 84,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_86_f.wav",
+     "ms": 1800,
+     "midi": 86,
+     "ref": 0.9
+    },
+    {
+     "file": "keys/emily/ord_37_p.wav",
+     "ms": 1800,
+     "midi": 37,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/emily/ord_40_p.wav",
+     "ms": 1800,
+     "midi": 40,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/emily/ord_42_p.wav",
+     "ms": 1800,
+     "midi": 42,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/emily/ord_45_p.wav",
+     "ms": 1800,
+     "midi": 45,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/emily/ord_48_p.wav",
+     "ms": 1800,
+     "midi": 48,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/emily/ord_51_p.wav",
+     "ms": 1800,
+     "midi": 51,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/emily/ord_54_p.wav",
+     "ms": 1800,
+     "midi": 54,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/emily/ord_57_p.wav",
+     "ms": 1800,
+     "midi": 57,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/emily/ord_60_p.wav",
+     "ms": 1800,
+     "midi": 60,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/emily/ord_63_p.wav",
+     "ms": 1800,
+     "midi": 63,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/emily/ord_66_p.wav",
+     "ms": 1800,
+     "midi": 66,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/emily/ord_69_p.wav",
+     "ms": 1800,
+     "midi": 69,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/emily/ord_72_p.wav",
+     "ms": 1800,
+     "midi": 72,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/emily/ord_75_p.wav",
+     "ms": 1800,
+     "midi": 75,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/emily/ord_78_p.wav",
+     "ms": 1800,
+     "midi": 78,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/emily/ord_81_p.wav",
+     "ms": 1800,
+     "midi": 81,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/emily/ord_84_p.wav",
+     "ms": 1800,
+     "midi": 84,
+     "ref": 0.45
+    },
+    {
+     "file": "keys/emily/ord_86_p.wav",
+     "ms": 1800,
+     "midi": 86,
+     "ref": 0.45
+    }
+   ],
+   "muted": []
   }
  },
  "basses": {

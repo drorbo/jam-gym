@@ -196,6 +196,6 @@ test('the bundle stays a reasonable size', () => {
   for (const f of files) total += statSync(join(SAMPLES, f)).size;
   // every bank is lazy-loaded only when its sound is actually picked (see src/audio/samples.js), so this bounds the
   // repo's total weight, not what any one visit downloads. Raised from 26 MB when the two electric guitars (~7 MB
-  // for both, including their muted/staccato notes) were added.
-  assert.ok(total < 32e6, `${(total / 1e6).toFixed(1)} MB`);
+  // for both, including their muted/staccato notes) were added, and to 36 MB for the Epiphone guitar (~4 MB).
+  assert.ok(total < 36e6, `${(total / 1e6).toFixed(1)} MB`);
 });

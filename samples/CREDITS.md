@@ -11,6 +11,7 @@ The recorded instruments in this folder come from openly licensed libraries. Tha
 | Double bass | [Meatbass](https://github.com/sfzinstruments/karoryfer.meatbass), pizzicato: a 1958 Otto Rubner double bass | Karoryfer Samples, played and mapped by Drogomir Smolken | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | Bass guitar, Bass guitar (bright) | [Black And Blue Basses](https://github.com/sfzinstruments/karoryfer.black-and-blue-basses): "Dark Black" (fingered) and "Baby Blue" | Karoryfer Samples | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | Electric guitar (Hofner, warm), Electric guitar (Gretsch, bright) | [Black And Green Guitars](https://github.com/sfzinstruments/karoryfer.black-and-green-guitars): a black Hofner Club and a green Gretsch Anniversary | Karoryfer Samples, recorded by Brian Wood | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| Electric guitar (Epiphone, direct) | [Emilyguitar](https://github.com/sfzinstruments/karoryfer.emilyguitar): an Epiphone "Emily the Strange" solid-body, flatwound strings, recorded direct (no amp) | Karoryfer Samples, played and mapped by D. Smolken | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 
 ## What was changed
 
@@ -31,6 +32,7 @@ The originals are large multi-microphone and multi-velocity recordings. For this
 `tools/build_samples.py` reproduces all of this from the original sources.
 
 The bass-guitar file names are written an octave above the pitch they sound (bass-guitar notation); they are mapped
-to their true pitch. The synthesised sounds (electronic drums, synth electric piano, organ, guitar, and the upright,
+to their true pitch. Emilyguitar is a direct recording, so Jam Gym plays it through the same simulated guitar amp (overdrive and cabinet) that the synth guitars use.
+The synthesised sounds (electronic drums, synth electric piano, organ, guitar, FM-pluck guitar, and the upright,
 electric and pick basses) are generated in the browser and
 contain no recordings.

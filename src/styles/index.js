@@ -53,6 +53,8 @@ export const KEY_SOUNDS = [
   { id: 'guitar', name: 'Guitar (synth)', sampled: false },
   { id: 'hofner', name: 'Electric guitar (Hofner, warm)', sampled: true },
   { id: 'gretsch', name: 'Electric guitar (Gretsch, bright)', sampled: true },
+  { id: 'emily', name: 'Electric guitar (Epiphone, direct)', sampled: true },
+  { id: 'guitarfm', name: 'Guitar (FM pluck)', sampled: false },
 ];
 
 /**

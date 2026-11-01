@@ -417,6 +417,42 @@ def build_electric_guitar(flavor, bank_id, name, credit):
     }
 
 
+def build_emily(bank_id='emily', name='Electric guitar (Epiphone, direct)', credit=None):
+    """
+    Emilyguitar (Karoryfer Samples, played and mapped by D. Smolken, CC0): an Epiphone "Emily the Strange" solid-body, strung
+    with flatwound strings and recorded straight into the interface (no amp), both pickups, all knobs on ten. Being a direct
+    recording, it is the raw instrument: the lab's "Amped" chain (overdrive + cabinet) is what makes it a rock guitar.
+    Every third semitone from Db2 to D6 was sampled in four dynamics; two are kept (like the other guitars) to keep the download
+    small. The library has no choked "staccato" take, so rock's palm-muted chug falls back to a short envelope on the note.
+    """
+    tree = json.loads(fetch_text('https://api.github.com/repos/sfzinstruments/karoryfer.emilyguitar/git/trees/master?recursive=1'))
+    names = {t['path'] for t in tree['tree'] if t['type'] == 'blob'}
+    base = f'{GH}/karoryfer.emilyguitar/master'
+    DYN = {'p': 0.45, 'f': 0.9}
+    found = {}
+    for p in names:
+        m = re.fullmatch(r'notes/([a-g]b?\d)_(p|f)_rr1\.wav', p)
+        if m:
+            found.setdefault(m.group(2), []).append((note_midi(m.group(1)), p))
+    fetch_many([f'{base}/{p}' for lst in found.values() for _, p in lst])
+
+    TARGET = {'p': db(-5), 'f': db(-2)}               # each note to its own dynamic's peak, so no note is left too soft
+    notes = []
+    for layer, lst in found.items():
+        for midi, p in sorted(lst):
+            x, sr = read(f'{base}/{p}')
+            y = resample(trim(x, sr, 1.8, floor_db=-60), sr, 32000)
+            y = y * (TARGET[layer] / (np.max(np.abs(y)) + 1e-9))
+            notes.append({**write(f'keys/{bank_id}/ord_{midi}_{layer}.wav', y, 32000), 'midi': midi, 'ref': DYN[layer]})
+    print(f'  {bank_id}: {len(notes)} ringing notes (no recorded mute)')
+    return {
+        'id': bank_id, 'name': name, 'kind': 'multisample', 'release': 0.15, 'gain': 0.37, 'brightness': False,   # gain: level-matched to the other guitars once amped (the amp saturates, so it needs much less)
+        'credit': credit or 'Emilyguitar (Epiphone Emily the Strange, direct) by Karoryfer Samples, played and mapped by D. Smolken (CC0)',
+        'amped': True,                      # recorded direct: the app plays it through the same amp as the synth guitars
+        'notes': notes, 'muted': [],
+    }
+
+
 # ---- Basses -----------------------------------------------------------------------------
 
 MEATBASS = 'https://raw.githubusercontent.com/sfzinstruments/karoryfer.meatbass/master/Samples/pizz'
@@ -533,6 +569,8 @@ if __name__ == '__main__':
         print('electric guitar (Gretsch)...')
         manifest['keys']['gretsch'] = build_electric_guitar('green', 'gretsch', 'Electric guitar (Gretsch, bright)',
             'Black And Green Guitars (Gretsch Anniversary) by Karoryfer Samples, recorded by Brian Wood (CC0)')
+    if 'emily' in only:   # a candidate being auditioned in the sound lab: built only when asked for by name
+        print('electric guitar (Emily)...'); manifest['keys']['emily'] = build_emily()
     if not only or 'double' in only:
         print('double bass...'); manifest['basses']['double'] = build_double()
     if not only or 'guitar' in only:

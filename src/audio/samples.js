@@ -90,7 +90,7 @@ export class SampleLibrary {
     // a separate, shorter recording for a muted/choked note (rock's palm-muted chug), where one exists: a real
     // mute, not just a short gain envelope on the ringing note. Falls back to that envelope where there isn't one.
     const mutedLayers = def.muted ? await groupByRef(def.muted) : null;
-    return { id, name: def.name, credit: def.credit, release: def.release, gain: def.gain, brightness: def.brightness, layers, mutedLayers };
+    return { id, name: def.name, credit: def.credit, release: def.release, gain: def.gain, brightness: def.brightness, amped: Boolean(def.amped), layers, mutedLayers };
   }
 }
 

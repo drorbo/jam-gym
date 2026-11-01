@@ -102,7 +102,7 @@ export class Bus {
     ampOut.gain.value = 0.45;
     amp.connect(shaper).connect(cab).connect(ampOut).connect(this.faders.chords);
     // recorded keyboards go straight to the fader: they already sound like themselves
-    this.chordInputs = { epiano, organ, guitar: amp, sampled: this.faders.chords };
+    this.chordInputs = { epiano, organ, guitar: amp, guitarfm: amp, sampled: this.faders.chords, ampedSample: amp };
 
     this.setMixer(mixer, true);
   }
@@ -144,10 +144,12 @@ export class Bus {
       case 'chords': {
         const bank = this.library?.get('keys', n.timbre);
         if (bank) {
-          playSampledNote(this.ctx, this.chordInputs.sampled, bank, t, n.dur, n.midi, n.vel * SAMPLE_LEVEL.keys, n.art);
+          // a guitar recorded direct (no amp) goes through the same amp as the synth guitars; the other recordings sound like themselves
+          const dest = bank.amped ? this.chordInputs.ampedSample : this.chordInputs.sampled;
+          playSampledNote(this.ctx, dest, bank, t, n.dur, n.midi, n.vel * SAMPLE_LEVEL.keys, n.art);
         } else {
           // synth timbres, and the stand-in while a recorded keyboard is still loading
-          const timbre = ['organ', 'guitar'].includes(n.timbre) ? n.timbre : 'epiano';
+          const timbre = ['organ', 'guitar', 'guitarfm'].includes(n.timbre) ? n.timbre : 'epiano';
           playChordNote(this.ctx, this.chordInputs[timbre], t, n.dur, n.midi, n.vel, timbre, n.art);
         }
         break;
